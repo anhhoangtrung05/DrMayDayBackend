@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.drmayday</groupId>
+        <artifactId>drmayday-backend</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>prescription</artifactId>
+    <packaging>jar</packaging>
+    <name>prescription</name>
+    <description>PHAN 6 API doc (phan Prescriptions): Don thuoc (prescriptions, prescription_items)</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.drmayday</groupId>
+            <artifactId>common</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.drmayday</groupId>
+            <artifactId>auth-rbac</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.drmayday</groupId>
+            <artifactId>medical-record</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+    </dependencies>
+</project>

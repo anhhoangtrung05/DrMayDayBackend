@@ -1,0 +1,41 @@
+# syntax=docker/dockerfile:1
+#
+# Dockerfile danh rieng cho giai doan chay unit test trong CI, tach biet voi
+# Dockerfile runtime (build.Dockerfile goc). Khong tao ra artifact deploy duoc,
+# chi dung de `docker build -f Dockerfile.test .` roi lay exit code lam ket qua CI.
+
+FROM maven:3.9-eclipse-temurin-17
+WORKDIR /workspace
+
+COPY pom.xml .
+COPY common/pom.xml common/
+COPY facility/pom.xml facility/
+COPY auth-rbac/pom.xml auth-rbac/
+COPY form-builder/pom.xml form-builder/
+COPY medical-record/pom.xml medical-record/
+COPY media/pom.xml media/
+COPY lesion-tracking/pom.xml lesion-tracking/
+COPY lab/pom.xml lab/
+COPY prescription/pom.xml prescription/
+COPY notification/pom.xml notification/
+COPY app/pom.xml app/
+
+RUN mvn -B -q dependency:go-offline || true
+
+COPY common/src common/src
+COPY facility/src facility/src
+COPY auth-rbac/src auth-rbac/src
+COPY form-builder/src form-builder/src
+COPY medical-record/src medical-record/src
+COPY media/src media/src
+COPY lesion-tracking/src lesion-tracking/src
+COPY lab/src lab/src
+COPY prescription/src prescription/src
+COPY notification/src notification/src
+COPY app/src app/src
+
+# KHONG dung -DskipTests: muc dich cua image nay la chay test.
+# Dung RUN (khong phai ENTRYPOINT) de test chay NGAY LUC `docker build`:
+# neu co test fail, lenh RUN tra ve exit code khac 0 -> `docker build` that bai -> CI nhan dien duoc,
+# khong can them buoc `docker run` rieng.
+RUN mvn -B test

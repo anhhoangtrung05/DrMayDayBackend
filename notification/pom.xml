@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.drmayday</groupId>
+        <artifactId>drmayday-backend</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>notification</artifactId>
+    <packaging>jar</packaging>
+    <name>notification</name>
+    <description>PHAN 9 API doc: Thong bao day (notifications, user_fcm_tokens, user_notification_settings).
+        Hai bang user_fcm_tokens va user_notification_settings duoc chuyen tu auth-rbac sang day
+        de bam sat nhom API "Push Notifications" theo tai lieu API Design.</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.drmayday</groupId>
+            <artifactId>common</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.drmayday</groupId>
+            <artifactId>auth-rbac</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+    </dependencies>
+</project>
