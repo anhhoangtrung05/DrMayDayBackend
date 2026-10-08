@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.drmayday</groupId>
+        <artifactId>drmayday-backend</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>medical-record</artifactId>
+    <packaging>jar</packaging>
+    <name>medical-record</name>
+    <description>PHAN 4 API doc: Benh nhan &amp; ho so benh an (medical_records, re_examinations,
+        wheal_assessments, angioedema_assessments, cindu_provocation_tests, proms_scores,
+        disease_history, prior_treatments, answers)</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.drmayday</groupId>
+            <artifactId>common</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.drmayday</groupId>
+            <artifactId>auth-rbac</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.drmayday</groupId>
+            <artifactId>form-builder</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+    </dependencies>
+</project>

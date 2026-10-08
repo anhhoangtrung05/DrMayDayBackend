@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.drmayday</groupId>
+        <artifactId>drmayday-backend</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>lesion-tracking</artifactId>
+    <packaging>jar</packaging>
+    <name>lesion-tracking</name>
+    <description>PHAN 5 + PHAN 8 API doc: Danh gia UAS7 va Theo doi ton thuong da
+        (lesion_episodes, lesion_locations, lesion_photos, uas7_scores)</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.drmayday</groupId>
+            <artifactId>common</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.drmayday</groupId>
+            <artifactId>auth-rbac</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.drmayday</groupId>
+            <artifactId>medical-record</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.drmayday</groupId>
+            <artifactId>media</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+    </dependencies>
+</project>

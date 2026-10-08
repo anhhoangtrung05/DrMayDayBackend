@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.drmayday</groupId>
+        <artifactId>drmayday-backend</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>app</artifactId>
+    <packaging>jar</packaging>
+    <name>app</name>
+    <description>Ung dung Spring Boot chinh, lap rap toan bo cac module nghiep vu</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.drmayday</groupId>
+            <artifactId>common</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.drmayday</groupId>
+            <artifactId>facility</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.drmayday</groupId>
+            <artifactId>auth-rbac</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.drmayday</groupId>
+            <artifactId>form-builder</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.drmayday</groupId>
+            <artifactId>medical-record</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.drmayday</groupId>
+            <artifactId>media</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.drmayday</groupId>
+            <artifactId>lesion-tracking</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.drmayday</groupId>
+            <artifactId>lab</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.drmayday</groupId>
+            <artifactId>prescription</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.drmayday</groupId>
+            <artifactId>notification</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <finalName>drmayday-app</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>
