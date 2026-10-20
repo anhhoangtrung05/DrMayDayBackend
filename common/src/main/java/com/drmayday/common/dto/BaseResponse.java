@@ -1,102 +1,76 @@
 package com.drmayday.common.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * BaseResponse chuẩn hóa dữ liệu trả về cho tất cả các APIs trong hệ thống DrMayDay.
- * Tuân thủ cấu trúc đặc tả:
- * {
- *   "code": "1000",
- *   "message": "OK",
- *   "data": { ... }
- * }
  */
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class BaseResponse<T> {
 
-    private String code;
-    private String message;
+    @Builder.Default
+    private String code = "1000";
+
+    @Builder.Default
+    private String message = "OK";
+
     private T data;
 
-    public BaseResponse() {
+    public static <T> BaseResponse<T> ok() {
+        return BaseResponse.<T>builder()
+                .code("1000")
+                .message("OK")
+                .build();
     }
 
-    public BaseResponse(String code, String message, T data) {
-        this.code = code;
-        this.message = message;
-        this.data = data;
-    }
-
-    public String getCode() {
-        return code;
-    }
-
-    public void setCode(String code) {
-        this.code = code;
-    }
-
-    public String getMessage() {
-        return message;
-    }
-
-    public void setMessage(String message) {
-        this.message = message;
-    }
-
-    public T getData() {
-        return data;
-    }
-
-    public void setData(T data) {
-        this.data = data;
+    public static <T> BaseResponse<T> ok(T data) {
+        return BaseResponse.<T>builder()
+                .code("1000")
+                .message("OK")
+                .data(data)
+                .build();
     }
 
     public static <T> BaseResponse<T> success(T data) {
-        return new BaseResponse<>("1000", "OK", data);
+        return ok(data);
     }
 
     public static <T> BaseResponse<T> success(String message, T data) {
-        return new BaseResponse<>("1000", message, data);
+        return BaseResponse.<T>builder()
+                .code("1000")
+                .message(message)
+                .data(data)
+                .build();
     }
 
     public static <T> BaseResponse<T> created(T data) {
-        return new BaseResponse<>("1001", "Created successfully", data);
+        return BaseResponse.<T>builder()
+                .code("1001")
+                .message("Created successfully")
+                .data(data)
+                .build();
     }
 
     public static <T> BaseResponse<T> created(String message, T data) {
-        return new BaseResponse<>("1001", message, data);
+        return BaseResponse.<T>builder()
+                .code("1001")
+                .message(message)
+                .data(data)
+                .build();
     }
 
     public static <T> BaseResponse<T> error(String code, String message) {
-        return new BaseResponse<>(code, message, null);
-    }
-
-    public static <T> Builder<T> builder() {
-        return new Builder<>();
-    }
-
-    public static class Builder<T> {
-        private String code;
-        private String message;
-        private T data;
-
-        public Builder<T> code(String code) {
-            this.code = code;
-            return this;
-        }
-
-        public Builder<T> message(String message) {
-            this.message = message;
-            return this;
-        }
-
-        public Builder<T> data(T data) {
-            this.data = data;
-            return this;
-        }
-
-        public BaseResponse<T> build() {
-            return new BaseResponse<>(code, message, data);
-        }
+        return BaseResponse.<T>builder()
+                .code(code)
+                .message(message)
+                .build();
     }
 }

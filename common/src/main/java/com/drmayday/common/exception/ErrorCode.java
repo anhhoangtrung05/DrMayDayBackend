@@ -1,11 +1,13 @@
 package com.drmayday.common.exception;
 
+import lombok.Getter;
 import org.springframework.http.HttpStatus;
 
 /**
  * Bảng mã phản hồi chuẩn hóa (System Response Codes & Status Codes) hệ thống DrMayDay.
  * Tham chiếu trực tiếp từ Sheet "MÃ PHẢN HỒI".
  */
+@Getter
 public enum ErrorCode {
 
     // 1xxx - Thành công
@@ -52,17 +54,5 @@ public enum ErrorCode {
         this.code = code;
         this.message = message;
         this.httpStatus = httpStatus;
-    }
-
-    public String getCode() {
-        return code;
-    }
-
-    public String getMessage() {
-        return message;
-    }
-
-    public HttpStatus getHttpStatus() {
-        return httpStatus;
     }
 }
