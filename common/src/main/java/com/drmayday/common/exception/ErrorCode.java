@@ -19,6 +19,8 @@ public enum ErrorCode {
     INVALID_PARAMETER_TYPE("2002", "Invalid parameter type", HttpStatus.BAD_REQUEST),
     INVALID_PARAMETER_VALUE("2003", "Invalid parameter value", HttpStatus.BAD_REQUEST),
     INVALID_PHONE_NUMBER_FORMAT("2004", "Invalid phone number format", HttpStatus.BAD_REQUEST),
+    BAD_REQUEST("2005", "Bad request", HttpStatus.BAD_REQUEST),
+    RESOURCE_NOT_FOUND("2006", "Resource not found", HttpStatus.NOT_FOUND),
 
     // 3xxx - Lỗi xác thực & phân quyền (Auth & RBAC)
     TOKEN_INVALID("3001", "Token invalid", HttpStatus.UNAUTHORIZED),

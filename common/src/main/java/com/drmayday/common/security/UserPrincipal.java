@@ -12,13 +12,13 @@ import java.util.Collections;
  */
 public class UserPrincipal implements UserDetails {
 
-    private final Integer userId;
+    private final Long userId;
     private final String phone;
     private final String fullName;
     private final String roleName;
     private final Collection<? extends GrantedAuthority> authorities;
 
-    public UserPrincipal(Integer userId, String phone, String fullName, String roleName, Collection<? extends GrantedAuthority> authorities) {
+    public UserPrincipal(Long userId, String phone, String fullName, String roleName, Collection<? extends GrantedAuthority> authorities) {
         this.userId = userId;
         this.phone = phone;
         this.fullName = fullName;
@@ -26,21 +26,36 @@ public class UserPrincipal implements UserDetails {
         this.authorities = authorities;
     }
 
-    public static UserPrincipal create(Integer userId, String phone, String fullName, String roleName) {
-        String authority = roleName != null && !roleName.startsWith("ROLE_") 
-                ? "ROLE_" + roleName.toUpperCase() 
-                : (roleName != null ? roleName : "ROLE_PATIENT");
-        
+    public UserPrincipal(Integer userId, String phone, String fullName, String roleName, Collection<? extends GrantedAuthority> authorities) {
+        this(userId != null ? userId.longValue() : null, phone, fullName, roleName, authorities);
+    }
+
+    public static UserPrincipal create(Long userId, String phone, String fullName, String roleName) {
+        String roleStr = roleName != null ? roleName.trim() : "patient";
+        String normalized = roleStr.toUpperCase();
+        if (normalized.startsWith("ROLE_")) {
+            normalized = normalized.substring(5);
+        }
+        String authority = "ROLE_" + normalized;
+
         return new UserPrincipal(
                 userId,
                 phone,
                 fullName,
-                roleName,
+                roleStr,
                 Collections.singletonList(new SimpleGrantedAuthority(authority))
         );
     }
 
-    public Integer getUserId() {
+    public static UserPrincipal create(Integer userId, String phone, String fullName, String roleName) {
+        return create(userId != null ? userId.longValue() : null, phone, fullName, roleName);
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public Long getUserIdAsLong() {
         return userId;
     }
 

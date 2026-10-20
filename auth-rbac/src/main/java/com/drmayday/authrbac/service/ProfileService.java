@@ -11,7 +11,11 @@ public interface ProfileService {
      * @param userId ID tài khoản bệnh nhân
      * @return Hồ sơ chi tiết bệnh nhân
      */
-    PatientProfileResponse getProfile(Integer userId);
+    PatientProfileResponse getProfile(Long userId);
+
+    default PatientProfileResponse getProfile(Integer userId) {
+        return getProfile(userId != null ? userId.longValue() : null);
+    }
 
     /**
      * API 8: PROFILE_PUT - Bệnh nhân cập nhật thông tin hồ sơ cá nhân.
@@ -20,5 +24,9 @@ public interface ProfileService {
      * @param request Dữ liệu cập nhật
      * @return Hồ sơ chi tiết sau khi cập nhật
      */
-    PatientProfileResponse updateProfile(Integer userId, UpdateProfileRequest request);
+    PatientProfileResponse updateProfile(Long userId, UpdateProfileRequest request);
+
+    default PatientProfileResponse updateProfile(Integer userId, UpdateProfileRequest request) {
+        return updateProfile(userId != null ? userId.longValue() : null, request);
+    }
 }

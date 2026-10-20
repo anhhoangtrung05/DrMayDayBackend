@@ -34,7 +34,7 @@ public class ProfileController {
     @GetMapping
     public ResponseEntity<BaseResponse<PatientProfileResponse>> getProfile(
             @RequestHeader(value = "Authorization", required = false) String token) {
-        Integer currentUserId = SecurityUtils.getCurrentUserId();
+        Long currentUserId = SecurityUtils.getCurrentUserId();
         PatientProfileResponse response = profileService.getProfile(currentUserId);
         return ResponseEntity.ok(BaseResponse.success(response));
     }
@@ -52,7 +52,7 @@ public class ProfileController {
     public ResponseEntity<BaseResponse<PatientProfileResponse>> updateProfile(
             @RequestHeader(value = "Authorization", required = false) String token,
             @Valid @RequestBody UpdateProfileRequest request) {
-        Integer currentUserId = SecurityUtils.getCurrentUserId();
+        Long currentUserId = SecurityUtils.getCurrentUserId();
         PatientProfileResponse response = profileService.updateProfile(currentUserId, request);
         return ResponseEntity.ok(BaseResponse.success("Cập nhật thông tin thành công", response));
     }

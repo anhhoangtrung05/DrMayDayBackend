@@ -1,5 +1,6 @@
 package com.drmayday.authrbac.security;
 
+import com.drmayday.common.exception.AppException;
 import com.drmayday.common.security.UserPrincipal;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
@@ -37,7 +38,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (StringUtils.hasText(jwt)) {
                 Claims claims = jwtTokenProvider.parseAndValidateClaims(jwt);
-                Integer userId = jwtTokenProvider.getUserIdFromClaims(claims);
+                Long userId = jwtTokenProvider.getUserIdFromClaims(claims);
                 String phone = jwtTokenProvider.getPhoneFromClaims(claims);
                 String role = jwtTokenProvider.getRoleFromClaims(claims);
 
@@ -49,8 +50,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
+        } catch (AppException ex) {
+            log.warn("Lỗi xác thực JWT [code={}, message={}]: {}", ex.getErrorCode().getCode(), ex.getMessage(), request.getRequestURI());
+            request.setAttribute("AUTH_EXCEPTION", ex);
         } catch (Exception ex) {
             log.warn("Không thể thiết lập xác thực người dùng trong Security Context: {}", ex.getMessage());
+            request.setAttribute("AUTH_EXCEPTION", ex);
         }
 
         filterChain.doFilter(request, response);
@@ -58,8 +63,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private String extractJwtFromRequest(HttpServletRequest request) {
         String bearerToken = request.getHeader("Authorization");
-        if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
-            return bearerToken.substring(7);
+        if (StringUtils.hasText(bearerToken)) {
+            String trimmed = bearerToken.trim();
+            if (trimmed.regionMatches(true, 0, "Bearer ", 0, 7)) {
+                return trimmed.substring(7).trim();
+            }
+            // Hỗ trợ trường hợp client truyền trực tiếp chuỗi JWT (bắt đầu bằng ey... và có 2 dấu chấm)
+            if (trimmed.startsWith("ey") && trimmed.chars().filter(ch -> ch == '.').count() == 2) {
+                return trimmed;
+            }
         }
         return null;
     }

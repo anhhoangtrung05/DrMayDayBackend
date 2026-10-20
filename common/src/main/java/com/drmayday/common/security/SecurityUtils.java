@@ -22,7 +22,7 @@ public final class SecurityUtils {
         return (UserPrincipal) authentication.getPrincipal();
     }
 
-    public static Integer getCurrentUserId() {
+    public static Long getCurrentUserId() {
         return getCurrentUser().getUserId();
     }
 

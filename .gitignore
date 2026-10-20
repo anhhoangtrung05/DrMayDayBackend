@@ -1,17 +1,72 @@
-docs/
+# =============================================================================
+# DrMayDay Backend - Git Ignore Rules
+# =============================================================================
 
-# Maven
+# --- Local-only Test Directories (DO NOT push to git) ---
+src/test/
+**/src/test/
+
+# --- Build Artifacts & Binaries ---
 target/
+**/target/
 *.class
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
 
-# IDE
+# --- Environment & Secret Configuration Files ---
+.env
+.env.*
+!.env.example
+
+# --- IDE & Editor Settings ---
+# IntelliJ IDEA
 .idea/
 *.iml
+*.iws
+*.ipr
+out/
+**/out/
+
+# Eclipse
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+# VS Code
 .vscode/
 
-# Env / secrets
-.env
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nb-task-res/
 
-# OS
+# --- Logs & Temporary Files ---
+*.log
+logs/
+**/logs/
+temp/
+tmp/
+**/tmp/
+
+# --- OS-generated Files ---
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
+[Dd]esktop.ini
+
+# --- Project Specific Ignored Folders ---
+docs/

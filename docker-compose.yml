@@ -1,18 +1,18 @@
 services:
-  mysql:
-    image: mysql:8.0
-    container_name: drmayday-mysql
+  postgres:
+    image: postgres:16-alpine
+    container_name: drmayday-postgres
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
-      MYSQL_DATABASE: ${DB_NAME:-drmayday}
+      POSTGRES_DB: ${DB_NAME:-drmayday}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
     ports:
-      - "${DB_HOST_PORT:-3306}:3306"
+      - "${DB_HOST_PORT:-5432}:5432"
     volumes:
-      - mysql_data:/var/lib/mysql
-      - ./sql/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${DB_PASSWORD:-root}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-drmayday}"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -38,16 +38,15 @@ services:
     container_name: drmayday-app
     restart: unless-stopped
     depends_on:
-      mysql:
+      postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
     environment:
-      DB_HOST: mysql
-      DB_PORT: 3306
-      DB_NAME: ${DB_NAME:-drmayday}
-      DB_USER: root
-      DB_PASSWORD: ${DB_PASSWORD:-root}
+      DB_URL: ${DB_URL:-jdbc:postgresql://postgres:5432/${DB_NAME:-drmayday}}
+      SPRING_DATASOURCE_URL: ${DB_URL:-jdbc:postgresql://postgres:5432/${DB_NAME:-drmayday}}
+      SPRING_DATASOURCE_USERNAME: ${DB_USER:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-postgres}
       REDIS_HOST: redis
       REDIS_PORT: 6379
       JWT_SECRET: ${JWT_SECRET:-change-this-secret-in-production-please-use-env-var}
@@ -56,5 +55,5 @@ services:
       - "${APP_HOST_PORT:-8080}:8080"
 
 volumes:
-  mysql_data:
+  postgres_data:
   redis_data:

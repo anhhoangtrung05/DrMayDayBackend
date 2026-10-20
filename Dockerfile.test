@@ -1,8 +1,9 @@
 # syntax=docker/dockerfile:1
 #
-# Dockerfile danh rieng cho giai doan chay unit test trong CI, tach biet voi
-# Dockerfile runtime (build.Dockerfile goc). Khong tao ra artifact deploy duoc,
-# chi dung de `docker build -f Dockerfile.test .` roi lay exit code lam ket qua CI.
+# Dockerfile chay test tren moi truong Docker (local / isolated test runner).
+# Luu y: Cac thu muc src/test duoc cau hinh local-only (.gitignore) de giu rieng tren may dev,
+# khong push len Git. File nay ho tro chay bo test local trong moi truong container dong nhat:
+# `docker build -f Dockerfile.test .`
 
 FROM maven:3.9-eclipse-temurin-17
 WORKDIR /workspace
@@ -34,8 +35,5 @@ COPY prescription/src prescription/src
 COPY notification/src notification/src
 COPY app/src app/src
 
-# KHONG dung -DskipTests: muc dich cua image nay la chay test.
-# Dung RUN (khong phai ENTRYPOINT) de test chay NGAY LUC `docker build`:
-# neu co test fail, lenh RUN tra ve exit code khac 0 -> `docker build` that bai -> CI nhan dien duoc,
-# khong can them buoc `docker run` rieng.
+# Chay bo test:
 RUN mvn -B test
