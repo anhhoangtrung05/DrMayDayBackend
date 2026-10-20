@@ -88,9 +88,9 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
     public ResponseEntity<BaseResponse<Void>> handleDataIntegrityViolationException(org.springframework.dao.DataIntegrityViolationException ex) {
-        log.warn("Lỗi vi phạm toàn vẹn dữ liệu CSDL: {}", ex.getMessage());
+        log.warn("Lỗi vi phạm toàn vẹn dữ liệu CSDL: {}", ex.getMessage(), ex);
         String msg = ex.getMessage() != null ? ex.getMessage().toLowerCase() : "";
-        if (msg.contains("duplicate") || msg.contains("unique") || msg.contains("so_dien_thoai")) {
+        if (msg.contains("duplicate key") || msg.contains("unique constraint") || msg.contains("violates unique") || msg.contains("uq_") || (msg.contains("unique") && msg.contains("constraint"))) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(BaseResponse.error(ErrorCode.USER_PHONE_ALREADY_EXISTS.getCode(),
                             ErrorCode.USER_PHONE_ALREADY_EXISTS.getMessage()));

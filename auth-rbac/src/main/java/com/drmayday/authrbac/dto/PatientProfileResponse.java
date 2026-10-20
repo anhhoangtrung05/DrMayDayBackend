@@ -8,7 +8,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class PatientProfileResponse {
 
     @JsonProperty("user_id")
-    private Integer userId;
+    private Long userId;
 
     @JsonProperty("full_name")
     private String fullName;
@@ -37,7 +37,7 @@ public class PatientProfileResponse {
     public PatientProfileResponse() {
     }
 
-    public PatientProfileResponse(Integer userId, String fullName, String phone, String gender,
+    public PatientProfileResponse(Long userId, String fullName, String phone, String gender,
                                   Integer yearOfBirth, String address, String ethnic,
                                   String occupation, String bhytCode) {
         this.userId = userId;
@@ -51,12 +51,22 @@ public class PatientProfileResponse {
         this.bhytCode = bhytCode;
     }
 
-    public Integer getUserId() {
+    public PatientProfileResponse(Integer userId, String fullName, String phone, String gender,
+                                  Integer yearOfBirth, String address, String ethnic,
+                                  String occupation, String bhytCode) {
+        this(userId != null ? userId.longValue() : null, fullName, phone, gender, yearOfBirth, address, ethnic, occupation, bhytCode);
+    }
+
+    public Long getUserId() {
         return userId;
     }
 
-    public void setUserId(Integer userId) {
+    public void setUserId(Long userId) {
         this.userId = userId;
+    }
+
+    public void setUserId(Integer userId) {
+        this.userId = userId != null ? userId.longValue() : null;
     }
 
     public String getFullName() {
@@ -128,7 +138,7 @@ public class PatientProfileResponse {
     }
 
     public static class Builder {
-        private Integer userId;
+        private Long userId;
         private String fullName;
         private String phone;
         private String gender;
@@ -138,8 +148,13 @@ public class PatientProfileResponse {
         private String occupation;
         private String bhytCode;
 
-        public Builder userId(Integer userId) {
+        public Builder userId(Long userId) {
             this.userId = userId;
+            return this;
+        }
+
+        public Builder userId(Integer userId) {
+            this.userId = userId != null ? userId.longValue() : null;
             return this;
         }
 

@@ -63,9 +63,16 @@ public class SecurityConfig {
     public AuthenticationEntryPoint customAuthenticationEntryPoint() {
         return (request, response, authException) -> {
             String authHeader = request.getHeader("Authorization");
-            ErrorCode errorCode = (authHeader == null || authHeader.isBlank())
-                    ? ErrorCode.USER_NOT_AUTHENTICATED
-                    : ErrorCode.TOKEN_INVALID;
+            Object authEx = request.getAttribute("AUTH_EXCEPTION");
+
+            ErrorCode errorCode;
+            if (authEx instanceof com.drmayday.common.exception.AppException appEx) {
+                errorCode = appEx.getErrorCode();
+            } else if (authHeader == null || authHeader.isBlank()) {
+                errorCode = ErrorCode.USER_NOT_AUTHENTICATED;
+            } else {
+                errorCode = ErrorCode.TOKEN_INVALID;
+            }
 
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);

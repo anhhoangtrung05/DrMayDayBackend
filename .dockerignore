@@ -1,11 +1,41 @@
-**/target/
+# Git
 **/.git/
+.gitignore
+
+# Environment & Secrets
+.env
+.env.*
+
+# Build Artifacts
+**/target/
+*.jar
+*.war
+
+# IDE & Editor Settings
 **/.idea/
 **/*.iml
+**/.vscode/
+**/.settings/
+**/.project
+**/.classpath
+
+# Documentation & Assets
 docs/
 sql/
 *.md
-.gitignore
+
+# Logs & Temp
+*.log
+logs/
+**/logs/
+tmp/
+**/tmp/
+
+# Docker Files
 .dockerignore
-docker-compose.yml
-Dockerfile
+docker-compose*.yml
+Dockerfile*
+
+# OS Files
+.DS_Store
+Thumbs.db

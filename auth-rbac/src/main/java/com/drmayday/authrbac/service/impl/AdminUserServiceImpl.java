@@ -4,17 +4,21 @@ import com.drmayday.authrbac.dto.CreateUserRequest;
 import com.drmayday.authrbac.dto.EditUserRequest;
 import com.drmayday.authrbac.dto.UserDetailsResponse;
 import com.drmayday.authrbac.dto.UserResponse;
-import com.drmayday.authrbac.entity.Patient;
-import com.drmayday.authrbac.entity.Role;
-import com.drmayday.authrbac.entity.Staff;
-import com.drmayday.authrbac.entity.User;
-import com.drmayday.authrbac.repository.PatientRepository;
-import com.drmayday.authrbac.repository.RoleRepository;
-import com.drmayday.authrbac.repository.StaffRepository;
-import com.drmayday.authrbac.repository.UserRepository;
+import com.drmayday.authrbac.entity.BenhNhan;
+import com.drmayday.authrbac.entity.Nguoi;
+import com.drmayday.authrbac.entity.NhanVien;
+import com.drmayday.authrbac.entity.TaiKhoan;
+import com.drmayday.authrbac.entity.VaiTro;
+import com.drmayday.authrbac.repository.BenhNhanRepository;
+import com.drmayday.authrbac.repository.NguoiRepository;
+import com.drmayday.authrbac.repository.NhanVienRepository;
+import com.drmayday.authrbac.repository.TaiKhoanRepository;
+import com.drmayday.authrbac.repository.VaiTroRepository;
 import com.drmayday.authrbac.service.AdminUserService;
 import com.drmayday.common.exception.AppException;
 import com.drmayday.common.exception.ErrorCode;
+import com.drmayday.facility.entity.ChiNhanh;
+import com.drmayday.facility.repository.ChiNhanhRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -25,7 +29,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 
 @Service
@@ -34,21 +38,27 @@ public class AdminUserServiceImpl implements AdminUserService {
     private static final Logger log = LoggerFactory.getLogger(AdminUserServiceImpl.class);
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-    private final UserRepository userRepository;
-    private final PatientRepository patientRepository;
-    private final StaffRepository staffRepository;
-    private final RoleRepository roleRepository;
+    private final TaiKhoanRepository taiKhoanRepository;
+    private final NguoiRepository nguoiRepository;
+    private final BenhNhanRepository benhNhanRepository;
+    private final NhanVienRepository nhanVienRepository;
+    private final VaiTroRepository vaiTroRepository;
+    private final ChiNhanhRepository chiNhanhRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public AdminUserServiceImpl(UserRepository userRepository,
-                                PatientRepository patientRepository,
-                                StaffRepository staffRepository,
-                                RoleRepository roleRepository,
+    public AdminUserServiceImpl(TaiKhoanRepository taiKhoanRepository,
+                                NguoiRepository nguoiRepository,
+                                BenhNhanRepository benhNhanRepository,
+                                NhanVienRepository nhanVienRepository,
+                                VaiTroRepository vaiTroRepository,
+                                ChiNhanhRepository chiNhanhRepository,
                                 PasswordEncoder passwordEncoder) {
-        this.userRepository = userRepository;
-        this.patientRepository = patientRepository;
-        this.staffRepository = staffRepository;
-        this.roleRepository = roleRepository;
+        this.taiKhoanRepository = taiKhoanRepository;
+        this.nguoiRepository = nguoiRepository;
+        this.benhNhanRepository = benhNhanRepository;
+        this.nhanVienRepository = nhanVienRepository;
+        this.vaiTroRepository = vaiTroRepository;
+        this.chiNhanhRepository = chiNhanhRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -59,177 +69,216 @@ public class AdminUserServiceImpl implements AdminUserService {
         int pageIndex = Math.max(page - 1, 0);
         int pageSize = limit > 0 ? limit : 20;
 
-        Pageable pageable = PageRequest.of(pageIndex, pageSize, Sort.by(Sort.Direction.DESC, "userId"));
-        Page<User> usersPage = userRepository.findAllUsersWithRoles(pageable);
+        Pageable pageable = PageRequest.of(pageIndex, pageSize, Sort.by(Sort.Direction.DESC, "maTaiKhoan"));
+        Page<TaiKhoan> accountsPage = taiKhoanRepository.findAllWithDetails(pageable);
 
-        return usersPage.map(this::mapToUserResponse);
+        return accountsPage.map(this::mapToUserResponse);
     }
 
     @Override
     @Transactional(readOnly = true)
     public UserDetailsResponse getUserDetails(String id) {
         log.info("Admin truy xuất chi tiết người dùng: id={}", id);
-        Integer userId = parseUserId(id);
+        Long userId = parseUserId(id);
 
-        User user = userRepository.findById(userId)
+        TaiKhoan taiKhoan = taiKhoanRepository.findByIdWithDetails(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_ACCOUNT_NOT_FOUND));
 
-        return UserDetailsResponse.builder()
-                .userId(String.valueOf(user.getUserId()))
-                .fullName(user.getFullName())
-                .phone(user.getPhone())
-                .roleId(resolveRoleIdString(user))
-                .isActive(String.valueOf(user.getIsActive()))
-                .createdAt(formatDateTime(user.getCreatedAt()))
-                .updatedAt(formatDateTime(user.getUpdatedAt()))
-                .build();
+        return mapToUserDetailsResponse(taiKhoan);
     }
 
     @Override
     @Transactional
     public UserResponse createUser(CreateUserRequest request) {
         log.info("Admin tạo mới người dùng: phone={}, role_id={}", request.getPhone(), request.getRoleId());
+        String phone = request.getPhone().trim();
 
-        if (userRepository.existsByPhone(request.getPhone().trim())) {
+        if (taiKhoanRepository.existsByTenDangNhap(phone) || nguoiRepository.existsBySoDienThoai(phone)) {
             throw new AppException(ErrorCode.USER_PHONE_ALREADY_EXISTS);
         }
 
-        Role role = resolveRole(request.getRoleId());
+        VaiTro vaiTro = resolveRole(request.getRoleId());
+        boolean active = !"0".equals(request.getIsActive()) && !"false".equalsIgnoreCase(request.getIsActive());
 
-        int active = "0".equals(request.getIsActive()) ? 0 : 1;
+        OffsetDateTime creationTime = OffsetDateTime.now().minusSeconds(10);
 
-        User user = User.builder()
-                .fullName(request.getFullName().trim())
-                .phone(request.getPhone().trim())
-                .passwordHash(passwordEncoder.encode(request.getPassword()))
-                .isActive(active)
+        Nguoi nguoi = Nguoi.builder()
+                .hoTen(request.getFullName().trim())
+                .soDienThoai(phone)
+                .thoiDiemTao(creationTime)
+                .thoiDiemCapNhat(creationTime)
                 .build();
+        nguoi = nguoiRepository.save(nguoi);
 
-        // Lưu thông tin vai trò vào bảng tương ứng qua CascadeType.ALL
-        if ("patient".equalsIgnoreCase(role.getName())) {
-            Patient patient = Patient.builder()
-                    .user(user)
-                    .roleId(role.getRoleId())
+        if ("benh_nhan".equalsIgnoreCase(vaiTro.getTenVaiTro()) || Long.valueOf(4L).equals(vaiTro.getMaVaiTro())) {
+            BenhNhan benhNhan = BenhNhan.builder()
+                    .maBenhNhan(nguoi.getMaNguoi())
+                    .nguoi(nguoi)
                     .build();
-            user.setPatient(patient);
+            benhNhanRepository.save(benhNhan);
         } else {
-            Staff staff = Staff.builder()
-                    .user(user)
-                    .roleId(role.getRoleId())
+            Long chiNhanhId = chiNhanhRepository.findFirstByOrderByMaChiNhanhAsc()
+                    .map(ChiNhanh::getMaChiNhanh)
+                    .orElse(1L);
+            NhanVien nhanVien = NhanVien.builder()
+                    .maNhanVien(nguoi.getMaNguoi())
+                    .nguoi(nguoi)
+                    .maChiNhanh(chiNhanhId)
                     .build();
-            user.setStaff(staff);
+            nhanVienRepository.save(nhanVien);
         }
 
-        user = userRepository.save(user);
-
-        return UserResponse.builder()
-                .userId(String.valueOf(user.getUserId()))
-                .fullName(user.getFullName())
-                .phone(user.getPhone())
-                .roleId(String.valueOf(role.getRoleId()))
-                .isActive(String.valueOf(user.getIsActive()))
-                .createdAt(formatDateTime(user.getCreatedAt()))
+        TaiKhoan taiKhoan = TaiKhoan.builder()
+                .nguoi(nguoi)
+                .vaiTro(vaiTro)
+                .tenDangNhap(phone)
+                .matKhauMaHoa(passwordEncoder.encode(request.getPassword()))
+                .trangThaiHoatDong(active)
+                .thoiDiemTao(creationTime)
+                .thoiDiemCapNhat(creationTime)
                 .build();
+        taiKhoan = taiKhoanRepository.save(taiKhoan);
+
+        return mapToUserResponse(taiKhoan);
     }
 
     @Override
     @Transactional
     public UserResponse editUser(String id, EditUserRequest request) {
         log.info("Admin chỉnh sửa người dùng: id={}", id);
-        Integer userId = parseUserId(id);
+        Long userId = parseUserId(id);
 
-        User user = userRepository.findById(userId)
+        TaiKhoan taiKhoan = taiKhoanRepository.findByIdWithDetails(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_ACCOUNT_NOT_FOUND));
 
         if (request.getFullName() != null && !request.getFullName().trim().isEmpty()) {
-            user.setFullName(request.getFullName().trim());
+            if (taiKhoan.getNguoi() != null) {
+                taiKhoan.getNguoi().setHoTen(request.getFullName().trim());
+                OffsetDateTime now = OffsetDateTime.now();
+                if (taiKhoan.getNguoi().getThoiDiemTao() != null && now.isBefore(taiKhoan.getNguoi().getThoiDiemTao())) {
+                    now = taiKhoan.getNguoi().getThoiDiemTao();
+                }
+                taiKhoan.getNguoi().setThoiDiemCapNhat(now);
+                nguoiRepository.save(taiKhoan.getNguoi());
+            }
         }
 
         if (request.getIsActive() != null && !request.getIsActive().trim().isEmpty()) {
-            int active = "1".equals(request.getIsActive().trim()) || "true".equalsIgnoreCase(request.getIsActive().trim()) ? 1 : 0;
-            user.setIsActive(active);
+            boolean active = "1".equals(request.getIsActive().trim()) || "true".equalsIgnoreCase(request.getIsActive().trim());
+            taiKhoan.setTrangThaiHoatDong(active);
         }
 
         if (request.getRoleId() != null && !request.getRoleId().trim().isEmpty()) {
-            Role role = resolveRole(request.getRoleId().trim());
+            VaiTro vaiTro = resolveRole(request.getRoleId().trim());
+            taiKhoan.setVaiTro(vaiTro);
 
-            if ("patient".equalsIgnoreCase(role.getName())) {
-                Patient patient = patientRepository.findByUserId(userId).orElse(null);
-                if (patient != null) {
-                    patient.setRoleId(role.getRoleId());
-                    patientRepository.save(patient);
+            if (taiKhoan.getNguoi() != null) {
+                Long personId = taiKhoan.getNguoi().getMaNguoi();
+                if ("benh_nhan".equalsIgnoreCase(vaiTro.getTenVaiTro()) || Long.valueOf(4L).equals(vaiTro.getMaVaiTro())) {
+                    if (!benhNhanRepository.existsById(personId)) {
+                        BenhNhan bn = BenhNhan.builder()
+                                .maBenhNhan(personId)
+                                .nguoi(taiKhoan.getNguoi())
+                                .build();
+                        benhNhanRepository.save(bn);
+                    }
                 } else {
-                    Patient newPatient = Patient.builder()
-                            .user(user)
-                            .roleId(role.getRoleId())
-                            .build();
-                    user.setPatient(newPatient);
-                    user.setStaff(null);
-                }
-            } else {
-                Staff staff = staffRepository.findByUserId(userId).orElse(null);
-                if (staff != null) {
-                    staff.setRoleId(role.getRoleId());
-                    staffRepository.save(staff);
-                } else {
-                    Staff newStaff = Staff.builder()
-                            .user(user)
-                            .roleId(role.getRoleId())
-                            .build();
-                    user.setStaff(newStaff);
-                    user.setPatient(null);
+                    if (!nhanVienRepository.existsById(personId)) {
+                        Long chiNhanhId = chiNhanhRepository.findFirstByOrderByMaChiNhanhAsc()
+                                .map(ChiNhanh::getMaChiNhanh)
+                                .orElse(1L);
+                        NhanVien nv = NhanVien.builder()
+                                .maNhanVien(personId)
+                                .nguoi(taiKhoan.getNguoi())
+                                .maChiNhanh(chiNhanhId)
+                                .build();
+                        nhanVienRepository.save(nv);
+                    }
                 }
             }
         }
 
-        user = userRepository.save(user);
+        OffsetDateTime nowTaiKhoan = OffsetDateTime.now();
+        if (taiKhoan.getThoiDiemTao() != null && nowTaiKhoan.isBefore(taiKhoan.getThoiDiemTao())) {
+            nowTaiKhoan = taiKhoan.getThoiDiemTao();
+        }
+        taiKhoan.setThoiDiemCapNhat(nowTaiKhoan);
+        taiKhoan = taiKhoanRepository.save(taiKhoan);
+
+        return mapToUserResponse(taiKhoan);
+    }
+
+    private UserResponse mapToUserResponse(TaiKhoan taiKhoan) {
+        Nguoi nguoi = taiKhoan.getNguoi();
+        VaiTro vaiTro = taiKhoan.getVaiTro();
 
         return UserResponse.builder()
-                .userId(String.valueOf(user.getUserId()))
-                .fullName(user.getFullName())
-                .roleId(resolveRoleIdString(user))
-                .isActive(String.valueOf(user.getIsActive()))
-                .updatedAt(formatDateTime(user.getUpdatedAt()))
+                .userId(String.valueOf(taiKhoan.getMaTaiKhoan()))
+                .fullName(nguoi != null ? nguoi.getHoTen() : "")
+                .phone(taiKhoan.getTenDangNhap())
+                .roleId(vaiTro != null ? String.valueOf(vaiTro.getMaVaiTro()) : "4")
+                .isActive(Boolean.TRUE.equals(taiKhoan.getTrangThaiHoatDong()) ? "1" : "0")
+                .createdAt(formatOffsetDateTime(taiKhoan.getThoiDiemTao()))
+                .updatedAt(formatOffsetDateTime(taiKhoan.getThoiDiemCapNhat()))
                 .build();
     }
 
-    private UserResponse mapToUserResponse(User user) {
-        return UserResponse.builder()
-                .userId(String.valueOf(user.getUserId()))
-                .fullName(user.getFullName())
-                .phone(user.getPhone())
-                .roleId(resolveRoleIdString(user))
-                .isActive(String.valueOf(user.getIsActive()))
-                .createdAt(formatDateTime(user.getCreatedAt()))
-                .updatedAt(formatDateTime(user.getUpdatedAt()))
+    private UserDetailsResponse mapToUserDetailsResponse(TaiKhoan taiKhoan) {
+        Nguoi nguoi = taiKhoan.getNguoi();
+        VaiTro vaiTro = taiKhoan.getVaiTro();
+
+        return UserDetailsResponse.builder()
+                .userId(String.valueOf(taiKhoan.getMaTaiKhoan()))
+                .fullName(nguoi != null ? nguoi.getHoTen() : "")
+                .phone(taiKhoan.getTenDangNhap())
+                .roleId(vaiTro != null ? String.valueOf(vaiTro.getMaVaiTro()) : "4")
+                .isActive(Boolean.TRUE.equals(taiKhoan.getTrangThaiHoatDong()) ? "1" : "0")
+                .createdAt(formatOffsetDateTime(taiKhoan.getThoiDiemTao()))
+                .updatedAt(formatOffsetDateTime(taiKhoan.getThoiDiemCapNhat()))
                 .build();
     }
 
-    private Integer parseUserId(String id) {
+    private Long parseUserId(String id) {
         try {
-            return Integer.parseInt(id);
+            return Long.parseLong(id);
         } catch (NumberFormatException ex) {
             throw new AppException(ErrorCode.USER_ACCOUNT_NOT_FOUND);
         }
     }
 
-    private Role resolveRole(String roleIdentifier) {
+    private VaiTro resolveRole(String roleIdentifier) {
+        if (roleIdentifier == null || roleIdentifier.trim().isEmpty()) {
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Vai trò (Role) không tồn tại");
+        }
+        String trimmed = roleIdentifier.trim();
         try {
-            int roleId = Integer.parseInt(roleIdentifier);
-            return roleRepository.findById(roleId)
+            long roleId = Long.parseLong(trimmed);
+            return vaiTroRepository.findById(roleId)
                     .orElseThrow(() -> new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Vai trò (Role) không tồn tại"));
         } catch (NumberFormatException e) {
-            return roleRepository.findByName(roleIdentifier)
+            String roleName = trimmed.toLowerCase();
+            if ("admin".equals(roleName)) {
+                return vaiTroRepository.findByTenVaiTro("admin")
+                        .orElseThrow(() -> new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Vai trò (Role) không tồn tại"));
+            }
+            if ("doctor".equals(roleName) || "bac_si".equals(roleName)) {
+                return vaiTroRepository.findByTenVaiTro("bac_si")
+                        .orElseThrow(() -> new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Vai trò (Role) không tồn tại"));
+            }
+            if ("nurse".equals(roleName) || "dieu_duong".equals(roleName)) {
+                return vaiTroRepository.findByTenVaiTro("dieu_duong")
+                        .orElseThrow(() -> new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Vai trò (Role) không tồn tại"));
+            }
+            if ("patient".equals(roleName) || "benh_nhan".equals(roleName)) {
+                return vaiTroRepository.findByTenVaiTro("benh_nhan")
+                        .orElseThrow(() -> new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Vai trò (Role) không tồn tại"));
+            }
+            return vaiTroRepository.findByTenVaiTro(roleName)
                     .orElseThrow(() -> new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Vai trò (Role) không tồn tại"));
         }
     }
 
-    private String resolveRoleIdString(User user) {
-        Integer roleId = user.getEffectiveRoleId();
-        return roleId != null ? String.valueOf(roleId) : "2";
-    }
-
-    private String formatDateTime(LocalDateTime dateTime) {
+    private String formatOffsetDateTime(OffsetDateTime dateTime) {
         return dateTime != null ? dateTime.format(DATE_TIME_FORMATTER) : null;
     }
 }
