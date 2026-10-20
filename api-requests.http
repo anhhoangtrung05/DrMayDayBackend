@@ -1,0 +1,151 @@
+### =====================================================================
+### DRMAYDAY BACKEND - HTTP REQUEST TEST SUITE (APIs 7 - 12)
+### Sử dụng trên IntelliJ IDEA hoặc VS Code (REST Client extension)
+### =====================================================================
+
+@baseUrl = http://localhost:8080
+
+### ---------------------------------------------------------------------
+### 0. BƯỚC CHUẨN BỊ: SINH TOKEN TEST DEV LOCAL
+### ---------------------------------------------------------------------
+
+### 0.1 Sinh Admin JWT Token
+# @name getAdminToken
+POST {{baseUrl}}/api/v1/auth/dev-token?userId=1&phone=0900000001&role=admin
+
+### Lưu adminToken từ response trên vào biến
+@adminToken = {{getAdminToken.response.body.data.token}}
+
+
+### 0.2 Sinh Patient (Bệnh nhân) JWT Token
+# @name getPatientToken
+POST {{baseUrl}}/api/v1/auth/dev-token?userId=2&phone=0912345678&role=patient
+
+### Lưu patientToken từ response trên vào biến
+@patientToken = {{getPatientToken.response.body.data.token}}
+
+
+### =====================================================================
+### PHẦN 1: XÁC THỰC & HỒ SƠ BỆNH NHÂN (APIs 7 & 8)
+### =====================================================================
+
+### API 7: PROFILE_GET - Lấy chi tiết hồ sơ bệnh nhân đang đăng nhập (200 OK)
+GET {{baseUrl}}/api/v1/profile
+Authorization: Bearer {{patientToken}}
+
+### API 7: PROFILE_GET - Lỗi chưa đăng nhập (401 Unauthorized - Mã 3003)
+GET {{baseUrl}}/api/v1/profile
+
+### API 8: PROFILE_PUT - Bệnh nhân cập nhật hồ sơ cá nhân (200 OK)
+PUT {{baseUrl}}/api/v1/profile
+Authorization: Bearer {{patientToken}}
+Content-Type: application/json; charset=utf-8
+
+{
+  "full_name": "Nguyễn Văn Bệnh Nhân Cập Nhật",
+  "gender": "Nam",
+  "year_of_birth": 1996,
+  "address": "Số 1 Đại Cồ Việt, Hai Bà Trưng, Hà Nội",
+  "ethnic": "Kinh",
+  "occupation": "Hoc sinh - Sinh vien",
+  "bhyt_code": "GD4010123456789"
+}
+
+### API 8: PROFILE_PUT - Lỗi năm sinh không hợp lệ (400 Bad Request - Mã 2003)
+PUT {{baseUrl}}/api/v1/profile
+Authorization: Bearer {{patientToken}}
+Content-Type: application/json
+
+{
+  "year_of_birth": 1850
+}
+
+
+### =====================================================================
+### PHẦN 2: QUẢN TRỊ NGƯỜI DÙNG DÀNH CHO ADMIN (APIs 9 - 12)
+### =====================================================================
+
+### API 9: admin02 / get_list_users - Admin lấy danh sách người dùng phân trang (200 OK)
+GET {{baseUrl}}/api/v1/admin/users?page=1&limit=10
+Authorization: Bearer {{adminToken}}
+
+### API 9: admin02 / get_list_users - Người dùng không phải Admin bị chặn (403 Forbidden - Mã 3102)
+GET {{baseUrl}}/api/v1/admin/users?page=1&limit=10
+Authorization: Bearer {{patientToken}}
+
+### API 10: admin03 / get_user_details - Lấy chi tiết người dùng theo ID (200 OK)
+GET {{baseUrl}}/api/v1/admin/users/1
+Authorization: Bearer {{adminToken}}
+
+### API 10: admin03 / get_user_details - ID không tồn tại (404 Not Found - Mã 3007)
+GET {{baseUrl}}/api/v1/admin/users/999999
+Authorization: Bearer {{adminToken}}
+
+### API 11: admin01 / create_user - Admin tạo mới người dùng (201 Created - Mã 1001)
+POST {{baseUrl}}/api/v1/admin/users
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "full_name": "Bác sĩ Nguyễn Văn C",
+  "phone": "0988776655",
+  "password": "Password123@",
+  "role_id": "2",
+  "is_active": "1"
+}
+
+### API 11: admin01 / create_user - Lỗi số điện thoại đã tồn tại (409 Conflict - Mã 3006)
+POST {{baseUrl}}/api/v1/admin/users
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "full_name": "Người Trùng Số",
+  "phone": "0988776655",
+  "password": "Password123@",
+  "role_id": "2",
+  "is_active": "1"
+}
+
+### API 11: admin01 / create_user - Lỗi thiếu trường bắt buộc (400 Bad Request - Mã 2001)
+POST {{baseUrl}}/api/v1/admin/users
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "full_name": "",
+  "phone": "",
+  "password": "",
+  "role_id": ""
+}
+
+### API 11: admin01 / create_user - Lỗi định dạng số điện thoại sai chuẩn (400 Bad Request - Mã 2004)
+POST {{baseUrl}}/api/v1/admin/users
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "full_name": "Người Sai Phone",
+  "phone": "0123",
+  "password": "Password123@",
+  "role_id": "2"
+}
+
+### API 12: admin04 / edit_user - Chỉnh sửa thông tin người dùng (200 OK - Mã 1000)
+PUT {{baseUrl}}/api/v1/admin/users/1
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "full_name": "Quản Trị Viên Hệ Thống Mới",
+  "is_active": "1"
+}
+
+### API 12: admin04 / edit_user - Chỉnh sửa user không tồn tại (404 Not Found - Mã 3007)
+PUT {{baseUrl}}/api/v1/admin/users/999999
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "full_name": "Không Tồn Tại"
+}

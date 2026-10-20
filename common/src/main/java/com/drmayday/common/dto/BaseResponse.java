@@ -6,6 +6,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * BaseResponse chuẩn hóa dữ liệu trả về cho tất cả các APIs trong hệ thống DrMayDay.
+ */
 @Data
 @Builder
 @NoArgsConstructor
@@ -36,9 +39,29 @@ public class BaseResponse<T> {
                 .build();
     }
 
-    public static <T> BaseResponse<T> ok(String message, T data) {
+    public static <T> BaseResponse<T> success(T data) {
+        return ok(data);
+    }
+
+    public static <T> BaseResponse<T> success(String message, T data) {
         return BaseResponse.<T>builder()
                 .code("1000")
+                .message(message)
+                .data(data)
+                .build();
+    }
+
+    public static <T> BaseResponse<T> created(T data) {
+        return BaseResponse.<T>builder()
+                .code("1001")
+                .message("Created successfully")
+                .data(data)
+                .build();
+    }
+
+    public static <T> BaseResponse<T> created(String message, T data) {
+        return BaseResponse.<T>builder()
+                .code("1001")
                 .message(message)
                 .data(data)
                 .build();

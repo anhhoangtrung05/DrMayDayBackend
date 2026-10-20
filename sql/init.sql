@@ -797,3 +797,18 @@ INSERT INTO permissions (name, description) VALUES
 
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.role_id, p.permission_id FROM roles r, permissions p WHERE r.name = 'admin';
+
+-- =====================================================================
+-- SEED TAI KHOAN MAU DUNG CHO KIEM THU DEV LOCAL
+-- =====================================================================
+-- 1. Admin: SĐT 0900000001 (Password: Admin@123)
+-- 2. Bệnh nhân mẫu: SĐT 0912345678 (Password: Patient@123)
+INSERT INTO users (user_id, ho_ten, so_dien_thoai, password_hash, gioi_tinh, is_active) VALUES
+    (1, 'System Administrator', '0900000001', '$2a$10$7EqJtq98hPqEX7fNZaFWoO.KjE/e7X3zF6K3l6/2U9Y8t6x9H7tO.', 'Nam', 1),
+    (2, 'Nguyễn Văn Bệnh Nhân', '0912345678', '$2a$10$7EqJtq98hPqEX7fNZaFWoO.KjE/e7X3zF6K3l6/2U9Y8t6x9H7tO.', 'Nam', 1);
+
+INSERT INTO staffs (user_id, role_id) VALUES
+    (1, 1);
+
+INSERT INTO patients (user_id, role_id, ngay_sinh, nghe_nghiep, dan_toc, dia_chi_so_nha_thon_pho, bhyt_so_the) VALUES
+    (2, 2, '1995-06-15', 'Hoc sinh - Sinh vien', 'Kinh', 'Số 1 Đại Cồ Việt, Hai Bà Trưng, Hà Nội', 'GD4010123456789');

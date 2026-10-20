@@ -1,0 +1,153 @@
+package com.drmayday.authrbac.dto;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+/**
+ * DTO chi tiết thông tin người dùng cho Admin (API 10 get_user_details).
+ */
+public class UserDetailsResponse {
+
+    @JsonProperty("user_id")
+    private String userId;
+
+    @JsonProperty("full_name")
+    private String fullName;
+
+    @JsonProperty("phone")
+    private String phone;
+
+    @JsonProperty("role_id")
+    private String roleId;
+
+    @JsonProperty("is_active")
+    private String isActive;
+
+    @JsonProperty("created_at")
+    private String createdAt;
+
+    @JsonProperty("updated_at")
+    private String updatedAt;
+
+    public UserDetailsResponse() {
+    }
+
+    public UserDetailsResponse(String userId, String fullName, String phone, String roleId,
+                               String isActive, String createdAt, String updatedAt) {
+        this.userId = userId;
+        this.fullName = fullName;
+        this.phone = phone;
+        this.roleId = roleId;
+        this.isActive = isActive;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
+
+    public String getFullName() {
+        return fullName;
+    }
+
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+
+    public String getRoleId() {
+        return roleId;
+    }
+
+    public void setRoleId(String roleId) {
+        this.roleId = roleId;
+    }
+
+    public String getIsActive() {
+        return isActive;
+    }
+
+    public void setIsActive(String isActive) {
+        this.isActive = isActive;
+    }
+
+    public String getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(String createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public String getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(String updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder {
+        private String userId;
+        private String fullName;
+        private String phone;
+        private String roleId;
+        private String isActive;
+        private String createdAt;
+        private String updatedAt;
+
+        public Builder userId(String userId) {
+            this.userId = userId;
+            return this;
+        }
+
+        public Builder fullName(String fullName) {
+            this.fullName = fullName;
+            return this;
+        }
+
+        public Builder phone(String phone) {
+            this.phone = phone;
+            return this;
+        }
+
+        public Builder roleId(String roleId) {
+            this.roleId = roleId;
+            return this;
+        }
+
+        public Builder isActive(String isActive) {
+            this.isActive = isActive;
+            return this;
+        }
+
+        public Builder createdAt(String createdAt) {
+            this.createdAt = createdAt;
+            return this;
+        }
+
+        public Builder updatedAt(String updatedAt) {
+            this.updatedAt = updatedAt;
+            return this;
+        }
+
+        public UserDetailsResponse build() {
+            return new UserDetailsResponse(userId, fullName, phone, roleId, isActive, createdAt, updatedAt);
+        }
+    }
+}
