@@ -1,9 +1,10 @@
-package com.example.drmayday.features.authorization.security.impl;
+package com.example.drmayday.features.security.impl;
 
-import com.example.drmayday.features.authorization.security.JwtTokenProvider;
 import com.example.drmayday.repository.TokenBlacklistRepository;
 import com.example.drmayday.common.exception.AppException;
 import com.example.drmayday.common.exception.ErrorCode;
+import com.example.drmayday.features.security.JwtTokenProvider;
+
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;

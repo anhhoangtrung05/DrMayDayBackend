@@ -1,4 +1,4 @@
-package com.example.drmayday.features.authorization.security;
+package com.example.drmayday.features.security;
 
 import com.example.drmayday.common.dto.BaseResponse;
 import com.example.drmayday.common.exception.ErrorCode;

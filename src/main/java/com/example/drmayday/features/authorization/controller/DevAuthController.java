@@ -1,7 +1,8 @@
 package com.example.drmayday.features.authorization.controller;
 
-import com.example.drmayday.features.authorization.security.JwtTokenProvider;
 import com.example.drmayday.common.dto.BaseResponse;
+import com.example.drmayday.features.security.JwtTokenProvider;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 

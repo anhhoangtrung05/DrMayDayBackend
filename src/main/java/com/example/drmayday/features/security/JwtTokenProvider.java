@@ -1,4 +1,4 @@
-package com.example.drmayday.features.authorization.security;
+package com.example.drmayday.features.security;
 
 import io.jsonwebtoken.Claims;
 
