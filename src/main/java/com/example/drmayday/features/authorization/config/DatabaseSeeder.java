@@ -59,6 +59,8 @@ public class DatabaseSeeder implements CommandLineRunner {
     public void run(String... args) {
         try {
             initTokenBlacklistTable();
+            initUserTokenVersionsTable();
+            initPasswordResetTokensTable();
             Branch defaultBranch = ensureDefaultBranch();
             ensureRoles();
             ensureAdminAccount(defaultBranch);
@@ -83,6 +85,37 @@ public class DatabaseSeeder implements CommandLineRunner {
             );
         } catch (Exception e) {
             log.debug("Khởi tạo bảng token_blacklist: {}", e.getMessage());
+        }
+    }
+
+    private void initPasswordResetTokensTable() {
+        try {
+            jdbcTemplate.execute(
+                    "CREATE TABLE IF NOT EXISTS password_reset_tokens (" +
+                    "password_reset_token_id BIGSERIAL PRIMARY KEY, " +
+                    "user_id BIGINT NOT NULL UNIQUE, " +
+                    "token_hash VARCHAR(100) NOT NULL, " +
+                    "expires_at TIMESTAMP NOT NULL, " +
+                    "created_at TIMESTAMP NOT NULL, " +
+                    "updated_at TIMESTAMP NOT NULL" +
+                    ")"
+            );
+        } catch (Exception ex) {
+            log.error("Không thể khởi tạo bảng password_reset_tokens", ex);
+        }
+    }
+
+    private void initUserTokenVersionsTable() {
+        try {
+            jdbcTemplate.execute(
+                    "CREATE TABLE IF NOT EXISTS user_token_versions (" +
+                    "user_id BIGINT PRIMARY KEY, " +
+                    "token_version BIGINT NOT NULL DEFAULT 0, " +
+                    "updated_at TIMESTAMP NOT NULL" +
+                    ")"
+            );
+        } catch (Exception ex) {
+            log.error("Không thể khởi tạo bảng user_token_versions", ex);
         }
     }
 

@@ -2,6 +2,7 @@ package com.example.drmayday;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 import java.io.BufferedReader;
@@ -10,6 +11,7 @@ import java.io.FileReader;
 import java.net.URI;
 
 @SpringBootApplication
+@ConfigurationPropertiesScan
 @EnableJpaRepositories(basePackages = "com.example.drmayday")
 public class DrMayDayApplication {
 

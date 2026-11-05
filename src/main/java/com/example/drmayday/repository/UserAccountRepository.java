@@ -13,6 +13,9 @@ import java.util.Optional;
 public interface UserAccountRepository extends JpaRepository<UserAccount, Long> {
     Optional<UserAccount> findByUsername(String username);
 
+    @EntityGraph(attributePaths = {"person", "role"})
+    Optional<UserAccount> findByPerson_PhoneNumber(String phoneNumber);
+
     boolean existsByUsername(String username);
 
     @Override
