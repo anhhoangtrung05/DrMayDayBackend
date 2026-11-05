@@ -2,13 +2,13 @@ package com.example.drmayday.features.authorization.service.impl;
 
 import com.example.drmayday.features.authorization.dto.PatientProfileResponse;
 import com.example.drmayday.features.authorization.dto.UpdateProfileRequest;
-import com.example.drmayday.entity.BenhNhan;
-import com.example.drmayday.entity.Nguoi;
-import com.example.drmayday.entity.TaiKhoan;
+import com.example.drmayday.entity.Patient;
+import com.example.drmayday.entity.Person;
+import com.example.drmayday.entity.UserAccount;
 import com.example.drmayday.features.authorization.service.ProfileService;
-import com.example.drmayday.repository.BenhNhanRepository;
-import com.example.drmayday.repository.NguoiRepository;
-import com.example.drmayday.repository.TaiKhoanRepository;
+import com.example.drmayday.repository.PatientRepository;
+import com.example.drmayday.repository.PersonRepository;
+import com.example.drmayday.repository.UserAccountRepository;
 import com.example.drmayday.common.exception.AppException;
 import com.example.drmayday.common.exception.ErrorCode;
 import org.slf4j.Logger;
@@ -26,13 +26,13 @@ public class ProfileServiceImpl implements ProfileService {
 
     private static final Logger log = LoggerFactory.getLogger(ProfileServiceImpl.class);
 
-    private final TaiKhoanRepository taiKhoanRepository;
-    private final NguoiRepository nguoiRepository;
-    private final BenhNhanRepository benhNhanRepository;
+    private final UserAccountRepository taiKhoanRepository;
+    private final PersonRepository nguoiRepository;
+    private final PatientRepository benhNhanRepository;
 
-    public ProfileServiceImpl(TaiKhoanRepository taiKhoanRepository,
-                              NguoiRepository nguoiRepository,
-                              BenhNhanRepository benhNhanRepository) {
+    public ProfileServiceImpl(UserAccountRepository taiKhoanRepository,
+                              PersonRepository nguoiRepository,
+                              PatientRepository benhNhanRepository) {
         this.taiKhoanRepository = taiKhoanRepository;
         this.nguoiRepository = nguoiRepository;
         this.benhNhanRepository = benhNhanRepository;
@@ -42,13 +42,13 @@ public class ProfileServiceImpl implements ProfileService {
     @Transactional(readOnly = true)
     public PatientProfileResponse getProfile(Long userId) {
         log.info("Xử lý lấy thông tin hồ sơ bệnh nhân cho user_id={}", userId);
-        TaiKhoan taiKhoan = null;
-        Nguoi nguoi = null;
+        UserAccount taiKhoan = null;
+        Person nguoi = null;
 
         if (userId != null) {
             taiKhoan = taiKhoanRepository.findById(userId).orElse(null);
             if (taiKhoan != null) {
-                nguoi = taiKhoan.getNguoi();
+                nguoi = taiKhoan.getPerson();
             } else {
                 nguoi = nguoiRepository.findById(userId).orElse(null);
             }
@@ -58,11 +58,11 @@ public class ProfileServiceImpl implements ProfileService {
             try {
                 String phone = com.example.drmayday.common.security.SecurityUtils.getCurrentUserPhone();
                 if (phone != null && !phone.isBlank()) {
-                    taiKhoan = taiKhoanRepository.findByTenDangNhap(phone).orElse(null);
+                    taiKhoan = taiKhoanRepository.findByUsername(phone).orElse(null);
                     if (taiKhoan != null) {
-                        nguoi = taiKhoan.getNguoi();
+                        nguoi = taiKhoan.getPerson();
                     } else {
-                        nguoi = nguoiRepository.findBySoDienThoai(phone).orElse(null);
+                        nguoi = nguoiRepository.findByPhoneNumber(phone).orElse(null);
                     }
                 }
             } catch (Exception ignored) {
@@ -73,8 +73,8 @@ public class ProfileServiceImpl implements ProfileService {
             throw new AppException(ErrorCode.USER_ACCOUNT_NOT_FOUND);
         }
 
-        Long personId = nguoi != null ? nguoi.getMaNguoi() : (taiKhoan != null && taiKhoan.getNguoi() != null ? taiKhoan.getNguoi().getMaNguoi() : null);
-        BenhNhan benhNhan = personId != null ? benhNhanRepository.findById(personId).orElse(null) : null;
+        Long personId = nguoi != null ? nguoi.getPersonId() : (taiKhoan != null && taiKhoan.getPerson() != null ? taiKhoan.getPerson().getPersonId() : null);
+        Patient benhNhan = personId != null ? benhNhanRepository.findById(personId).orElse(null) : null;
 
         return mapToProfileResponse(taiKhoan, nguoi, benhNhan);
     }
@@ -83,13 +83,13 @@ public class ProfileServiceImpl implements ProfileService {
     @Transactional
     public PatientProfileResponse updateProfile(Long userId, UpdateProfileRequest request) {
         log.info("Xử lý cập nhật hồ sơ bệnh nhân cho user_id={}", userId);
-        TaiKhoan taiKhoan = null;
-        Nguoi nguoi = null;
+        UserAccount taiKhoan = null;
+        Person nguoi = null;
 
         if (userId != null) {
             taiKhoan = taiKhoanRepository.findById(userId).orElse(null);
             if (taiKhoan != null) {
-                nguoi = taiKhoan.getNguoi();
+                nguoi = taiKhoan.getPerson();
             } else {
                 nguoi = nguoiRepository.findById(userId).orElse(null);
             }
@@ -99,11 +99,11 @@ public class ProfileServiceImpl implements ProfileService {
             try {
                 String phone = com.example.drmayday.common.security.SecurityUtils.getCurrentUserPhone();
                 if (phone != null && !phone.isBlank()) {
-                    taiKhoan = taiKhoanRepository.findByTenDangNhap(phone).orElse(null);
+                    taiKhoan = taiKhoanRepository.findByUsername(phone).orElse(null);
                     if (taiKhoan != null) {
-                        nguoi = taiKhoan.getNguoi();
+                        nguoi = taiKhoan.getPerson();
                     } else {
-                        nguoi = nguoiRepository.findBySoDienThoai(phone).orElse(null);
+                        nguoi = nguoiRepository.findByPhoneNumber(phone).orElse(null);
                     }
                 }
             } catch (Exception ignored) {
@@ -116,16 +116,16 @@ public class ProfileServiceImpl implements ProfileService {
 
         // Cập nhật thông tin trên bảng nguoi
         if (request.getFullName() != null && !request.getFullName().trim().isEmpty()) {
-            nguoi.setHoTen(request.getFullName().trim());
+            nguoi.setFullName(request.getFullName().trim());
         }
 
         if (request.getGender() != null) {
             String gender = request.getGender().trim();
-            nguoi.setGioiTinh(normalizeGender(gender));
+            nguoi.setGender(normalizeGender(gender));
         }
 
         if (request.getAddress() != null) {
-            nguoi.setDiaChiSoNhaThonPho(request.getAddress().trim());
+            nguoi.setStreetAddress(request.getAddress().trim());
         }
 
         if (request.getYearOfBirth() != null) {
@@ -133,39 +133,38 @@ public class ProfileServiceImpl implements ProfileService {
             if (request.getYearOfBirth() < 1900 || request.getYearOfBirth() > currentYear) {
                 throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Năm sinh không hợp lệ");
             }
-            if (nguoi.getNgaySinh() != null) {
-                nguoi.setNgaySinh(nguoi.getNgaySinh().withYear(request.getYearOfBirth()));
+            if (nguoi.getBirthDate() != null) {
+                nguoi.setBirthDate(nguoi.getBirthDate().withYear(request.getYearOfBirth()));
             } else {
-                nguoi.setNgaySinh(LocalDate.of(request.getYearOfBirth(), 1, 1));
+                nguoi.setBirthDate(LocalDate.of(request.getYearOfBirth(), 1, 1));
             }
         }
 
         OffsetDateTime nowNguoi = OffsetDateTime.now();
-        if (nguoi.getThoiDiemTao() != null && nowNguoi.isBefore(nguoi.getThoiDiemTao())) {
-            nowNguoi = nguoi.getThoiDiemTao();
+        if (nguoi.getCreatedAt() != null && nowNguoi.isBefore(nguoi.getCreatedAt())) {
+            nowNguoi = nguoi.getCreatedAt();
         }
-        nguoi.setThoiDiemCapNhat(nowNguoi);
+        nguoi.setUpdatedAt(nowNguoi);
         nguoi = nguoiRepository.save(nguoi);
 
         // Cập nhật thông tin trên bảng benhnhan
-        BenhNhan benhNhan = benhNhanRepository.findById(nguoi.getMaNguoi()).orElse(null);
+        Patient benhNhan = benhNhanRepository.findById(nguoi.getPersonId()).orElse(null);
         if (benhNhan == null) {
-            benhNhan = BenhNhan.builder()
-                    .maBenhNhan(nguoi.getMaNguoi())
-                    .nguoi(nguoi)
+            benhNhan = Patient.builder()
+                    .patientId(nguoi.getPersonId())
                     .build();
         }
 
         if (request.getEthnic() != null) {
-            benhNhan.setDanToc(request.getEthnic().trim());
+            benhNhan.setEthnicity(request.getEthnic().trim());
         }
 
         if (request.getOccupation() != null) {
-            benhNhan.setNgheNghiep(normalizeOccupation(request.getOccupation()));
+            benhNhan.setOccupation(normalizeOccupation(request.getOccupation()));
         }
 
         if (request.getBhytCode() != null) {
-            benhNhan.setBhytSoThe(request.getBhytCode().trim());
+            benhNhan.setHealthInsuranceNumber(request.getBhytCode().trim());
         }
 
         benhNhan = benhNhanRepository.save(benhNhan);
@@ -173,16 +172,16 @@ public class ProfileServiceImpl implements ProfileService {
         return mapToProfileResponse(taiKhoan, nguoi, benhNhan);
     }
 
-    private PatientProfileResponse mapToProfileResponse(TaiKhoan taiKhoan, Nguoi nguoi, BenhNhan benhNhan) {
-        Long userId = taiKhoan != null ? taiKhoan.getMaTaiKhoan() : (nguoi != null ? nguoi.getMaNguoi() : null);
-        String fullName = nguoi != null ? nguoi.getHoTen() : null;
-        String phone = nguoi != null ? nguoi.getSoDienThoai() : (taiKhoan != null ? taiKhoan.getTenDangNhap() : null);
-        String gender = nguoi != null ? nguoi.getGioiTinh() : null;
-        Integer yearOfBirth = (nguoi != null && nguoi.getNgaySinh() != null) ? nguoi.getNgaySinh().getYear() : null;
-        String address = nguoi != null ? nguoi.getDiaChiSoNhaThonPho() : null;
-        String ethnic = benhNhan != null ? benhNhan.getDanToc() : null;
-        String occupation = benhNhan != null ? benhNhan.getNgheNghiep() : null;
-        String bhytCode = benhNhan != null ? benhNhan.getBhytSoThe() : null;
+    private PatientProfileResponse mapToProfileResponse(UserAccount taiKhoan, Person nguoi, Patient benhNhan) {
+        Long userId = taiKhoan != null ? taiKhoan.getAccountId() : (nguoi != null ? nguoi.getPersonId() : null);
+        String fullName = nguoi != null ? nguoi.getFullName() : null;
+        String phone = nguoi != null ? nguoi.getPhoneNumber() : (taiKhoan != null ? taiKhoan.getUsername() : null);
+        String gender = nguoi != null ? nguoi.getGender() : null;
+        Integer yearOfBirth = (nguoi != null && nguoi.getBirthDate() != null) ? nguoi.getBirthDate().getYear() : null;
+        String address = nguoi != null ? nguoi.getStreetAddress() : null;
+        String ethnic = benhNhan != null ? benhNhan.getEthnicity() : null;
+        String occupation = benhNhan != null ? benhNhan.getOccupation() : null;
+        String bhytCode = benhNhan != null ? benhNhan.getHealthInsuranceNumber() : null;
 
         return PatientProfileResponse.builder()
                 .userId(userId)
