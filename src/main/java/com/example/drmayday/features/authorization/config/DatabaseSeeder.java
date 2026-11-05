@@ -4,12 +4,14 @@ import com.example.drmayday.entity.BenhNhan;
 import com.example.drmayday.entity.ChiNhanh;
 import com.example.drmayday.entity.Nguoi;
 import com.example.drmayday.entity.NhanVien;
+import com.example.drmayday.entity.QuyenHan;
 import com.example.drmayday.entity.TaiKhoan;
 import com.example.drmayday.entity.VaiTro;
 import com.example.drmayday.repository.BenhNhanRepository;
 import com.example.drmayday.repository.ChiNhanhRepository;
 import com.example.drmayday.repository.NguoiRepository;
 import com.example.drmayday.repository.NhanVienRepository;
+import com.example.drmayday.repository.QuyenHanRepository;
 import com.example.drmayday.repository.TaiKhoanRepository;
 import com.example.drmayday.repository.VaiTroRepository;
 
@@ -35,6 +37,7 @@ public class DatabaseSeeder implements CommandLineRunner {
     private final BenhNhanRepository benhNhanRepository;
     private final NhanVienRepository nhanVienRepository;
     private final TaiKhoanRepository taiKhoanRepository;
+    private final QuyenHanRepository quyenHanRepository;
     private final PasswordEncoder passwordEncoder;
 
     public DatabaseSeeder(JdbcTemplate jdbcTemplate,
@@ -44,6 +47,7 @@ public class DatabaseSeeder implements CommandLineRunner {
                           BenhNhanRepository benhNhanRepository,
                           NhanVienRepository nhanVienRepository,
                           TaiKhoanRepository taiKhoanRepository,
+                          QuyenHanRepository quyenHanRepository,
                           PasswordEncoder passwordEncoder) {
         this.jdbcTemplate = jdbcTemplate;
         this.chiNhanhRepository = chiNhanhRepository;
@@ -52,6 +56,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         this.benhNhanRepository = benhNhanRepository;
         this.nhanVienRepository = nhanVienRepository;
         this.taiKhoanRepository = taiKhoanRepository;
+        this.quyenHanRepository = quyenHanRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -61,6 +66,7 @@ public class DatabaseSeeder implements CommandLineRunner {
             initTokenBlacklistTable();
             ChiNhanh defaultBranch = ensureDefaultBranch();
             ensureRoles();
+            ensurePermissions();
             ensureAdminAccount(defaultBranch);
             ensurePatientAccount();
             log.info("DatabaseSeeder hoàn tất khởi tạo dữ liệu mẫu thành công.");
@@ -109,6 +115,23 @@ public class DatabaseSeeder implements CommandLineRunner {
         }
         if (!vaiTroRepository.existsByTenVaiTro("benh_nhan")) {
             vaiTroRepository.save(new VaiTro(4L, "benh_nhan", "Bệnh nhân", "Bệnh nhân sử dụng ứng dụng", OffsetDateTime.now(), OffsetDateTime.now()));
+        }
+    }
+
+    private void ensurePermissions() {
+        if (!quyenHanRepository.existsByTenQuyenHan("manage_users_v1")) {
+            quyenHanRepository.save(QuyenHan.builder()
+                    .tenQuyenHan("manage_users_v1")
+                    .nhomQuyen("USER_MANAGEMENT")
+                    .moTa("Quản lý người dùng hệ thống")
+                    .build());
+        }
+        if (!quyenHanRepository.existsByTenQuyenHan("manage_clinical")) {
+            quyenHanRepository.save(QuyenHan.builder()
+                    .tenQuyenHan("manage_clinical")
+                    .nhomQuyen("CLINICAL")
+                    .moTa("Quản lý hồ sơ bệnh án")
+                    .build());
         }
     }
 
