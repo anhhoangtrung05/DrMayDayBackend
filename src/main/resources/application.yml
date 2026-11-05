@@ -6,7 +6,7 @@ spring:
     name: drmayday-backend
 
   datasource:
-    url: ${SPRING_DATASOURCE_URL:${DB_URL:jdbc:postgresql://localhost:5432/drmayday}}
+    url: ${SPRING_DATASOURCE_URL:${DB_URL:jdbc:postgresql://localhost:5433/drmayday}}
     username: ${SPRING_DATASOURCE_USERNAME:${DB_USER:${DB_USERNAME:postgres}}}
     password: ${SPRING_DATASOURCE_PASSWORD:${DB_PASSWORD:postgres}}
     driver-class-name: org.postgresql.Driver

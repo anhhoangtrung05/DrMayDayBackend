@@ -8,4 +8,6 @@ import java.util.Optional;
 public interface NhanVienRepository extends JpaRepository<NhanVien, Long> {
 
     Optional<NhanVien> findByMaNhanVien(Long maNhanVien);
+
+    boolean existsByMaChiNhanh(Long maChiNhanh);
 }

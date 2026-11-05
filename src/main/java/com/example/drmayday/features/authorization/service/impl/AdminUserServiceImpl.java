@@ -97,7 +97,7 @@ public class AdminUserServiceImpl implements AdminUserService {
     @Transactional
     public UserResponse createUser(CreateUserRequest request) {
         log.info("Admin tạo mới người dùng: phone={}, role_id={}", request.getPhone(), request.getRoleId());
-        String phone = request.getPhone().trim();
+        String phone = normalizePhone(request.getPhone());
 
         if (taiKhoanRepository.existsByTenDangNhap(phone) || nguoiRepository.existsBySoDienThoai(phone)) {
             throw new AppException(ErrorCode.USER_PHONE_ALREADY_EXISTS);
@@ -242,6 +242,15 @@ public class AdminUserServiceImpl implements AdminUserService {
                 .createdAt(formatOffsetDateTime(taiKhoan.getThoiDiemTao()))
                 .updatedAt(formatOffsetDateTime(taiKhoan.getThoiDiemCapNhat()))
                 .build();
+    }
+
+    /**
+     * Chuẩn hóa +84xxxxxxxxx về 0xxxxxxxxx, vì nguoi.so_dien_thoai chỉ nhận đúng 10 chữ số
+     * và một số điện thoại chỉ được ứng với một tài khoản.
+     */
+    private String normalizePhone(String phone) {
+        String trimmed = phone.trim();
+        return trimmed.startsWith("+84") ? "0" + trimmed.substring(3) : trimmed;
     }
 
     private Long parseUserId(String id) {
