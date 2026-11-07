@@ -188,3 +188,53 @@ Content-Type: application/json
 {
   "full_name": "Không Tồn Tại"
 }
+
+
+### =====================================================================
+### PHẦN 3: QUẢN TRỊ QUYỀN HẠN & VAI TRÒ (APIs 19 - 23)
+### =====================================================================
+
+### API 19: perm03 / edit_permission - Chỉnh sửa thông tin quyền hạn (200 OK - Mã 1000)
+PUT {{baseUrl}}/api/v1/permissions/1
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "permission_name": "manage_users_v2",
+  "description": "Quản lý người dùng phiên bản 2",
+  "group_name": "USER_MANAGEMENT"
+}
+
+### API 19: perm03 / edit_permission - Quyền hạn không tồn tại (404 Not Found - Mã 2006)
+PUT {{baseUrl}}/api/v1/permissions/999999
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "permission_name": "unknown_permission"
+}
+
+### API 20: perm04 / delete_permission - Xóa quyền hạn khỏi hệ thống (200 OK - Mã 1000)
+DELETE {{baseUrl}}/api/v1/permissions/99
+Authorization: Bearer {{adminToken}}
+
+### API 20: perm04 / delete_permission - Quyền hạn không tồn tại (404 Not Found - Mã 2006)
+DELETE {{baseUrl}}/api/v1/permissions/999999
+Authorization: Bearer {{adminToken}}
+
+### API 21: roleperm01 / set_role_permissions - Gán danh sách quyền hạn cho vai trò (200 OK - Mã 1000)
+POST {{baseUrl}}/api/v1/roles/1/permissions
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "permission_ids": ["1", "2"]
+}
+
+### API 22: roleperm02 / get_role_permissions - Lấy danh sách quyền hạn của vai trò (200 OK - Mã 1000)
+GET {{baseUrl}}/api/v1/roles/1/permissions
+Authorization: Bearer {{adminToken}}
+
+### API 23: roleperm03 / delete_role_permissions - Thu hồi một quyền hạn khỏi vai trò (200 OK - Mã 1000)
+DELETE {{baseUrl}}/api/v1/roles/1/permissions/2
+Authorization: Bearer {{adminToken}}

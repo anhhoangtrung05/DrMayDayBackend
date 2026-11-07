@@ -6,12 +6,14 @@ import com.example.drmayday.entity.Person;
 import com.example.drmayday.entity.Employee;
 import com.example.drmayday.entity.UserAccount;
 import com.example.drmayday.entity.Role;
+import com.example.drmayday.entity.Permission;
 import com.example.drmayday.repository.PatientRepository;
 import com.example.drmayday.repository.BranchRepository;
 import com.example.drmayday.repository.PersonRepository;
 import com.example.drmayday.repository.EmployeeRepository;
 import com.example.drmayday.repository.UserAccountRepository;
 import com.example.drmayday.repository.RoleRepository;
+import com.example.drmayday.repository.PermissionRepository;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,6 +24,8 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Component
 public class DatabaseSeeder implements CommandLineRunner {
@@ -35,6 +39,7 @@ public class DatabaseSeeder implements CommandLineRunner {
     private final PatientRepository benhNhanRepository;
     private final EmployeeRepository nhanVienRepository;
     private final UserAccountRepository taiKhoanRepository;
+    private final PermissionRepository quyenHanRepository;
     private final PasswordEncoder passwordEncoder;
 
     public DatabaseSeeder(JdbcTemplate jdbcTemplate,
@@ -44,6 +49,7 @@ public class DatabaseSeeder implements CommandLineRunner {
                           PatientRepository benhNhanRepository,
                           EmployeeRepository nhanVienRepository,
                           UserAccountRepository taiKhoanRepository,
+                          PermissionRepository quyenHanRepository,
                           PasswordEncoder passwordEncoder) {
         this.jdbcTemplate = jdbcTemplate;
         this.chiNhanhRepository = chiNhanhRepository;
@@ -52,6 +58,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         this.benhNhanRepository = benhNhanRepository;
         this.nhanVienRepository = nhanVienRepository;
         this.taiKhoanRepository = taiKhoanRepository;
+        this.quyenHanRepository = quyenHanRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -63,6 +70,7 @@ public class DatabaseSeeder implements CommandLineRunner {
             initPasswordResetTokensTable();
             Branch defaultBranch = ensureDefaultBranch();
             ensureRoles();
+            ensurePermissions();
             ensureAdminAccount(defaultBranch);
             ensurePatientAccount();
             log.info("DatabaseSeeder hoàn tất khởi tạo dữ liệu mẫu thành công.");
@@ -142,6 +150,31 @@ public class DatabaseSeeder implements CommandLineRunner {
         }
         if (!vaiTroRepository.existsByName("benh_nhan")) {
             vaiTroRepository.save(new Role(4L, "benh_nhan", "Bệnh nhân", "Bệnh nhân sử dụng ứng dụng", OffsetDateTime.now(), OffsetDateTime.now()));
+        }
+    }
+
+    private void ensurePermissions() {
+        Set<String> existingNames = quyenHanRepository.findAll().stream()
+                .map(Permission::getName)
+                .collect(Collectors.toSet());
+
+        if (!existingNames.contains("manage_users_v1")) {
+            quyenHanRepository.save(Permission.builder()
+                    .name("manage_users_v1")
+                    .permissionGroup("USER_MANAGEMENT")
+                    .description("Quản lý người dùng hệ thống")
+                    .createdAt(OffsetDateTime.now())
+                    .updatedAt(OffsetDateTime.now())
+                    .build());
+        }
+        if (!existingNames.contains("manage_clinical")) {
+            quyenHanRepository.save(Permission.builder()
+                    .name("manage_clinical")
+                    .permissionGroup("CLINICAL")
+                    .description("Quản lý hồ sơ bệnh án")
+                    .createdAt(OffsetDateTime.now())
+                    .updatedAt(OffsetDateTime.now())
+                    .build());
         }
     }
 

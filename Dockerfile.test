@@ -5,7 +5,7 @@
 # khong push len Git. File nay ho tro chay bo test local trong moi truong container dong nhat:
 # `docker build -f Dockerfile.test .`
 
-FROM maven:3.9-eclipse-temurin-25
+FROM maven:3.9-eclipse-temurin-17
 WORKDIR /workspace
 
 COPY pom.xml .

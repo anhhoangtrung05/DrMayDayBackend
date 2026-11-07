@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # ===== Stage 1: Build =====
-FROM maven:3.9-eclipse-temurin-25 AS build
+FROM maven:3.9-eclipse-temurin-17 AS build
 WORKDIR /workspace
 
 # Copy the root POM first to cache dependency downloads.
@@ -15,7 +15,7 @@ COPY src src
 RUN mvn -B -q clean package -DskipTests
 
 # ===== Stage 2: Runtime =====
-FROM eclipse-temurin:25-jre-alpine AS runtime
+FROM eclipse-temurin:17-jre-alpine AS runtime
 WORKDIR /app
 
 RUN addgroup -S drmayday && adduser -S drmayday -G drmayday
