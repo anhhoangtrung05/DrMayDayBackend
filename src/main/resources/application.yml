@@ -25,6 +25,16 @@ jwt:
   access-token-expiration-ms: ${JWT_ACCESS_EXP:3600000}
   refresh-token-expiration-ms: ${JWT_REFRESH_EXP:604800000}
 
+authentication:
+  password-reset-token-expiration-minutes: ${PASSWORD_RESET_TOKEN_EXPIRATION_MINUTES:5}
+
+speedsms:
+  api-url: ${SPEEDSMS_API_URL:https://api.speedsms.vn/index.php/sms/send}
+  api-token: ${SPEEDSMS_API_TOKEN:}
+  sms-type: ${SPEEDSMS_SMS_TYPE:4}
+  sender: ${SPEEDSMS_SENDER:}
+  password-reset-message: ${SPEEDSMS_PASSWORD_RESET_MESSAGE:Ma xac thuc DrMayDay cua ban la %s. Ma co hieu luc trong %d phut.}
+
 logging:
   level:
     "[com.example.drmayday]": ${LOG_LEVEL:INFO}
