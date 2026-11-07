@@ -3,6 +3,7 @@ package com.example.drmayday.features.security.impl;
 import com.example.drmayday.repository.TokenBlacklistRepository;
 import com.example.drmayday.common.exception.AppException;
 import com.example.drmayday.common.exception.ErrorCode;
+import com.example.drmayday.entity.TokenBlacklist;
 import com.example.drmayday.features.security.JwtTokenProvider;
 
 import io.jsonwebtoken.Claims;
@@ -16,11 +17,14 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Set;
@@ -38,7 +42,9 @@ public class JwtTokenProviderImpl implements JwtTokenProvider {
     private final TokenBlacklistRepository tokenBlacklistRepository;
     private final JdbcTemplate jdbcTemplate;
     private final Set<String> inMemoryBlacklist = ConcurrentHashMap.newKeySet();
+    private final ConcurrentHashMap<Long, Long> inMemoryTokenVersions = new ConcurrentHashMap<>();
     private volatile boolean blacklistTableExists = false;
+    private volatile boolean tokenVersionTableExists = false;
 
     public JwtTokenProviderImpl(
             @Value("${jwt.secret:default-secret-key-that-is-at-least-256-bits-long-for-hmac-sha-algorithm-safety}") String secret,
@@ -73,6 +79,11 @@ public class JwtTokenProviderImpl implements JwtTokenProvider {
                 } else {
                     log.info("Bảng token_blacklist chưa có trong CSDL. Hệ thống tự động kích hoạt in-memory blacklist.");
                 }
+                Boolean versionTableExists = jdbcTemplate.queryForObject(
+                        "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user_token_versions')",
+                        Boolean.class
+                );
+                this.tokenVersionTableExists = Boolean.TRUE.equals(versionTableExists);
             }
         } catch (Exception ex) {
             this.blacklistTableExists = false;
@@ -94,10 +105,59 @@ public class JwtTokenProviderImpl implements JwtTokenProvider {
                 .claim("phone", phone)
                 .claim("role", roleName)
                 .claim("role_name", roleName)
+                .claim("tokenVersion", getTokenVersion(userId))
                 .issuedAt(now)
                 .expiration(expiryDate)
                 .signWith(key)
                 .compact();
+    }
+
+    @Override
+    public void invalidateToken(String token) {
+        Claims claims = parseAndValidateClaims(token);
+        String jti = claims.getId();
+        Date expiration = claims.getExpiration();
+        Long userId = getUserIdFromClaims(claims);
+        if (jti == null || jti.isBlank() || expiration == null || userId == null) {
+            throw new AppException(ErrorCode.TOKEN_INVALID);
+        }
+
+        if (tokenBlacklistRepository != null) {
+            TokenBlacklist blacklistEntry = TokenBlacklist.builder()
+                    .jti(jti)
+                    .userId(userId)
+                    .expiresAt(LocalDateTime.ofInstant(expiration.toInstant(), ZoneId.systemDefault()))
+                    .build();
+            tokenBlacklistRepository.save(blacklistEntry);
+            blacklistTableExists = true;
+        }
+        blacklistToken(jti);
+    }
+
+    @Override
+    public void invalidateUserTokens(Long userId) {
+        if (userId == null) {
+            throw new AppException(ErrorCode.USER_NOT_AUTHENTICATED);
+        }
+
+        if (refreshTokenVersionTableAvailability()) {
+            jdbcTemplate.update(
+                    "INSERT INTO user_token_versions (user_id, token_version, updated_at) " +
+                            "VALUES (?, 1, CURRENT_TIMESTAMP) " +
+                            "ON CONFLICT (user_id) DO UPDATE " +
+                            "SET token_version = user_token_versions.token_version + 1, updated_at = CURRENT_TIMESTAMP",
+                    userId
+            );
+            inMemoryTokenVersions.compute(userId, (key, version) -> Math.max(
+                    version == null ? 0L : version,
+                    getTokenVersionFromDatabase(userId)
+            ));
+            return;
+        }
+
+        inMemoryTokenVersions.merge(userId, 1L, (existingVersion, increment) ->
+                (existingVersion == null ? 0L : existingVersion) + (increment == null ? 0L : increment)
+        );
     }
 
     @Override
@@ -117,6 +177,8 @@ public class JwtTokenProviderImpl implements JwtTokenProvider {
                     .build()
                     .parseSignedClaims(cleanToken)
                     .getPayload();
+
+            validateTokenVersion(claims);
 
             String jti = claims.getId();
             if (jti != null && isTokenBlacklisted(jti)) {
@@ -143,15 +205,96 @@ public class JwtTokenProviderImpl implements JwtTokenProvider {
         if (inMemoryBlacklist.contains(jti)) {
             return true;
         }
-        if (!blacklistTableExists || tokenBlacklistRepository == null) {
+        if (tokenBlacklistRepository == null || !refreshBlacklistTableAvailability()) {
             return false;
         }
         try {
-            return tokenBlacklistRepository.existsByJti(jti);
+            boolean blacklisted = tokenBlacklistRepository.existsByJti(jti);
+            blacklistTableExists = true;
+            return blacklisted;
         } catch (Exception ex) {
             log.debug("Lỗi truy vấn token_blacklist CSDL, chuyển sang in-memory: {}", ex.getMessage());
             this.blacklistTableExists = false;
             return false;
+        }
+    }
+
+    private boolean refreshBlacklistTableAvailability() {
+        if (blacklistTableExists) {
+            return true;
+        }
+        if (jdbcTemplate == null) {
+            return false;
+        }
+        try {
+            Boolean exists = jdbcTemplate.queryForObject(
+                    "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'token_blacklist')",
+                    Boolean.class
+            );
+            blacklistTableExists = Boolean.TRUE.equals(exists);
+            return blacklistTableExists;
+        } catch (Exception ex) {
+            log.debug("Không thể kiểm tra bảng token_blacklist: {}", ex.getMessage());
+            return false;
+        }
+    }
+
+    private void validateTokenVersion(Claims claims) {
+        Long userId = getUserIdFromClaims(claims);
+        if (userId == null) {
+            return;
+        }
+
+        Object versionClaim = claims.get("tokenVersion");
+        long tokenVersion = versionClaim instanceof Number number ? number.longValue() : 0L;
+        if (tokenVersion < getTokenVersion(userId)) {
+            throw new AppException(ErrorCode.TOKEN_INVALID);
+        }
+    }
+
+    private long getTokenVersion(Long userId) {
+        if (userId == null) {
+            return 0L;
+        }
+        if (refreshTokenVersionTableAvailability()) {
+            return getTokenVersionFromDatabase(userId);
+        }
+        return inMemoryTokenVersions.getOrDefault(userId, 0L);
+    }
+
+    private boolean refreshTokenVersionTableAvailability() {
+        if (tokenVersionTableExists) {
+            return true;
+        }
+        if (jdbcTemplate == null) {
+            return false;
+        }
+        try {
+            Boolean exists = jdbcTemplate.queryForObject(
+                    "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user_token_versions')",
+                    Boolean.class
+            );
+            tokenVersionTableExists = Boolean.TRUE.equals(exists);
+            return tokenVersionTableExists;
+        } catch (Exception ex) {
+            log.error("Không thể kiểm tra bảng user_token_versions", ex);
+            throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    private long getTokenVersionFromDatabase(Long userId) {
+        try {
+            Long version = jdbcTemplate.queryForObject(
+                    "SELECT token_version FROM user_token_versions WHERE user_id = ?",
+                    Long.class,
+                    userId
+            );
+            return version != null ? version : 0L;
+        } catch (EmptyResultDataAccessException ex) {
+            return 0L;
+        } catch (Exception ex) {
+            log.error("Không thể truy vấn phiên bản token người dùng từ CSDL", ex);
+            throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
     }
 

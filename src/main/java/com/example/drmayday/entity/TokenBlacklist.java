@@ -19,7 +19,7 @@ public class TokenBlacklist {
     private String jti;
 
     @Column(name = "user_id", nullable = false)
-    private Integer userId;
+    private Long userId;
 
     @Column(name = "expires_at", nullable = false)
     private LocalDateTime expiresAt;
@@ -35,7 +35,7 @@ public class TokenBlacklist {
     public TokenBlacklist() {
     }
 
-    public TokenBlacklist(Integer invalidTokenId, String jti, Integer userId, LocalDateTime expiresAt) {
+    public TokenBlacklist(Integer invalidTokenId, String jti, Long userId, LocalDateTime expiresAt) {
         this.invalidTokenId = invalidTokenId;
         this.jti = jti;
         this.userId = userId;
@@ -58,11 +58,11 @@ public class TokenBlacklist {
         this.jti = jti;
     }
 
-    public Integer getUserId() {
+    public Long getUserId() {
         return userId;
     }
 
-    public void setUserId(Integer userId) {
+    public void setUserId(Long userId) {
         this.userId = userId;
     }
 
@@ -97,7 +97,7 @@ public class TokenBlacklist {
     public static class Builder {
         private Integer invalidTokenId;
         private String jti;
-        private Integer userId;
+        private Long userId;
         private LocalDateTime expiresAt;
 
         public Builder invalidTokenId(Integer invalidTokenId) {
@@ -110,7 +110,7 @@ public class TokenBlacklist {
             return this;
         }
 
-        public Builder userId(Integer userId) {
+        public Builder userId(Long userId) {
             this.userId = userId;
             return this;
         }
