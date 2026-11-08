@@ -1,17 +1,17 @@
 package com.example.drmayday.features.authorization.config;
 
-import com.example.drmayday.entity.BenhNhan;
-import com.example.drmayday.entity.ChiNhanh;
-import com.example.drmayday.entity.Nguoi;
-import com.example.drmayday.entity.NhanVien;
-import com.example.drmayday.entity.TaiKhoan;
-import com.example.drmayday.entity.VaiTro;
-import com.example.drmayday.repository.BenhNhanRepository;
-import com.example.drmayday.repository.ChiNhanhRepository;
-import com.example.drmayday.repository.NguoiRepository;
-import com.example.drmayday.repository.NhanVienRepository;
-import com.example.drmayday.repository.TaiKhoanRepository;
-import com.example.drmayday.repository.VaiTroRepository;
+import com.example.drmayday.entity.Patient;
+import com.example.drmayday.entity.Branch;
+import com.example.drmayday.entity.Person;
+import com.example.drmayday.entity.Employee;
+import com.example.drmayday.entity.UserAccount;
+import com.example.drmayday.entity.Role;
+import com.example.drmayday.repository.PatientRepository;
+import com.example.drmayday.repository.BranchRepository;
+import com.example.drmayday.repository.PersonRepository;
+import com.example.drmayday.repository.EmployeeRepository;
+import com.example.drmayday.repository.UserAccountRepository;
+import com.example.drmayday.repository.RoleRepository;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,21 +29,21 @@ public class DatabaseSeeder implements CommandLineRunner {
     private static final Logger log = LoggerFactory.getLogger(DatabaseSeeder.class);
 
     private final JdbcTemplate jdbcTemplate;
-    private final ChiNhanhRepository chiNhanhRepository;
-    private final VaiTroRepository vaiTroRepository;
-    private final NguoiRepository nguoiRepository;
-    private final BenhNhanRepository benhNhanRepository;
-    private final NhanVienRepository nhanVienRepository;
-    private final TaiKhoanRepository taiKhoanRepository;
+    private final BranchRepository chiNhanhRepository;
+    private final RoleRepository vaiTroRepository;
+    private final PersonRepository nguoiRepository;
+    private final PatientRepository benhNhanRepository;
+    private final EmployeeRepository nhanVienRepository;
+    private final UserAccountRepository taiKhoanRepository;
     private final PasswordEncoder passwordEncoder;
 
     public DatabaseSeeder(JdbcTemplate jdbcTemplate,
-                          ChiNhanhRepository chiNhanhRepository,
-                          VaiTroRepository vaiTroRepository,
-                          NguoiRepository nguoiRepository,
-                          BenhNhanRepository benhNhanRepository,
-                          NhanVienRepository nhanVienRepository,
-                          TaiKhoanRepository taiKhoanRepository,
+                          BranchRepository chiNhanhRepository,
+                          RoleRepository vaiTroRepository,
+                          PersonRepository nguoiRepository,
+                          PatientRepository benhNhanRepository,
+                          EmployeeRepository nhanVienRepository,
+                          UserAccountRepository taiKhoanRepository,
                           PasswordEncoder passwordEncoder) {
         this.jdbcTemplate = jdbcTemplate;
         this.chiNhanhRepository = chiNhanhRepository;
@@ -59,7 +59,9 @@ public class DatabaseSeeder implements CommandLineRunner {
     public void run(String... args) {
         try {
             initTokenBlacklistTable();
-            ChiNhanh defaultBranch = ensureDefaultBranch();
+            initUserTokenVersionsTable();
+            initPasswordResetTokensTable();
+            Branch defaultBranch = ensureDefaultBranch();
             ensureRoles();
             ensureAdminAccount(defaultBranch);
             ensurePatientAccount();
@@ -86,65 +88,95 @@ public class DatabaseSeeder implements CommandLineRunner {
         }
     }
 
-    private ChiNhanh ensureDefaultBranch() {
-        return chiNhanhRepository.findFirstByOrderByMaChiNhanhAsc().orElseGet(() -> {
-            ChiNhanh branch = new ChiNhanh();
-            branch.setTenChiNhanh("Phòng khám Đa khoa DrMayDay - Cơ sở chính");
-            branch.setDiaChi("123 Đường Giải Phóng, Hà Nội");
-            branch.setSoDienThoai("02438888888");
-            branch.setTrangThai(true);
+    private void initPasswordResetTokensTable() {
+        try {
+            jdbcTemplate.execute(
+                    "CREATE TABLE IF NOT EXISTS password_reset_tokens (" +
+                    "password_reset_token_id BIGSERIAL PRIMARY KEY, " +
+                    "user_id BIGINT NOT NULL UNIQUE, " +
+                    "token_hash VARCHAR(100) NOT NULL, " +
+                    "expires_at TIMESTAMP NOT NULL, " +
+                    "created_at TIMESTAMP NOT NULL, " +
+                    "updated_at TIMESTAMP NOT NULL" +
+                    ")"
+            );
+        } catch (Exception ex) {
+            log.error("Không thể khởi tạo bảng password_reset_tokens", ex);
+        }
+    }
+
+    private void initUserTokenVersionsTable() {
+        try {
+            jdbcTemplate.execute(
+                    "CREATE TABLE IF NOT EXISTS user_token_versions (" +
+                    "user_id BIGINT PRIMARY KEY, " +
+                    "token_version BIGINT NOT NULL DEFAULT 0, " +
+                    "updated_at TIMESTAMP NOT NULL" +
+                    ")"
+            );
+        } catch (Exception ex) {
+            log.error("Không thể khởi tạo bảng user_token_versions", ex);
+        }
+    }
+
+    private Branch ensureDefaultBranch() {
+        return chiNhanhRepository.findFirstByOrderByBranchIdAsc().orElseGet(() -> {
+            Branch branch = new Branch();
+            branch.setName("Phòng khám Đa khoa DrMayDay - Cơ sở chính");
+            branch.setAddress("123 Đường Giải Phóng, Hà Nội");
+            branch.setPhoneNumber("02438888888");
+            branch.setActive(true);
             return chiNhanhRepository.save(branch);
         });
     }
 
     private void ensureRoles() {
-        if (!vaiTroRepository.existsByTenVaiTro("admin")) {
-            vaiTroRepository.save(new VaiTro(1L, "admin", "Quản trị viên", "Toàn quyền quản trị hệ thống", OffsetDateTime.now(), OffsetDateTime.now()));
+        if (!vaiTroRepository.existsByName("admin")) {
+            vaiTroRepository.save(new Role(1L, "admin", "Quản trị viên", "Toàn quyền quản trị hệ thống", OffsetDateTime.now(), OffsetDateTime.now()));
         }
-        if (!vaiTroRepository.existsByTenVaiTro("bac_si")) {
-            vaiTroRepository.save(new VaiTro(2L, "bac_si", "Bác sĩ", "Bác sĩ điều trị", OffsetDateTime.now(), OffsetDateTime.now()));
+        if (!vaiTroRepository.existsByName("bac_si")) {
+            vaiTroRepository.save(new Role(2L, "bac_si", "Bác sĩ", "Bác sĩ điều trị", OffsetDateTime.now(), OffsetDateTime.now()));
         }
-        if (!vaiTroRepository.existsByTenVaiTro("dieu_duong")) {
-            vaiTroRepository.save(new VaiTro(3L, "dieu_duong", "Điều dưỡng", "Điều dưỡng viên hỗ trợ", OffsetDateTime.now(), OffsetDateTime.now()));
+        if (!vaiTroRepository.existsByName("dieu_duong")) {
+            vaiTroRepository.save(new Role(3L, "dieu_duong", "Điều dưỡng", "Điều dưỡng viên hỗ trợ", OffsetDateTime.now(), OffsetDateTime.now()));
         }
-        if (!vaiTroRepository.existsByTenVaiTro("benh_nhan")) {
-            vaiTroRepository.save(new VaiTro(4L, "benh_nhan", "Bệnh nhân", "Bệnh nhân sử dụng ứng dụng", OffsetDateTime.now(), OffsetDateTime.now()));
+        if (!vaiTroRepository.existsByName("benh_nhan")) {
+            vaiTroRepository.save(new Role(4L, "benh_nhan", "Bệnh nhân", "Bệnh nhân sử dụng ứng dụng", OffsetDateTime.now(), OffsetDateTime.now()));
         }
     }
 
-    private void ensureAdminAccount(ChiNhanh defaultBranch) {
+    private void ensureAdminAccount(Branch defaultBranch) {
         String adminPhone = "0900000001";
-        if (!taiKhoanRepository.existsByTenDangNhap(adminPhone)) {
-            Nguoi nguoi = nguoiRepository.findBySoDienThoai(adminPhone).orElseGet(() -> {
-                Nguoi n = Nguoi.builder()
-                        .hoTen("Hệ thống Admin")
-                        .soDienThoai(adminPhone)
-                        .thoiDiemTao(OffsetDateTime.now())
-                        .thoiDiemCapNhat(OffsetDateTime.now())
+        if (!taiKhoanRepository.existsByUsername(adminPhone)) {
+            Person nguoi = nguoiRepository.findByPhoneNumber(adminPhone).orElseGet(() -> {
+                Person n = Person.builder()
+                        .fullName("Hệ thống Admin")
+                        .phoneNumber(adminPhone)
+                        .createdAt(OffsetDateTime.now())
+                        .updatedAt(OffsetDateTime.now())
                         .build();
                 return nguoiRepository.save(n);
             });
 
-            if (!nhanVienRepository.existsById(nguoi.getMaNguoi())) {
-                NhanVien staff = NhanVien.builder()
-                        .maNhanVien(nguoi.getMaNguoi())
-                        .nguoi(nguoi)
-                        .maChiNhanh(defaultBranch.getMaChiNhanh())
+            if (!nhanVienRepository.existsById(nguoi.getPersonId())) {
+                Employee staff = Employee.builder()
+                        .employeeId(nguoi.getPersonId())
+                        .branchId(defaultBranch.getBranchId())
                         .build();
                 nhanVienRepository.save(staff);
             }
 
-            VaiTro adminRole = vaiTroRepository.findByTenVaiTro("admin")
+            Role adminRole = vaiTroRepository.findByName("admin")
                     .orElseGet(() -> vaiTroRepository.findById(1L).orElse(null));
 
-            TaiKhoan taiKhoan = TaiKhoan.builder()
-                    .nguoi(nguoi)
-                    .vaiTro(adminRole)
-                    .tenDangNhap(adminPhone)
-                    .matKhauMaHoa(passwordEncoder.encode("Admin@123"))
-                    .trangThaiHoatDong(true)
-                    .thoiDiemTao(OffsetDateTime.now())
-                    .thoiDiemCapNhat(OffsetDateTime.now())
+            UserAccount taiKhoan = UserAccount.builder()
+                    .person(nguoi)
+                    .role(adminRole)
+                    .username(adminPhone)
+                    .passwordHash(passwordEncoder.encode("Admin@123"))
+                    .active(true)
+                    .createdAt(OffsetDateTime.now())
+                    .updatedAt(OffsetDateTime.now())
                     .build();
             taiKhoanRepository.save(taiKhoan);
             log.info("Đã khởi tạo tài khoản Admin mặc định: {}", adminPhone);
@@ -153,41 +185,41 @@ public class DatabaseSeeder implements CommandLineRunner {
 
     private void ensurePatientAccount() {
         String patientPhone = "0912345678";
-        if (!taiKhoanRepository.existsByTenDangNhap(patientPhone)) {
-            Nguoi nguoi = nguoiRepository.findBySoDienThoai(patientPhone).orElseGet(() -> {
-                Nguoi n = Nguoi.builder()
-                        .hoTen("Nguyễn Văn A")
-                        .soDienThoai(patientPhone)
-                        .ngaySinh(LocalDate.of(1990, 1, 1))
-                        .gioiTinh("Nam")
-                        .diaChiSoNhaThonPho("123 Đường ABC, Phường 1, Quận 1, TP.HCM")
-                        .thoiDiemTao(OffsetDateTime.now())
-                        .thoiDiemCapNhat(OffsetDateTime.now())
+        if (!taiKhoanRepository.existsByUsername(patientPhone)) {
+            Person nguoi = nguoiRepository.findByPhoneNumber(patientPhone).orElseGet(() -> {
+                Person n = Person.builder()
+                        .fullName("Nguyễn Văn A")
+                        .phoneNumber(patientPhone)
+                        .birthDate(LocalDate.of(1990, 1, 1))
+                        .gender("Nam")
+                        .streetAddress("123 Đường ABC, Phường 1, Quận 1, TP.HCM")
+                        .createdAt(OffsetDateTime.now())
+                        .updatedAt(OffsetDateTime.now())
                         .build();
                 return nguoiRepository.save(n);
             });
 
-            if (!benhNhanRepository.existsById(nguoi.getMaNguoi())) {
-                BenhNhan patient = BenhNhan.builder()
-                        .maBenhNhan(nguoi.getMaNguoi())
-                        .danToc("Kinh")
-                        .ngheNghiep("Khac")
-                        .bhytSoThe("DN4010123456789")
+            if (!benhNhanRepository.existsById(nguoi.getPersonId())) {
+                Patient patient = Patient.builder()
+                        .patientId(nguoi.getPersonId())
+                        .ethnicity("Kinh")
+                        .occupation("Khac")
+                        .healthInsuranceNumber("DN4010123456789")
                         .build();
                 benhNhanRepository.save(patient);
             }
 
-            VaiTro patientRole = vaiTroRepository.findByTenVaiTro("benh_nhan")
+            Role patientRole = vaiTroRepository.findByName("benh_nhan")
                     .orElseGet(() -> vaiTroRepository.findById(4L).orElse(null));
 
-            TaiKhoan taiKhoan = TaiKhoan.builder()
-                    .nguoi(nguoi)
-                    .vaiTro(patientRole)
-                    .tenDangNhap(patientPhone)
-                    .matKhauMaHoa(passwordEncoder.encode("Patient@123"))
-                    .trangThaiHoatDong(true)
-                    .thoiDiemTao(OffsetDateTime.now())
-                    .thoiDiemCapNhat(OffsetDateTime.now())
+            UserAccount taiKhoan = UserAccount.builder()
+                    .person(nguoi)
+                    .role(patientRole)
+                    .username(patientPhone)
+                    .passwordHash(passwordEncoder.encode("Patient@123"))
+                    .active(true)
+                    .createdAt(OffsetDateTime.now())
+                    .updatedAt(OffsetDateTime.now())
                     .build();
             taiKhoanRepository.save(taiKhoan);
             log.info("Đã khởi tạo tài khoản Bệnh nhân mặc định: {}", patientPhone);

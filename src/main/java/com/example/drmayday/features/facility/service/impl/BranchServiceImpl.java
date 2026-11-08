@@ -8,7 +8,7 @@ import com.example.drmayday.features.facility.dto.CreateBranchRequest;
 import com.example.drmayday.features.facility.dto.EditBranchRequest;
 import com.example.drmayday.features.facility.service.BranchService;
 import com.example.drmayday.repository.ChiNhanhRepository;
-import com.example.drmayday.repository.NhanVienRepository;
+import com.example.drmayday.repository.EmployeeRepository;
 import com.example.drmayday.repository.PhongKhamRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,14 +27,14 @@ public class BranchServiceImpl implements BranchService {
 
     private final ChiNhanhRepository chiNhanhRepository;
     private final PhongKhamRepository phongKhamRepository;
-    private final NhanVienRepository nhanVienRepository;
+    private final EmployeeRepository EmployeeRepository;
 
     public BranchServiceImpl(ChiNhanhRepository chiNhanhRepository,
                              PhongKhamRepository phongKhamRepository,
-                             NhanVienRepository nhanVienRepository) {
+                             EmployeeRepository EmployeeRepository) {
         this.chiNhanhRepository = chiNhanhRepository;
         this.phongKhamRepository = phongKhamRepository;
-        this.nhanVienRepository = nhanVienRepository;
+        this.EmployeeRepository = EmployeeRepository;
     }
 
     @Override
@@ -100,7 +100,7 @@ public class BranchServiceImpl implements BranchService {
             throw new AppException(ErrorCode.LAST_BRANCH_CANNOT_BE_DELETED);
         }
         if (phongKhamRepository.existsByChiNhanh_MaChiNhanh(branchId)
-                || nhanVienRepository.existsByMaChiNhanh(branchId)) {
+                || EmployeeRepository.existsByBranchId(branchId)) {
             throw new AppException(ErrorCode.BRANCH_HAS_DEPENDENCIES);
         }
 

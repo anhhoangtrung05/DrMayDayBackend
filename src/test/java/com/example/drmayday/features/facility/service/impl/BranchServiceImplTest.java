@@ -6,7 +6,7 @@ import com.example.drmayday.entity.ChiNhanh;
 import com.example.drmayday.features.facility.dto.CreateBranchRequest;
 import com.example.drmayday.features.facility.dto.EditBranchRequest;
 import com.example.drmayday.repository.ChiNhanhRepository;
-import com.example.drmayday.repository.NhanVienRepository;
+import com.example.drmayday.repository.EmployeeRepository;
 import com.example.drmayday.repository.PhongKhamRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -54,14 +54,14 @@ class BranchServiceImplTest {
     private PhongKhamRepository phongKhamRepository;
 
     @Mock
-    private NhanVienRepository nhanVienRepository;
+    private EmployeeRepository EmployeeRepository;
 
     private BranchServiceImpl service;
     private ChiNhanh branch;
 
     @BeforeEach
     void setUp() {
-        service = new BranchServiceImpl(chiNhanhRepository, phongKhamRepository, nhanVienRepository);
+        service = new BranchServiceImpl(chiNhanhRepository, phongKhamRepository, EmployeeRepository);
         branch = new ChiNhanh(BRANCH_ID, "Cơ sở Hoàn Kiếm", "Số 1 Phố Huế", "0241234567", true);
         when(chiNhanhRepository.findById(BRANCH_ID)).thenReturn(Optional.of(branch));
         when(chiNhanhRepository.saveAndFlush(any(ChiNhanh.class))).thenAnswer(call -> call.getArgument(0));
@@ -84,7 +84,7 @@ class BranchServiceImplTest {
     void lastBranchWinsOverDependencies() {
         givenBranchCount(1);
         when(phongKhamRepository.existsByChiNhanh_MaChiNhanh(BRANCH_ID)).thenReturn(true);
-        when(nhanVienRepository.existsByMaChiNhanh(BRANCH_ID)).thenReturn(true);
+        when(EmployeeRepository.existsByBranchId(BRANCH_ID)).thenReturn(true);
 
         assertFailsWith(ErrorCode.LAST_BRANCH_CANNOT_BE_DELETED, () -> service.deleteBranch(ID));
 
@@ -116,7 +116,7 @@ class BranchServiceImplTest {
     @DisplayName("AC-12: còn từ hai chi nhánh và chi nhánh này còn nhân viên thì trả 2102")
     void branchWithStaffCannotBeDeleted() {
         givenBranchCount(2);
-        when(nhanVienRepository.existsByMaChiNhanh(BRANCH_ID)).thenReturn(true);
+        when(EmployeeRepository.existsByBranchId(BRANCH_ID)).thenReturn(true);
 
         assertFailsWith(ErrorCode.BRANCH_HAS_DEPENDENCIES, () -> service.deleteBranch(ID));
 
@@ -143,7 +143,7 @@ class BranchServiceImplTest {
         assertFailsWith(ErrorCode.BRANCH_NOT_FOUND, () -> service.deleteBranch("99"));
 
         verify(chiNhanhRepository, never()).count();
-        verifyNoInteractions(phongKhamRepository, nhanVienRepository);
+        verifyNoInteractions(phongKhamRepository, EmployeeRepository);
     }
 
     // API 28: đổi lỗi database khi hai Admin thao tác cùng lúc
