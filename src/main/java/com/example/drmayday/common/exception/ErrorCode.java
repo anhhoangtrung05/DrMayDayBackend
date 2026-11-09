@@ -22,6 +22,15 @@ public enum ErrorCode {
     BAD_REQUEST("2005", "Bad request", HttpStatus.BAD_REQUEST),
     RESOURCE_NOT_FOUND("2006", "Resource not found", HttpStatus.NOT_FOUND),
 
+    // 21xx - Lỗi nghiệp vụ Cơ sở vật chất (Chi nhánh & Phòng khám)
+    BRANCH_NOT_FOUND("2101", "Branch not found", HttpStatus.NOT_FOUND),
+    BRANCH_HAS_DEPENDENCIES("2102", "Branch still has rooms or staff", HttpStatus.BAD_REQUEST),
+    ROOM_NOT_FOUND("2103", "Room not found", HttpStatus.NOT_FOUND),
+    ROOM_NAME_ALREADY_EXISTS("2104", "Room name already exists in this branch", HttpStatus.CONFLICT),
+    ROOM_HAS_EXAM_SESSIONS("2105", "Room has exam sessions", HttpStatus.BAD_REQUEST),
+    BRANCH_INACTIVE("2106", "Branch is inactive", HttpStatus.BAD_REQUEST),
+    LAST_BRANCH_CANNOT_BE_DELETED("2107", "Last branch cannot be deleted", HttpStatus.BAD_REQUEST),
+
     // 3xxx - Lỗi xác thực & phân quyền (Auth & RBAC)
     TOKEN_INVALID("3001", "Token invalid", HttpStatus.UNAUTHORIZED),
     TOKEN_EXPIRED("3002", "Token expired", HttpStatus.UNAUTHORIZED),

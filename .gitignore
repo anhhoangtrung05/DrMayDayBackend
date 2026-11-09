@@ -2,10 +2,6 @@
 # DrMayDay Backend - Git Ignore Rules
 # =============================================================================
 
-# --- Local-only Test Directories (DO NOT push to git) ---
-src/test/
-**/src/test/
-
 # --- Build Artifacts & Binaries ---
 target/
 **/target/
@@ -70,3 +66,10 @@ Thumbs.db
 
 # --- Project Specific Ignored Folders ---
 docs/
+
+# --- Local AI Tooling ---
+.claude/
+AGENTS.md
+CLAUDE.md
+skills-lock.json
+test-preferences.json
