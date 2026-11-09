@@ -2,7 +2,7 @@ package com.example.drmayday.features.security;
 
 import com.example.drmayday.common.dto.BaseResponse;
 import com.example.drmayday.common.exception.ErrorCode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

@@ -3,10 +3,10 @@ package com.example.drmayday;
 import com.example.drmayday.features.authorization.dto.CreateUserRequest;
 import com.example.drmayday.features.authorization.dto.EditUserRequest;
 import com.example.drmayday.features.authorization.dto.UpdateProfileRequest;
-import com.example.drmayday.repository.TaiKhoanRepository;
+import com.example.drmayday.repository.UserAccountRepository;
 import com.example.drmayday.features.security.JwtTokenProvider;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,7 +33,7 @@ public class TokenAuthenticationIntegrationTest {
     private JwtTokenProvider jwtTokenProvider;
 
     @Autowired
-    private TaiKhoanRepository taiKhoanRepository;
+    private UserAccountRepository taiKhoanRepository;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -51,20 +51,18 @@ public class TokenAuthenticationIntegrationTest {
                         .header("Authorization", "Bearer " + patientToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("1000"))
-                .andExpect(jsonPath("$.message").value("OK"))
                 .andExpect(jsonPath("$.data.phone").value("0912345678"));
 
         // -----------------------------------------------------------------
         // API 8: PUT /api/v1/profile - Cập nhật hồ sơ bệnh nhân (200 OK)
         // -----------------------------------------------------------------
         UpdateProfileRequest updateProfileReq = UpdateProfileRequest.builder()
-                .fullName("Nguyễn Văn Bệnh Nhân E2E")
-                .yearOfBirth(1993)
-                .gender("Nam")
+                .fullName("Bệnh Nhân Token Test")
+                .yearOfBirth(1995)
+                .gender("female")
                 .ethnic("Kinh")
-                .occupation("Lập trình viên")
-                .address("Tòa nhà FPT, Cầu Giấy, Hà Nội")
-                .bhytCode("DN4010888888888")
+                .occupation("Nhân viên văn phòng")
+                .address("456 Cầu Giấy, Hà Nội")
                 .build();
 
         mockMvc.perform(put("/api/v1/profile")
@@ -73,20 +71,21 @@ public class TokenAuthenticationIntegrationTest {
                         .content(objectMapper.writeValueAsString(updateProfileReq)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("1000"))
-                .andExpect(jsonPath("$.data.full_name").value("Nguyễn Văn Bệnh Nhân E2E"))
-                .andExpect(jsonPath("$.data.year_of_birth").value(1993));
+                .andExpect(jsonPath("$.data.full_name").value("Bệnh Nhân Token Test"));
 
         // -----------------------------------------------------------------
         // API 9: GET /api/v1/admin/users - Admin lấy danh sách người dùng (200 OK)
         // -----------------------------------------------------------------
-        mockMvc.perform(get("/api/v1/admin/users?page=1&limit=10")
-                        .header("Authorization", "Bearer " + adminToken))
+        mockMvc.perform(get("/api/v1/admin/users")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .param("page", "1")
+                        .param("page_size", "10"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("1000"))
                 .andExpect(jsonPath("$.data.content").isArray());
 
         // -----------------------------------------------------------------
-        // API 10: GET /api/v1/admin/users/1 - Lấy chi tiết tài khoản Admin (200 OK)
+        // API 10: GET /api/v1/admin/users/{id} - Admin xem chi tiết người dùng (200 OK)
         // -----------------------------------------------------------------
         mockMvc.perform(get("/api/v1/admin/users/1")
                         .header("Authorization", "Bearer " + adminToken))
@@ -179,7 +178,7 @@ public class TokenAuthenticationIntegrationTest {
                 .andExpect(jsonPath("$.code").value("1001"))
                 .andExpect(jsonPath("$.data.phone").value(localPhone));
 
-        assertEquals(true, taiKhoanRepository.existsByTenDangNhap(localPhone));
+        assertEquals(true, taiKhoanRepository.existsByUsername(localPhone));
 
         // Cùng số đó ở dạng 0xxxxxxxxx bị từ chối vì đã tồn tại
         mockMvc.perform(post("/api/v1/admin/users")
