@@ -63,9 +63,9 @@ public class DatabaseSeeder implements CommandLineRunner {
             ensureRoles();
             ensureAdminAccount(defaultBranch);
             ensurePatientAccount();
-            log.info("DatabaseSeeder hoàn tất khởi tạo dữ liệu mẫu thành công.");
+            log.info("DatabaseSeeder completed sample data initialization successfully.");
         } catch (Exception ex) {
-            log.warn("Lỗi trong quá trình DatabaseSeeder: {}", ex.getMessage());
+            log.warn("DatabaseSeeder failed during initialization: {}", ex.getMessage());
         }
     }
 
@@ -79,7 +79,7 @@ public class DatabaseSeeder implements CommandLineRunner {
                     ")"
             );
         } catch (Exception ex) {
-            log.error("Không thể khởi tạo bảng user_token_versions", ex);
+            log.error("Unable to initialize the user_token_versions table", ex);
         }
     }
 
@@ -143,7 +143,7 @@ public class DatabaseSeeder implements CommandLineRunner {
                     .updatedAt(OffsetDateTime.now())
                     .build();
             userAccountRepository.save(taiKhoan);
-            log.info("Đã khởi tạo tài khoản Admin mặc định: {}", adminPhone);
+            log.info("Initialized the default admin account: {}", adminPhone);
         }
     }
 
@@ -186,7 +186,7 @@ public class DatabaseSeeder implements CommandLineRunner {
                     .updatedAt(OffsetDateTime.now())
                     .build();
             userAccountRepository.save(taiKhoan);
-            log.info("Đã khởi tạo tài khoản Bệnh nhân mặc định: {}", patientPhone);
+            log.info("Initialized the default patient account: {}", patientPhone);
         }
     }
 }

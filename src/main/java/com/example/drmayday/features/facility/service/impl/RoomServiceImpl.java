@@ -35,7 +35,7 @@ public class RoomServiceImpl implements RoomService {
     @Override
     @Transactional
     public RoomResponse createRoom(CreateRoomRequest req) {
-        log.info("Admin tạo phòng khám mới: branchId={}", req.getBranchId());
+        log.info("Admin creating a clinic room: branchId={}", req.getBranchId());
         Long branchId = parseBodyBranchId(req.getBranchId());
         Branch branch = findActiveBranch(branchId);
         String name = req.getName().trim();
@@ -69,7 +69,7 @@ public class RoomServiceImpl implements RoomService {
     @Override
     @Transactional
     public RoomResponse editRoom(String id, EditRoomRequest req) {
-        log.info("Admin sửa phòng khám: id={}", id);
+        log.info("Admin updating a clinic room: id={}", id);
         ClinicRoom clinicRoom = clinicRoomRepository.findByIdForUpdate(parseRoomId(id))
                 .orElseThrow(() -> new AppException(ErrorCode.ROOM_NOT_FOUND));
 
@@ -81,7 +81,7 @@ public class RoomServiceImpl implements RoomService {
         Branch branch = clinicRoom.getBranch();
         if (req.getBranchId() != null) {
             Long targetBranchId = parseBodyBranchId(req.getBranchId());
-            // Gửi trùng chi nhánh hiện tại thì không tính là chuyển phòng
+            // Specifying the current branch does not count as moving the room.
             if (!targetBranchId.equals(branch.getBranchId())) {
                 branch = findActiveBranch(targetBranchId);
                 if (clinicRoomRepository.hasExamSessions(clinicRoom.getClinicRoomId())) {
@@ -108,7 +108,7 @@ public class RoomServiceImpl implements RoomService {
     @Override
     @Transactional
     public void deleteRoom(String id) {
-        log.info("Admin xóa phòng khám: id={}", id);
+        log.info("Admin deleting a clinic room: id={}", id);
         ClinicRoom clinicRoom = findRoom(id);
 
         if (clinicRoomRepository.hasExamSessions(clinicRoom.getClinicRoomId())) {
@@ -124,12 +124,12 @@ public class RoomServiceImpl implements RoomService {
             }
             throw ex;
         } catch (ObjectOptimisticLockingFailureException ex) {
-            // Admin khác đã xóa phòng trước, câu DELETE không còn dòng nào để xóa
+            // Another admin already deleted the room, so the DELETE statement found no row.
             throw new AppException(ErrorCode.ROOM_NOT_FOUND);
         }
     }
 
-    // Phải saveAndFlush để lỗi database xảy ra trong khối try, không phải lúc commit
+    // saveAndFlush ensures database errors occur inside the try block instead of during commit.
     private ClinicRoom saveRoom(ClinicRoom clinicRoom) {
         try {
             return clinicRoomRepository.saveAndFlush(clinicRoom);

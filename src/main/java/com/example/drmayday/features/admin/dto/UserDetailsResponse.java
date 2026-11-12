@@ -3,7 +3,7 @@ package com.example.drmayday.features.admin.dto;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * DTO chi tiết thông tin người dùng cho Admin (API 10 get_user_details).
+ * Response DTO containing user details for ADMIN_GET_USER_DETAILS.
  */
 public class UserDetailsResponse {
 

@@ -53,20 +53,20 @@ public class Apis7To12PostgresIntegrationTest {
     }
 
     @Test
-    @DisplayName("Kiểm thử tích hợp toàn diện APIs 7-12 trực tiếp với PostgreSQL")
+    @DisplayName("End-to-end integration test for profile and admin user endpoints against PostgreSQL")
     void testApis7To12AgainstPostgres() {
-        // 1. Kiểm tra tài khoản mẫu đã được seed
+        // 1. Verify that the sample accounts were seeded.
         UserAccount patientAcc = userAccountRepository.findByUsername("0912345678")
                 .orElseThrow(() -> new AssertionError("Patient account 0912345678 was not seeded"));
         UserAccount adminAcc = userAccountRepository.findByUsername("0900000001")
                 .orElseThrow(() -> new AssertionError("Admin account 0900000001 was not seeded"));
 
-        // Reset dữ liệu bệnh nhân về trạng thái ban đầu để test chạy lặp lại an toàn (idempotent)
+        // Reset the patient data so this test can be rerun safely (idempotently).
         patientAcc.getPerson().setFullName("Nguyễn Văn A");
         personRepository.save(patientAcc.getPerson());
 
         // ==========================================
-        // API 7: PROFILE_GET
+        // PROFILE_GET: PROFILE_GET
         // ==========================================
         authenticateUser(patientAcc.getAccountId(), "0912345678", "benh_nhan");
         ResponseEntity<BaseResponse<PatientProfileResponse>> getProfileRes = profileController.getProfile(null);
@@ -80,7 +80,7 @@ public class Apis7To12PostgresIntegrationTest {
         assertEquals("Kinh", profile.getEthnic());
 
         // ==========================================
-        // API 8: PROFILE_PUT
+        // PROFILE_PUT: PROFILE_PUT
         // ==========================================
         UpdateProfileRequest updateReq = UpdateProfileRequest.builder()
                 .fullName("Nguyễn Văn A Cập Nhật")
@@ -102,7 +102,7 @@ public class Apis7To12PostgresIntegrationTest {
         assertEquals("DN4010999999999", updatedProfile.getBhytCode());
 
         // ==========================================
-        // API 9: admin02 / get_list_users
+        // ADMIN_GET_LIST_USERS
         // ==========================================
         authenticateUser(adminAcc.getAccountId(), "0900000001", "admin");
         ResponseEntity<BaseResponse<Page<UserResponse>>> listUsersRes =
@@ -114,7 +114,7 @@ public class Apis7To12PostgresIntegrationTest {
         assertTrue(pageData.getTotalElements() >= 2);
 
         // ==========================================
-        // API 10: admin03 / get_user_details
+        // ADMIN_GET_USER_DETAILS
         // ==========================================
         ResponseEntity<BaseResponse<UserDetailsResponse>> userDetailsRes =
                 adminUserController.getUserDetails(String.valueOf(adminAcc.getAccountId()));
@@ -126,7 +126,7 @@ public class Apis7To12PostgresIntegrationTest {
         assertEquals("1", adminDetails.getIsActive());
 
         // ==========================================
-        // API 11: admin01 / create_user
+        // ADMIN_CREATE_USER
         // ==========================================
         String testPhone = "0988776655";
         if (userAccountRepository.existsByUsername(testPhone)) {
@@ -136,7 +136,7 @@ public class Apis7To12PostgresIntegrationTest {
                 .fullName("Bác Sĩ Test Postgres")
                 .phone(testPhone)
                 .password("Doctor@123")
-                .roleId("2") // Bác sĩ
+                .roleId("2") // Doctor
                 .isActive("1")
                 .build();
         ResponseEntity<BaseResponse<UserResponse>> createRes =
@@ -152,12 +152,12 @@ public class Apis7To12PostgresIntegrationTest {
         assertEquals("1", createdUser.getIsActive());
 
         // ==========================================
-        // API 12: admin04 / edit_user
+        // ADMIN_EDIT_USER
         // ==========================================
         EditUserRequest editReq = EditUserRequest.builder()
                 .fullName("Bác Sĩ Test Postgres (Đã Sửa)")
-                .roleId("3") // Đổi sang điều dưỡng
-                .isActive("0") // Khóa tài khoản
+                .roleId("3") // Change to nurse
+                .isActive("0") // Disable the account
                 .build();
         ResponseEntity<BaseResponse<UserResponse>> editRes =
                 adminUserController.editUser(createdUser.getUserId(), editReq);

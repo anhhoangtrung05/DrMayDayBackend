@@ -65,7 +65,7 @@ public class AdminUserServiceImpl implements AdminUserService {
     @Override
     @Transactional(readOnly = true)
     public Page<UserResponse> getListUsers(int page, int limit) {
-        log.info("Admin truy xuất danh sách người dùng: page={}, limit={}", page, limit);
+        log.info("Admin requested the user list: page={}, limit={}", page, limit);
         int pageIndex = Math.max(page - 1, 0);
         int pageSize = limit > 0 ? limit : 20;
         
@@ -84,7 +84,7 @@ public class AdminUserServiceImpl implements AdminUserService {
     @Override
     @Transactional(readOnly = true)
     public UserDetailsResponse getUserDetails(String id) {
-        log.info("Admin truy xuất chi tiết người dùng: id={}", id);
+        log.info("Admin requested user details: id={}", id);
         Long userId = parseUserId(id);
 
         UserAccount userAccount = userAccountRepository.findById(userId)
@@ -96,7 +96,7 @@ public class AdminUserServiceImpl implements AdminUserService {
     @Override
     @Transactional
     public UserResponse createUser(CreateUserRequest request) {
-        log.info("Admin tạo mới người dùng: phone={}, role_id={}", request.getPhone(), request.getRoleId());
+        log.info("Admin creating a user: phone={}, role_id={}", request.getPhone(), request.getRoleId());
         String phone = normalizePhone(request.getPhone());
 
         if (userAccountRepository.existsByUsername(phone) || personRepository.existsByPhoneNumber(phone)) {
@@ -149,7 +149,7 @@ public class AdminUserServiceImpl implements AdminUserService {
     @Override
     @Transactional
     public UserResponse editUser(String id, EditUserRequest request) {
-        log.info("Admin chỉnh sửa người dùng: id={}", id);
+        log.info("Admin updating a user: id={}", id);
         Long userId = parseUserId(id);
 
         UserAccount userAccount = userAccountRepository.findById(userId)
@@ -241,8 +241,8 @@ public class AdminUserServiceImpl implements AdminUserService {
     }
 
     /**
-     * Chuẩn hóa +84xxxxxxxxx về 0xxxxxxxxx, vì nguoi.so_dien_thoai chỉ nhận đúng 10 chữ số
-     * và một số điện thoại chỉ được ứng với một tài khoản.
+     * Normalizes +84xxxxxxxxx to 0xxxxxxxxx because nguoi.so_dien_thoai accepts exactly 10 digits
+     * and each phone number can be associated with only one account.
      */
     private String normalizePhone(String phone) {
         String trimmed = phone.trim();

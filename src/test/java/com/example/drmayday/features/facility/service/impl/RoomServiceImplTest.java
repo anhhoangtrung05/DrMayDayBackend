@@ -42,8 +42,8 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
- * Khóa các nhánh khó tạo bằng dữ liệu thật: thứ tự kiểm tra của API 29, 32, 33 và cách đổi lỗi database.
- * Chỉ giả lập repository, là ranh giới với database.
+ * Covers hard-to-reproduce branches using test data: validation order for TOPOLOGY_SET_ROOM, 32, and 33, plus database error translation.
+ * Only the repository boundary is mocked.
  */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -108,10 +108,10 @@ class RoomServiceImplTest {
         assertThat(room.getName()).isEqualTo(ROOM_NAME);
     }
 
-    // API 29
+    // TOPOLOGY_SET_ROOM
 
     @Test
-    @DisplayName("AC-14: tạo phòng lưu tên đã trim và trả đúng các trường của phòng mới")
+    @DisplayName("AC-14: room creation saves the trimmed name and returns the new room's fields")
     void createTrimsNameAndMapsResponse() {
         when(clinicRoomRepository.saveAndFlush(any(ClinicRoom.class))).thenAnswer(call -> {
             ClinicRoom saved = call.getArgument(0);
@@ -128,7 +128,7 @@ class RoomServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-16: kiểm tra trùng tên dùng tên đã trim")
+    @DisplayName("AC-16: duplicate-name checks use the trimmed name")
     void createChecksDuplicateAfterTrim() {
         when(clinicRoomRepository.existsByBranchIdAndName(BRANCH_ID, ROOM_NAME)).thenReturn(true);
 
@@ -140,7 +140,7 @@ class RoomServiceImplTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"abc", "1.5", "99999999999999999999", ""})
-    @DisplayName("AC-15: branch_id không phải số Long trả 2002 và chưa chạm tới database")
+    @DisplayName("AC-15: a branch_id that is not a Long returns 2002 without accessing the database")
     void createRejectsNonNumericBranchId(String branchId) {
         assertFailsWith(ErrorCode.INVALID_PARAMETER_TYPE, () -> service.createRoom(createRequest(branchId, ROOM_NAME)));
 
@@ -148,7 +148,7 @@ class RoomServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-15: chi nhánh không tồn tại trả 2101 và không ghi")
+    @DisplayName("AC-15: a nonexistent branch returns 2101 and performs no writes")
     void createRejectsMissingBranch() {
         when(branchRepository.findById(404L)).thenReturn(Optional.empty());
 
@@ -158,7 +158,7 @@ class RoomServiceImplTest {
     }
 
     @Test
-    @DisplayName("Thứ tự API 29: chi nhánh ngừng hoạt động thắng lỗi trùng tên")
+    @DisplayName("TOPOLOGY_SET_ROOM validation order: an inactive branch takes precedence over a duplicate-name error")
     void createChecksInactiveBranchBeforeDuplicateName() {
         branch.setActive(false);
         when(clinicRoomRepository.existsByBranchIdAndName(anyLong(), anyString())).thenReturn(true);
@@ -167,7 +167,7 @@ class RoomServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-5: tạo phòng gặp lỗi trùng khóa từ database thì trả 2104, không phải 3006")
+    @DisplayName("AC-5: a unique constraint violation during room creation returns 2104, not 3006")
     void createTranslatesUniqueViolation() {
         when(clinicRoomRepository.saveAndFlush(any())).thenThrow(sqlError("23505"));
 
@@ -175,7 +175,7 @@ class RoomServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-5: tạo phòng gặp lỗi khóa ngoại từ database thì trả 2101")
+    @DisplayName("AC-5: a foreign key violation during room creation returns 2101")
     void createTranslatesForeignKeyViolation() {
         when(clinicRoomRepository.saveAndFlush(any())).thenThrow(sqlError("23503"));
 
@@ -183,7 +183,7 @@ class RoomServiceImplTest {
     }
 
     @Test
-    @DisplayName("Lỗi database khác khi tạo phòng không bị đổi thành mã 21xx")
+    @DisplayName("Other database errors during room creation are not translated to a 21xx code")
     void createRethrowsOtherDatabaseErrors() {
         DataIntegrityViolationException checkViolation = sqlError("23514");
         when(clinicRoomRepository.saveAndFlush(any())).thenThrow(checkViolation);
@@ -191,10 +191,10 @@ class RoomServiceImplTest {
         assertThatThrownBy(() -> service.createRoom(createRequest("7", ROOM_NAME))).isSameAs(checkViolation);
     }
 
-    // API 30
+    // TOPOLOGY_GET_LIST_ROOMS
 
     @Test
-    @DisplayName("AC-17: không có branch_id thì lấy mọi phòng và không kiểm tra chi nhánh")
+    @DisplayName("AC-17: when branch_id is omitted, all rooms are returned and no branch lookup is performed")
     void listWithoutFilterSkipsBranchCheck() {
         when(clinicRoomRepository.findAll()).thenReturn(List.of(room));
 
@@ -205,7 +205,7 @@ class RoomServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-17: chi nhánh tồn tại nhưng không có phòng thì trả mảng rỗng")
+    @DisplayName("AC-17: an existing branch with no rooms returns an empty array")
     void listReturnsEmptyForBranchWithoutRooms() {
         when(branchRepository.existsById(BRANCH_ID)).thenReturn(true);
         when(clinicRoomRepository.findAllByBranchId(BRANCH_ID)).thenReturn(List.of());
@@ -214,7 +214,7 @@ class RoomServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-17: bộ lọc với chi nhánh không tồn tại trả 2101")
+    @DisplayName("AC-17: filtering by a nonexistent branch returns 2101")
     void listRejectsMissingBranch() {
         when(branchRepository.existsById(404L)).thenReturn(false);
 
@@ -223,21 +223,21 @@ class RoomServiceImplTest {
         verify(clinicRoomRepository, never()).findAllByBranchId(anyLong());
     }
 
-    // API 31
+    // TOPOLOGY_GET_ROOM_DETAIL
 
     @ParameterizedTest
     @ValueSource(strings = {"abc", "99999999999999999999", ""})
-    @DisplayName("AC-18: id không phải số Long trả 2103 và chưa chạm tới database")
+    @DisplayName("AC-18: an ID that is not a Long returns 2103 without accessing the database")
     void detailRejectsNonNumericId(String id) {
         assertFailsWith(ErrorCode.ROOM_NOT_FOUND, () -> service.getRoomDetails(id));
 
         verifyNoInteractions(clinicRoomRepository);
     }
 
-    // API 32
+    // TOPOLOGY_EDIT_ROOM
 
     @Test
-    @DisplayName("API 32 đọc phòng bằng khóa FOR UPDATE, không dùng findById")
+    @DisplayName("TOPOLOGY_EDIT_ROOM retrieves the room using FOR UPDATE instead of findById")
     void editReadsRoomThroughRowLock() {
         service.editRoom(ID, editRequest(null, "Phòng mới"));
 
@@ -246,7 +246,7 @@ class RoomServiceImplTest {
     }
 
     @Test
-    @DisplayName("Thứ tự API 32: id sai thắng tên rỗng")
+    @DisplayName("TOPOLOGY_EDIT_ROOM validation order: an invalid ID takes precedence over an empty name")
     void editChecksRoomBeforeName() {
         when(clinicRoomRepository.findByIdForUpdate(404L)).thenReturn(Optional.empty());
 
@@ -254,13 +254,13 @@ class RoomServiceImplTest {
     }
 
     @Test
-    @DisplayName("Thứ tự API 32: tên rỗng thắng branch_id sai kiểu")
+    @DisplayName("TOPOLOGY_EDIT_ROOM validation order: an empty name takes precedence over an invalid branch_id")
     void editChecksNameBeforeBranchId() {
         assertFailsWith(ErrorCode.INVALID_PARAMETER_VALUE, () -> service.editRoom(ID, editRequest("abc", "   ")));
     }
 
     @Test
-    @DisplayName("Thứ tự API 32: chi nhánh đích ngừng hoạt động thắng lỗi phòng có phiên khám")
+    @DisplayName("TOPOLOGY_EDIT_ROOM validation order: an inactive target branch takes precedence over an exam-session error")
     void editChecksTargetBranchBeforeExamSessions() {
         targetBranch.setActive(false);
         when(clinicRoomRepository.hasMedicalVisits(ROOM_ID)).thenReturn(true);
@@ -271,7 +271,7 @@ class RoomServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-19: body không có trường nào thì trả dữ liệu hiện tại và không ghi")
+    @DisplayName("AC-19: a body with no fields returns the current data and performs no writes")
     void editWithEmptyBodyWritesNothing() {
         RoomResponse response = service.editRoom(ID, editRequest(null, null));
 
@@ -281,7 +281,7 @@ class RoomServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-19: giá trị không đổi sau khi trim thì bỏ qua kiểm tra trùng tên và không ghi")
+    @DisplayName("AC-19: values unchanged after trimming skip duplicate-name checks and writes")
     void editWithSameValuesWritesNothing() {
         service.editRoom(ID, editRequest("7", "  " + ROOM_NAME + "  "));
 
@@ -291,7 +291,7 @@ class RoomServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-20: gửi branch_id trùng chi nhánh hiện tại không tính là chuyển nên không xét phiên khám")
+    @DisplayName("AC-20: sending the current branch_id is not a move, so exam sessions are not checked")
     void editWithCurrentBranchIsNotAMove() {
         when(clinicRoomRepository.hasMedicalVisits(ROOM_ID)).thenReturn(true);
 
@@ -302,7 +302,7 @@ class RoomServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-20: phòng có phiên khám không chuyển được, tên gửi kèm cũng không đổi")
+    @DisplayName("AC-20: a room with exam sessions cannot be moved, and its supplied name is not changed")
     void editRefusesToMoveRoomWithExamSessions() {
         when(clinicRoomRepository.hasMedicalVisits(ROOM_ID)).thenReturn(true);
 
@@ -313,7 +313,7 @@ class RoomServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-20: chuyển phòng kiểm tra trùng tên ở chi nhánh đích, trừ chính phòng này")
+    @DisplayName("AC-20: moving a room checks for duplicate names in the target branch, excluding the room itself")
     void editChecksDuplicateInTargetBranch() {
         when(clinicRoomRepository.existsByBranchIdAndNameAndRoomIdNot(
                 TARGET_BRANCH_ID, ROOM_NAME, ROOM_ID)).thenReturn(true);
@@ -324,7 +324,7 @@ class RoomServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-20: chuyển phòng lưu chi nhánh mới và giữ tên cũ khi không gửi tên")
+    @DisplayName("AC-20: moving a room saves the new branch and preserves the old name when no name is supplied")
     void editMovesRoomToTargetBranch() {
         service.editRoom(ID, editRequest("8", null));
 
@@ -335,7 +335,7 @@ class RoomServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-5: sửa phòng gặp lỗi trùng khóa từ database thì trả 2104")
+    @DisplayName("AC-5: a unique constraint violation while updating a room returns 2104")
     void editTranslatesUniqueViolation() {
         when(clinicRoomRepository.saveAndFlush(any())).thenThrow(sqlError("23505"));
 
@@ -343,17 +343,17 @@ class RoomServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-5: chuyển phòng gặp lỗi khóa ngoại từ database thì trả 2101")
+    @DisplayName("AC-5: a foreign key violation while moving a room returns 2101")
     void editTranslatesForeignKeyViolation() {
         when(clinicRoomRepository.saveAndFlush(any())).thenThrow(sqlError("23503"));
 
         assertFailsWith(ErrorCode.BRANCH_NOT_FOUND, () -> service.editRoom(ID, editRequest("8", null)));
     }
 
-    // API 33
+    // TOPOLOGY_DELETE_ROOM
 
     @Test
-    @DisplayName("AC-21: xóa rồi flush ngay, để lỗi database xảy ra trong khối try")
+    @DisplayName("AC-21: deletion is flushed immediately so database errors occur inside the try block")
     void deleteFlushesInsideTheTry() {
         service.deleteRoom(ID);
 
@@ -363,7 +363,7 @@ class RoomServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-22: phòng có phiên khám trả 2105 và không gọi xóa")
+    @DisplayName("AC-22: a room with exam sessions returns 2105 and is not deleted")
     void deleteRefusesRoomWithExamSessions() {
         when(clinicRoomRepository.hasMedicalVisits(ROOM_ID)).thenReturn(true);
 
@@ -373,7 +373,7 @@ class RoomServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-5: phiên khám chen vào lúc xóa, database báo khóa ngoại thì trả 2105")
+    @DisplayName("AC-5: an exam session inserted during deletion causes the database foreign key violation to return 2105")
     void deleteTranslatesForeignKeyViolation() {
         doThrow(sqlError("23503")).when(clinicRoomRepository).flush();
 
@@ -381,7 +381,7 @@ class RoomServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-5: Admin khác đã xóa phòng trước thì trả 2103, không phải 9999")
+    @DisplayName("AC-5: if another admin deleted the room first, the request returns 2103, not 9999")
     void deleteTranslatesLostRace() {
         doThrow(new ObjectOptimisticLockingFailureException(ClinicRoom.class, ROOM_ID))
                 .when(clinicRoomRepository).flush();
@@ -390,7 +390,7 @@ class RoomServiceImplTest {
     }
 
     @Test
-    @DisplayName("Lỗi database khác khi xóa phòng không bị đổi thành mã 21xx")
+    @DisplayName("Other database errors during room deletion are not translated to a 21xx code")
     void deleteRethrowsOtherDatabaseErrors() {
         DataIntegrityViolationException checkViolation = sqlError("23514");
         doThrow(checkViolation).when(clinicRoomRepository).flush();
@@ -399,7 +399,7 @@ class RoomServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-18: xóa phòng với id không tồn tại trả 2103")
+    @DisplayName("AC-18: deleting a room with a nonexistent ID returns 2103")
     void deleteRejectsMissingRoom() {
         when(clinicRoomRepository.findById(404L)).thenReturn(Optional.empty());
 

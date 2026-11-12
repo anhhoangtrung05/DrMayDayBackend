@@ -14,8 +14,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * Controller quản trị người dùng dành cho Admin (Phân hệ Quản trị & Phân quyền).
- * Chứa API 9 (get_list_users), API 10 (get_user_details), API 11 (create_user), API 12 (edit_user).
+ * Admin controller for user management (Administration and Authorization).
+ * Handles ADMIN_GET_LIST_USERS, ADMIN_GET_USER_DETAILS, ADMIN_CREATE_USER, and ADMIN_EDIT_USER.
  */
 @RestController
 @RequestMapping("/api/v1/admin/users")
@@ -28,12 +28,12 @@ public class AdminUserController {
     }
 
     /**
-     * API 9: admin02 / get_list_users
-     * Admin truy xuất danh sách người dùng trong hệ thống (hỗ trợ phân trang).
+     * ADMIN_GET_LIST_USERS
+     * Retrieves a paginated list of system users. Access is restricted to admins.
      *
-     * @param page Số trang hiện tại (mặc định 1)
-     * @param limit Số bản ghi trên 1 trang (mặc định 20)
-     * @return Danh sách người dùng phân trang
+     * @param page Page number (defaults to 1)
+     * @param limit Number of records per page (defaults to 20)
+     * @return The paginated user list
      */
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -45,11 +45,11 @@ public class AdminUserController {
     }
 
     /**
-     * API 10: admin03 / get_user_details
-     * Lấy thông tin chi tiết của một người dùng theo ID.
+     * ADMIN_GET_USER_DETAILS
+     * Retrieves a user's account details by ID. Access is restricted to admins.
      *
-     * @param id ID người dùng cần xem
-     * @return Chi tiết tài khoản người dùng
+     * @param id User ID
+     * @return The user's account details
      */
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
@@ -59,11 +59,11 @@ public class AdminUserController {
     }
 
     /**
-     * API 11: admin01 / create_user
-     * Tạo mới người dùng từ trang quản trị Admin.
+     * ADMIN_CREATE_USER
+     * Creates a user from the admin console. Access is restricted to admins.
      *
-     * @param req Dữ liệu tạo người dùng mới
-     * @return Thông tin người dùng vừa tạo
+     * @param req New user data
+     * @return The created user
      */
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -74,12 +74,12 @@ public class AdminUserController {
     }
 
     /**
-     * API 12: admin04 / edit_user
-     * Chỉnh sửa thông tin người dùng (Họ tên, Vai trò, Trạng thái hoạt động).
+     * ADMIN_EDIT_USER
+     * Updates the supplied full name, role, or active status. Access is restricted to admins.
      *
-     * @param id ID người dùng cần chỉnh sửa
-     * @param req Thông tin cập nhật
-     * @return Thông tin người dùng sau cập nhật
+     * @param id User ID
+     * @param req User fields to update
+     * @return The updated user
      */
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")

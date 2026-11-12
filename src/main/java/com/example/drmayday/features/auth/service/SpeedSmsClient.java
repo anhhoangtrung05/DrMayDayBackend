@@ -33,7 +33,7 @@ public class SpeedSmsClient implements PasswordResetSmsSender {
     public void send(String phone, String code, long expirationMinutes) {
         if (properties.apiToken().isBlank()) {
             log.error("SpeedSMS is not configured: SPEEDSMS_API_TOKEN is empty");
-            throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR, "SMS provider is not configured");
+            throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR, "Nhà cung cấp SMS chưa được cấu hình");
         }
 
         SpeedSmsRequest request = new SpeedSmsRequest(
@@ -57,11 +57,11 @@ public class SpeedSmsClient implements PasswordResetSmsSender {
             if (response == null || !"success".equalsIgnoreCase(response.status())) {
                 String providerCode = response != null ? response.code() : "empty response";
                 log.error("SpeedSMS rejected password reset SMS (code={})", providerCode);
-                throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR, "Unable to send password reset SMS");
+                throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR, "Không thể gửi tin nhắn đặt lại mật khẩu");
             }
         } catch (RestClientException ex) {
             log.error("SpeedSMS request failed: {}", ex.getMessage());
-            throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR, "Unable to send password reset SMS");
+            throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR, "Không thể gửi tin nhắn đặt lại mật khẩu");
         }
     }
 

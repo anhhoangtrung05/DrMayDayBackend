@@ -38,24 +38,24 @@ public class TokenAuthenticationIntegrationTest {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Test
-    @DisplayName("Kiểm thử trọn vẹn xác thực Token cho APIs 7-12 qua Filter Chain")
+    @DisplayName("End-to-end token authentication test for profile and admin user endpoints through the filter chain")
     void testFullApisTokenAuthentication() throws Exception {
-        // Sinh tokens
+        // Generate tokens.
         String patientToken = jwtTokenProvider.generateToken(2L, "0912345678", "patient");
         String adminToken = jwtTokenProvider.generateToken(1L, "0900000001", "admin");
 
         // -----------------------------------------------------------------
-        // API 7: GET /api/v1/profile - Lấy thông tin hồ sơ bệnh nhân (200 OK)
+        // PROFILE_GET: GET /api/v1/profile - Retrieve the patient's profile (200 OK).
         // -----------------------------------------------------------------
         mockMvc.perform(get("/api/v1/profile")
                         .header("Authorization", "Bearer " + patientToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("1000"))
-                .andExpect(jsonPath("$.message").value("OK"))
+                .andExpect(jsonPath("$.message").value("Thành công"))
                 .andExpect(jsonPath("$.data.phone").value("0912345678"));
 
         // -----------------------------------------------------------------
-        // API 8: PUT /api/v1/profile - Cập nhật hồ sơ bệnh nhân (200 OK)
+        // PROFILE_PUT: PUT /api/v1/profile - Update the patient's profile (200 OK).
         // -----------------------------------------------------------------
         UpdateProfileRequest updateProfileReq = UpdateProfileRequest.builder()
                 .fullName("Nguyễn Văn Bệnh Nhân E2E")
@@ -77,7 +77,7 @@ public class TokenAuthenticationIntegrationTest {
                 .andExpect(jsonPath("$.data.year_of_birth").value(1993));
 
         // -----------------------------------------------------------------
-        // API 9: GET /api/v1/admin/users - Admin lấy danh sách người dùng (200 OK)
+        // ADMIN_GET_LIST_USERS: GET /api/v1/admin/users - Admin retrieves the user list (200 OK).
         // -----------------------------------------------------------------
         mockMvc.perform(get("/api/v1/admin/users?page=1&limit=10")
                         .header("Authorization", "Bearer " + adminToken))
@@ -86,7 +86,7 @@ public class TokenAuthenticationIntegrationTest {
                 .andExpect(jsonPath("$.data.content").isArray());
 
         // -----------------------------------------------------------------
-        // API 10: GET /api/v1/admin/users/1 - Lấy chi tiết tài khoản Admin (200 OK)
+        // ADMIN_GET_USER_DETAILS: GET /api/v1/admin/users/1 - Retrieve admin account details (200 OK).
         // -----------------------------------------------------------------
         mockMvc.perform(get("/api/v1/admin/users/1")
                         .header("Authorization", "Bearer " + adminToken))
@@ -95,14 +95,14 @@ public class TokenAuthenticationIntegrationTest {
                 .andExpect(jsonPath("$.data.phone").value("0900000001"));
 
         // -----------------------------------------------------------------
-        // API 11: POST /api/v1/admin/users - Admin tạo người dùng mới (201 Created)
+        // ADMIN_CREATE_USER: POST /api/v1/admin/users - Admin creates a user (201 Created).
         // -----------------------------------------------------------------
         String randomPhone = String.format("097%07d", (int) (System.currentTimeMillis() % 10000000L));
         CreateUserRequest createUserReq = CreateUserRequest.builder()
                 .fullName("Người Dùng Test Token")
                 .phone(randomPhone)
                 .password("Password123@")
-                .roleId("2") // Bác sĩ
+                .roleId("2") // Doctor
                 .isActive("1")
                 .build();
 
@@ -120,12 +120,12 @@ public class TokenAuthenticationIntegrationTest {
         assertNotNull(newUserId);
 
         // -----------------------------------------------------------------
-        // API 12: PUT /api/v1/admin/users/{id} - Chỉnh sửa người dùng vừa tạo (200 OK)
+        // ADMIN_EDIT_USER: PUT /api/v1/admin/users/{id} - Update the newly created user (200 OK).
         // -----------------------------------------------------------------
         EditUserRequest editUserReq = EditUserRequest.builder()
                 .fullName("Người Dùng Đã Sửa Tên")
-                .roleId("3") // Điều dưỡng
-                .isActive("0") // Khóa tài khoản
+                .roleId("3") // Nurse
+                .isActive("0") // Disable the account
                 .build();
 
         mockMvc.perform(put("/api/v1/admin/users/" + newUserId)
@@ -139,38 +139,38 @@ public class TokenAuthenticationIntegrationTest {
                 .andExpect(jsonPath("$.data.is_active").value("0"));
 
         // -----------------------------------------------------------------
-        // KIỂM THỬ CÁC TÌNH HUỐNG LỖI XÁC THỰC THEO ĐẶC TẢ
+        // Test authentication failure scenarios from the specification.
         // -----------------------------------------------------------------
 
-        // 1. Không truyền token -> Mã 3003 (User not authenticated)
+        // 1. No token supplied -> code 3003 (User not authenticated).
         mockMvc.perform(get("/api/v1/profile"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("3003"))
-                .andExpect(jsonPath("$.message").value("User not authenticated"));
+                .andExpect(jsonPath("$.message").value("Người dùng chưa được xác thực"));
 
-        // 2. Token không hợp lệ / sai chữ ký -> Mã 3001 (Token invalid)
+        // 2. Invalid token or signature -> code 3001 (Token invalid).
         mockMvc.perform(get("/api/v1/profile")
                         .header("Authorization", "Bearer eyJhbGciOiJIUzM4NCIsInR5cCI6IkpXVCJ9.invalid.signature"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("3001"))
-                .andExpect(jsonPath("$.message").value("Token invalid"));
+                .andExpect(jsonPath("$.message").value("Token không hợp lệ"));
 
-        // 3. Token patient truy cập API Admin -> Mã 3102 (Admin role required - 403 Forbidden)
+        // 3. Patient token accesses an admin API -> code 3102 (Admin role required - 403 Forbidden).
         mockMvc.perform(get("/api/v1/admin/users")
                         .header("Authorization", "Bearer " + patientToken))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("3102"))
-                .andExpect(jsonPath("$.message").value("Admin role required"));
+                .andExpect(jsonPath("$.message").value("Yêu cầu quyền quản trị viên"));
     }
 
     @Test
-    @DisplayName("API 11: Số điện thoại +84 được chuẩn hóa về 10 chữ số và không tạo trùng tài khoản")
+    @DisplayName("ADMIN_CREATE_USER: +84 phone numbers are normalized to 10 digits and duplicate accounts are rejected")
     void testCreateUserNormalizesInternationalPhone() throws Exception {
         String adminToken = jwtTokenProvider.generateToken(1L, "0900000001", "admin");
         String subscriberDigits = String.format("96%07d", (int) (System.currentTimeMillis() % 10000000L));
         String localPhone = "0" + subscriberDigits;
 
-        // Số dạng +84 được chấp nhận và lưu theo dạng 0xxxxxxxxx
+        // A +84 number is accepted and stored in 0xxxxxxxxx format.
         mockMvc.perform(post("/api/v1/admin/users")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -181,7 +181,7 @@ public class TokenAuthenticationIntegrationTest {
 
         assertEquals(true, userAccountRepository.existsByUsername(localPhone));
 
-        // Cùng số đó ở dạng 0xxxxxxxxx bị từ chối vì đã tồn tại
+        // The same number in 0xxxxxxxxx format is rejected because it already exists.
         mockMvc.perform(post("/api/v1/admin/users")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -189,7 +189,7 @@ public class TokenAuthenticationIntegrationTest {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("3006"));
 
-        // Và ở chiều ngược lại, gửi lại dạng +84 cũng bị từ chối
+        // The reverse also applies: resubmitting the number in +84 format is rejected.
         mockMvc.perform(post("/api/v1/admin/users")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)

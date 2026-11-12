@@ -9,36 +9,36 @@ import org.springframework.data.domain.Page;
 public interface AdminUserService {
 
     /**
-     * API 9: admin02 / get_list_users - Admin truy xuất danh sách người dùng trong hệ thống (hỗ trợ phân trang).
+     * ADMIN_GET_LIST_USERS - Retrieves the paginated list of users for an admin.
      *
-     * @param page Số trang hiện tại (1-based index)
-     * @param limit Số bản ghi trên 1 trang
-     * @return Trang danh sách người dùng
+     * @param page Current page number (1-based index)
+     * @param limit Number of records per page
+     * @return A page of users
      */
     Page<UserResponse> getListUsers(int page, int limit);
 
     /**
-     * API 10: admin03 / get_user_details - Lấy thông tin chi tiết một người dùng theo ID.
+     * ADMIN_GET_USER_DETAILS - Retrieves a user's details by ID.
      *
-     * @param id ID người dùng dạng chuỗi
-     * @return Thông tin chi tiết người dùng
+     * @param id User ID as a string
+     * @return User details
      */
     UserDetailsResponse getUserDetails(String id);
 
     /**
-     * API 11: admin01 / create_user - Tạo mới người dùng từ trang quản trị Admin.
+     * ADMIN_CREATE_USER - Creates a new user from the admin console.
      *
-     * @param request Dữ liệu tạo người dùng
-     * @return Thông tin người dùng vừa tạo
+     * @param request Data for the new user
+     * @return The created user's details
      */
     UserResponse createUser(CreateUserRequest request);
 
     /**
-     * API 12: admin04 / edit_user - Chỉnh sửa thông tin người dùng (Họ tên, Vai trò, Trạng thái).
+     * ADMIN_EDIT_USER - Updates a user's full name, role, or active status.
      *
-     * @param id ID người dùng cần chỉnh sửa
-     * @param request Dữ liệu cập nhật
-     * @return Thông tin người dùng sau khi cập nhật
+     * @param id ID of the user to update
+     * @param request Updated user data
+     * @return The updated user's details
      */
     UserResponse editUser(String id, EditUserRequest request);
 }

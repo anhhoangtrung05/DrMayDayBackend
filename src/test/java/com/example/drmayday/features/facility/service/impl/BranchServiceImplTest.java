@@ -37,8 +37,8 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
- * Khóa các nhánh khó tạo bằng dữ liệu thật: thứ tự kiểm tra của API 28 và cách đổi lỗi database.
- * Chỉ giả lập repository, là ranh giới với database.
+ * Covers hard-to-reproduce branches using test data: TOPOLOGY_DELETE_BRANCH validation order and database error translation.
+ * Only the repository boundary is mocked.
  */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -77,10 +77,10 @@ class BranchServiceImplTest {
                         ex -> assertThat(ex.getErrorCode()).isEqualTo(expected));
     }
 
-    // API 28: thứ tự kiểm tra
+    // TOPOLOGY_DELETE_BRANCH: validation order.
 
     @Test
-    @DisplayName("AC-13: chi nhánh cuối còn phòng và nhân viên trả 2107 chứ không phải 2102")
+    @DisplayName("AC-13: the last branch returns 2107, not 2102, even when it has rooms and employees")
     void lastBranchWinsOverDependencies() {
         givenBranchCount(1);
         when(clinicRoomRepository.existsByBranchId(BRANCH_ID)).thenReturn(true);
@@ -92,7 +92,7 @@ class BranchServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-13: chi nhánh cuối không còn gì vẫn không xóa được")
+    @DisplayName("AC-13: the last branch cannot be deleted even when it has no dependencies")
     void lastEmptyBranchCannotBeDeleted() {
         givenBranchCount(1);
 
@@ -102,7 +102,7 @@ class BranchServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-12: còn từ hai chi nhánh và chi nhánh này còn phòng thì trả 2102")
+    @DisplayName("AC-12: with at least two branches, a branch containing rooms returns 2102")
     void branchWithRoomsCannotBeDeleted() {
         givenBranchCount(2);
         when(clinicRoomRepository.existsByBranchId(BRANCH_ID)).thenReturn(true);
@@ -113,7 +113,7 @@ class BranchServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-12: còn từ hai chi nhánh và chi nhánh này còn nhân viên thì trả 2102")
+    @DisplayName("AC-12: with at least two branches, a branch containing employees returns 2102")
     void branchWithStaffCannotBeDeleted() {
         givenBranchCount(2);
         when(employeeRepository.existsByBranchId(BRANCH_ID)).thenReturn(true);
@@ -124,7 +124,7 @@ class BranchServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-11: chi nhánh trống được xóa và flush ngay để lỗi database lộ ra trong service")
+    @DisplayName("AC-11: an empty branch is deleted and flushed immediately so database errors surface in the service")
     void emptyBranchIsDeletedAndFlushed() {
         givenBranchCount(2);
 
@@ -136,7 +136,7 @@ class BranchServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-9: id không tồn tại trả 2101 trước mọi kiểm tra khác")
+    @DisplayName("AC-9: a nonexistent ID returns 2101 before any other checks")
     void missingBranchFailsBeforeOtherChecks() {
         when(branchRepository.findById(99L)).thenReturn(Optional.empty());
 
@@ -146,10 +146,10 @@ class BranchServiceImplTest {
         verifyNoInteractions(clinicRoomRepository, employeeRepository);
     }
 
-    // API 28: đổi lỗi database khi hai Admin thao tác cùng lúc
+    // TOPOLOGY_DELETE_BRANCH: translate database errors when two admins act concurrently.
 
     @Test
-    @DisplayName("AC-5: lỗi khóa ngoại lúc flush được đổi thành 2102")
+    @DisplayName("AC-5: a foreign key violation during flush is translated to 2102")
     void foreignKeyViolationBecomesBranchHasDependencies() {
         givenBranchCount(2);
         doThrow(new DataIntegrityViolationException("fk", new SQLException("fk", "23503")))
@@ -159,7 +159,7 @@ class BranchServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-5: lỗi database khác không bị đổi mã, ngoại lệ gốc được ném lại")
+    @DisplayName("AC-5: other database errors are not translated and the original exception is rethrown")
     void otherIntegrityViolationIsRethrown() {
         givenBranchCount(2);
         DataIntegrityViolationException original =
@@ -170,7 +170,7 @@ class BranchServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-5: Admin khác đã xóa trước thì bên sau nhận 2101")
+    @DisplayName("AC-5: if another admin deleted the branch first, the subsequent request receives 2101")
     void concurrentDeleteBecomesBranchNotFound() {
         givenBranchCount(2);
         doThrow(new ObjectOptimisticLockingFailureException(Branch.class, BRANCH_ID))
@@ -179,18 +179,18 @@ class BranchServiceImplTest {
         assertFailsWith(ErrorCode.BRANCH_NOT_FOUND, () -> service.deleteBranch(ID));
     }
 
-    // Id trên đường dẫn
+    // Path ID.
 
     @ParameterizedTest
     @ValueSource(strings = {"abc", "", "1.5", "9223372036854775808"})
-    @DisplayName("AC-9: id không parse được thành Long trả 2101 mà không gọi database")
+    @DisplayName("AC-9: an ID that cannot be parsed as Long returns 2101 without calling the database")
     void unparsableIdIsNotFound(String id) {
         assertFailsWith(ErrorCode.BRANCH_NOT_FOUND, () -> service.getBranchDetails(id));
 
         verify(branchRepository, never()).findById(any());
     }
 
-    // API 24 và API 27: chuẩn hóa dữ liệu trước khi lưu
+    // TOPOLOGY_SET_BRANCH and TOPOLOGY_EDIT_BRANCH: normalize data before saving.
 
     private Branch savedBranch() {
         ArgumentCaptor<Branch> captor = ArgumentCaptor.forClass(Branch.class);
@@ -207,7 +207,7 @@ class BranchServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-6: tạo chi nhánh trim tên, địa chỉ, số điện thoại và luôn đang hoạt động")
+    @DisplayName("AC-6: branch creation trims the name, address, and phone and always activates the branch")
     void createTrimsValuesAndStartsActive() {
         service.createBranch(createRequest(" +84901234567 "));
 
@@ -220,7 +220,7 @@ class BranchServiceImplTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"", "   "})
-    @DisplayName("AC-6: số điện thoại rỗng khi tạo được lưu NULL vì cột cấm chuỗi rỗng")
+    @DisplayName("AC-6: an empty phone on creation is stored as NULL because the column disallows empty strings")
     void createStoresBlankPhoneAsNull(String phone) {
         service.createBranch(createRequest(phone));
 
@@ -228,7 +228,7 @@ class BranchServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-10: không gửi phone thì giữ nguyên số cũ")
+    @DisplayName("AC-10: omitting phone preserves the existing number")
     void editKeepsPhoneWhenNotSent() {
         service.editBranch(ID, new EditBranchRequest());
 
@@ -237,7 +237,7 @@ class BranchServiceImplTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"", "   "})
-    @DisplayName("AC-10: phone rỗng xóa số điện thoại")
+    @DisplayName("AC-10: an empty phone removes the phone number")
     void editClearsPhoneWhenBlank(String phone) {
         EditBranchRequest req = new EditBranchRequest();
         req.setPhone(phone);
@@ -248,7 +248,7 @@ class BranchServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-10: address rỗng trả 2003 và không ghi gì")
+    @DisplayName("AC-10: an empty address returns 2003 and does not write any data")
     void editRejectsBlankAddressWithoutSaving() {
         EditBranchRequest req = new EditBranchRequest();
         req.setAddress("   ");

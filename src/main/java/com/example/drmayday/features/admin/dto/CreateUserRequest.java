@@ -5,7 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 
 /**
- * DTO yêu cầu tạo người dùng mới từ trang quản trị Admin (API 11 create_user).
+ * Request DTO for ADMIN_CREATE_USER.
  */
 public class CreateUserRequest {
 

@@ -4,10 +4,10 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * DTO phản hồi thông tin người dùng theo đặc tả quản trị Admin (API 9, 11, 12).
- * Lưu ý đặc tả backend:
- * - user_id, role_id trả về kiểu String.
- * - is_active trả về kiểu String ("1" hoặc "0").
+ * User response DTO for ADMIN_GET_LIST_USERS, ADMIN_CREATE_USER, and ADMIN_EDIT_USER.
+ * Backend contract notes:
+ * - user_id and role_id are returned as strings.
+ * - is_active is returned as a string ("1" or "0").
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class UserResponse {

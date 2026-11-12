@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.Size;
 
 /**
- * DTO yêu cầu sửa phòng khám (API 32 edit_room). Trường nào không gửi thì giữ nguyên.
+ * Request DTO for TOPOLOGY_EDIT_ROOM. Omitted fields remain unchanged.
  */
 public class EditRoomRequest {
 

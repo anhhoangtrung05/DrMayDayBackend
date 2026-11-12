@@ -38,9 +38,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
 /**
- * Kiểm thử tranh chấp giữa hai giao dịch trên phòng khám (AC-5, AC-20). Lớp này cần commit thật.
- * Test ghi thật vào database rồi tự dọn, nên chỉ chạy trên Postgres local. Gặp server khác thì test bị bỏ qua.
- * Thay vì chờ một khoảng cố định, test đọc pg_stat_activity để biết chắc request đã bị database chặn.
+ * Tests contention between two clinic room transactions (AC-5, AC-20). This class requires real commits.
+ * It writes to the database and cleans up afterward, so it only runs against local PostgreSQL.
+ * Tests inspect pg_stat_activity to confirm that the database blocked a request instead of waiting for a fixed duration.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -75,7 +75,7 @@ class RoomTransactionIntegrationTest {
             url = connection.getMetaData().getURL();
         }
         assumeTrue(url.contains("localhost") || url.contains("127.0.0.1"),
-                "Lớp test này commit dữ liệu thật nên chỉ chạy trên Postgres local");
+                "This test class commits real data and therefore only runs against local PostgreSQL.");
 
         adminToken = jwtTokenProvider.generateToken(1L, "0900000001", "admin");
         otherAdmin = dataSource.getConnection();
@@ -89,7 +89,7 @@ class RoomTransactionIntegrationTest {
             otherAdmin.rollback();
             otherAdmin.close();
         }
-        // Khóa ngoại subtype là DEFERRED nên phải xóa cả chuỗi trong cùng một transaction
+        // Subtype foreign keys are deferred, so the entire record chain must be deleted in one transaction.
         try (Connection connection = dataSource.getConnection()) {
             connection.setAutoCommit(false);
             for (Long patient : createdPatients) {
@@ -155,7 +155,7 @@ class RoomTransactionIntegrationTest {
                 Long.class, branch, name);
     }
 
-    // Hồ sơ bắt buộc có dòng subtype, khóa ngoại subtype được kiểm tra lúc commit
+    // The record requires a subtype row; the subtype foreign key is checked at commit time.
     private long givenCommittedMedicalRecord() throws SQLException {
         try (Connection connection = dataSource.getConnection()) {
             connection.setAutoCommit(false);
@@ -172,7 +172,7 @@ class RoomTransactionIntegrationTest {
         }
     }
 
-    // Câu INSERT này lấy FOR KEY SHARE trên dòng phongkham, đúng thứ API 32 và 33 phải tranh chấp với
+    // This INSERT takes FOR KEY SHARE on the phongkham row, matching the lock that TOPOLOGY_EDIT_ROOM and TOPOLOGY_DELETE_ROOM must contend with.
     private void otherAdminInsertsExamSession(long record, long room) throws SQLException {
         Long doctor = jdbcTemplate.queryForObject("SELECT min(ma_nhan_vien) FROM nhanvien", Long.class);
         long session = insertReturningId(otherAdmin, """
@@ -235,7 +235,7 @@ class RoomTransactionIntegrationTest {
     }
 
     @Test
-    @DisplayName("AC-5: phòng cùng tên chen vào lúc đang tạo thì API 29 trả 2104, không phải 3006")
+    @DisplayName("AC-5: a room with the same name inserted during creation makes TOPOLOGY_SET_ROOM return 2104, not 3006")
     void concurrentSameNameOnCreateReturns2104() throws Exception {
         long branch = givenBranch("Cơ sở Tranh Chấp");
         run(otherAdmin, "INSERT INTO phongkham (ma_chi_nhanh, ten_phong_kham) VALUES (?, ?)", branch, "Phòng 101");
@@ -253,7 +253,7 @@ class RoomTransactionIntegrationTest {
     }
 
     @Test
-    @DisplayName("AC-5: phòng cùng tên chen vào lúc đang đổi tên thì API 32 trả 2104, tên cũ giữ nguyên")
+    @DisplayName("AC-5: a room with the same name inserted during a rename makes TOPOLOGY_EDIT_ROOM return 2104 and preserves the old name")
     void concurrentSameNameOnRenameReturns2104() throws Exception {
         long branch = givenBranch("Cơ sở Tranh Chấp");
         long room = givenRoom(branch, "Phòng 101");
@@ -272,7 +272,7 @@ class RoomTransactionIntegrationTest {
     }
 
     @Test
-    @DisplayName("AC-5: chi nhánh bị xóa đúng lúc đang tạo phòng thì API 29 trả 2101")
+    @DisplayName("AC-5: deleting a branch while a room is being created makes TOPOLOGY_SET_ROOM return 2101")
     void branchDeletedDuringCreateReturns2101() throws Exception {
         long branch = givenBranch("Cơ sở Tranh Chấp");
         run(otherAdmin, "DELETE FROM chinhanh WHERE ma_chi_nhanh = ?", branch);
@@ -289,7 +289,7 @@ class RoomTransactionIntegrationTest {
     }
 
     @Test
-    @DisplayName("AC-5: phiên khám chen vào lúc đang xóa phòng thì API 33 trả 2105, phòng vẫn còn")
+    @DisplayName("AC-5: an exam session inserted while a room is being deleted makes TOPOLOGY_DELETE_ROOM return 2105 and preserves the room")
     void examSessionDuringDeleteReturns2105() throws Exception {
         long branch = givenBranch("Cơ sở Tranh Chấp");
         long room = givenRoom(branch, "Phòng 101");
@@ -307,7 +307,7 @@ class RoomTransactionIntegrationTest {
     }
 
     @Test
-    @DisplayName("AC-5, AC-20: phiên khám chưa commit chặn API 32, commit xong thì trả 2105 và phòng ở chi nhánh cũ")
+    @DisplayName("AC-5, AC-20: an uncommitted exam session blocks TOPOLOGY_EDIT_ROOM; after commit, it returns 2105 and the room stays in its original branch")
     void examSessionCommittedDuringMoveReturns2105() throws Exception {
         long branch = givenBranch("Cơ sở Tranh Chấp");
         long target = givenBranch("Cơ sở Đích");
@@ -328,7 +328,7 @@ class RoomTransactionIntegrationTest {
     }
 
     @Test
-    @DisplayName("AC-5, AC-20: FOR KEY SHARE chặn API 32, rollback xong thì chuyển phòng thành công")
+    @DisplayName("AC-5, AC-20: FOR KEY SHARE blocks TOPOLOGY_EDIT_ROOM; after rollback, the room is moved successfully")
     void moveWaitsForKeyShareLockThenSucceeds() throws Exception {
         long branch = givenBranch("Cơ sở Tranh Chấp");
         long target = givenBranch("Cơ sở Đích");
@@ -348,7 +348,7 @@ class RoomTransactionIntegrationTest {
     }
 
     @Test
-    @DisplayName("AC-5: hai Admin cùng xóa một phòng thì một bên 1000, bên kia 2103, không có 9999")
+    @DisplayName("AC-5: when two admins delete the same room, one receives 1000 and the other 2103, never 9999")
     void concurrentDeletesReturnSuccessAndNotFound() throws Exception {
         long branch = givenBranch("Cơ sở Tranh Chấp");
         long room = givenRoom(branch, "Phòng 101");
@@ -365,7 +365,7 @@ class RoomTransactionIntegrationTest {
     }
 
     @Test
-    @DisplayName("Sửa thất bại giữa chừng thì tên hợp lệ gửi cùng request cũng không được lưu")
+    @DisplayName("If an update fails midway, a valid name in the same request is not saved")
     void failedEditLeavesRowUntouched() throws Exception {
         long branch = givenBranch("Cơ sở Tranh Chấp");
         long room = givenRoom(branch, "Phòng 101");

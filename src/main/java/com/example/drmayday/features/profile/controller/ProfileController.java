@@ -9,6 +9,10 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * Controller for the authenticated patient's profile.
+ * Handles PROFILE_GET and PROFILE_PUT.
+ */
 @RestController
 @RequestMapping("/api/v1/profile")
 public class ProfileController {
@@ -19,6 +23,13 @@ public class ProfileController {
         this.profileService = profileService;
     }
 
+    /**
+     * PROFILE_GET
+     * Retrieves the detailed profile of the authenticated patient.
+     *
+     * @param token Bearer token for the authenticated user
+     * @return The patient's profile
+     */
     @GetMapping
     public ResponseEntity<BaseResponse<PatientProfileResponse>> getProfile(
             @RequestHeader(value = "Authorization", required = false) String token) {
@@ -27,6 +38,14 @@ public class ProfileController {
         return ResponseEntity.ok(BaseResponse.success(response));
     }
 
+    /**
+     * PROFILE_PUT
+     * Updates the patient's demographic, contact, and health insurance information.
+     *
+     * @param token Bearer token for the authenticated user
+     * @param request Profile fields to update
+     * @return The updated patient profile
+     */
     @PutMapping
     public ResponseEntity<BaseResponse<PatientProfileResponse>> updateProfile(
             @RequestHeader(value = "Authorization", required = false) String token,

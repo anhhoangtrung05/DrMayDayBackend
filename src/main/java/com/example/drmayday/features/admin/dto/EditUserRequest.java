@@ -3,7 +3,7 @@ package com.example.drmayday.features.admin.dto;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * DTO yêu cầu chỉnh sửa thông tin người dùng từ trang quản trị Admin (API 12 edit_user).
+ * Request DTO for ADMIN_EDIT_USER.
  */
 public class EditUserRequest {
 

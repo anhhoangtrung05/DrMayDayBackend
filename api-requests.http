@@ -1,16 +1,16 @@
 ### =====================================================================
-### DRMAYDAY BACKEND - HTTP REQUEST TEST SUITE (APIs 7 - 12)
-### Sử dụng trên IntelliJ IDEA hoặc VS Code (REST Client extension)
+### DRMAYDAY BACKEND - HTTP REQUEST TEST SUITE (profile and admin user endpoints)
+### Use with IntelliJ IDEA or VS Code (REST Client extension)
 ### =====================================================================
 
 @baseUrl = http://localhost:8080
 
 ### ---------------------------------------------------------------------
-### AUTH_LOGIN: Đăng nhập bằng số điện thoại và mật khẩu
-### Tài khoản Admin mẫu được tạo bởi DatabaseSeeder
+### AUTH_LOGIN: Log in with a phone number and password
+### The sample admin account is created by DatabaseSeeder
 ### ---------------------------------------------------------------------
 
-### Đăng nhập thành công (200 OK)
+### Successful login (200 OK)
 # @name login
 POST {{baseUrl}}/api/v1/auth/login
 Content-Type: application/json
@@ -20,11 +20,11 @@ Content-Type: application/json
   "password": "Admin@123"
 }
 
-### Đăng xuất thành công (200 OK, token bị thu hồi)
+### Successful logout (200 OK; the token is revoked)
 POST {{baseUrl}}/api/v1/auth/logout
 Authorization: Bearer {{login.response.body.data.token}}
 
-### Yêu cầu mã khôi phục mật khẩu (SMS)
+### Request a password reset code (SMS)
 POST {{baseUrl}}/api/v1/auth/forgot-password
 Content-Type: application/json
 
@@ -32,7 +32,7 @@ Content-Type: application/json
   "phone": "0912345678"
 }
 
-### Đổi mật khẩu (token hiện tại sẽ bị thu hồi)
+### Change password (the current token will be revoked)
 PUT {{baseUrl}}/api/v1/auth/change-password
 Authorization: Bearer {{login.response.body.data.token}}
 Content-Type: application/json
@@ -45,37 +45,37 @@ Content-Type: application/json
 
 
 ### ---------------------------------------------------------------------
-### 0. BƯỚC CHUẨN BỊ: SINH TOKEN TEST DEV LOCAL
+### 0. SETUP: GENERATE LOCAL DEVELOPMENT TEST TOKENS
 ### ---------------------------------------------------------------------
 
-### 0.1 Sinh Admin JWT Token
+### 0.1 Generate an admin JWT
 # @name getAdminToken
 POST {{baseUrl}}/api/v1/auth/dev-token?userId=1&phone=0900000001&role=admin
 
-### Lưu adminToken từ response trên vào biến
+### Store the adminToken from the response in a variable
 @adminToken = {{getAdminToken.response.body.data.token}}
 
 
-### 0.2 Sinh Patient (Bệnh nhân) JWT Token
+### 0.2 Generate a patient JWT
 # @name getPatientToken
 POST {{baseUrl}}/api/v1/auth/dev-token?userId=2&phone=0912345678&role=patient
 
-### Lưu patientToken từ response trên vào biến
+### Store the patientToken from the response in a variable
 @patientToken = {{getPatientToken.response.body.data.token}}
 
 
 ### =====================================================================
-### PHẦN 1: XÁC THỰC & HỒ SƠ BỆNH NHÂN (APIs 7 & 8)
+### PART 1: AUTHENTICATION AND PATIENT PROFILES (PROFILE_GET and PROFILE_PUT)
 ### =====================================================================
 
-### API 7: PROFILE_GET - Lấy chi tiết hồ sơ bệnh nhân đang đăng nhập (200 OK)
+### PROFILE_GET - Get the authenticated patient's profile (200 OK)
 GET {{baseUrl}}/api/v1/profile
 Authorization: Bearer {{patientToken}}
 
-### API 7: PROFILE_GET - Lỗi chưa đăng nhập (401 Unauthorized - Mã 3003)
+### PROFILE_GET - Unauthenticated request (401 Unauthorized - Code 3003)
 GET {{baseUrl}}/api/v1/profile
 
-### API 8: PROFILE_PUT - Bệnh nhân cập nhật hồ sơ cá nhân (200 OK)
+### PROFILE_PUT - Patient updates their profile (200 OK)
 PUT {{baseUrl}}/api/v1/profile
 Authorization: Bearer {{patientToken}}
 Content-Type: application/json; charset=utf-8
@@ -90,7 +90,7 @@ Content-Type: application/json; charset=utf-8
   "bhyt_code": "GD4010123456789"
 }
 
-### API 8: PROFILE_PUT - Lỗi năm sinh không hợp lệ (400 Bad Request - Mã 2003)
+### PROFILE_PUT - Invalid birth year (400 Bad Request - Code 2003)
 PUT {{baseUrl}}/api/v1/profile
 Authorization: Bearer {{patientToken}}
 Content-Type: application/json
@@ -101,26 +101,26 @@ Content-Type: application/json
 
 
 ### =====================================================================
-### PHẦN 2: QUẢN TRỊ NGƯỜI DÙNG DÀNH CHO ADMIN (APIs 9 - 12)
+### PART 2: ADMIN USER MANAGEMENT (admin user endpoints)
 ### =====================================================================
 
-### API 9: admin02 / get_list_users - Admin lấy danh sách người dùng phân trang (200 OK)
+### ADMIN_GET_LIST_USERS - Admin retrieves the paginated user list (200 OK)
 GET {{baseUrl}}/api/v1/admin/users?page=1&limit=10
 Authorization: Bearer {{adminToken}}
 
-### API 9: admin02 / get_list_users - Người dùng không phải Admin bị chặn (403 Forbidden - Mã 3102)
+### ADMIN_GET_LIST_USERS - Non-admin user is denied (403 Forbidden - Code 3102)
 GET {{baseUrl}}/api/v1/admin/users?page=1&limit=10
 Authorization: Bearer {{patientToken}}
 
-### API 10: admin03 / get_user_details - Lấy chi tiết người dùng theo ID (200 OK)
+### ADMIN_GET_USER_DETAILS - Get user details by ID (200 OK)
 GET {{baseUrl}}/api/v1/admin/users/1
 Authorization: Bearer {{adminToken}}
 
-### API 10: admin03 / get_user_details - ID không tồn tại (404 Not Found - Mã 3007)
+### ADMIN_GET_USER_DETAILS - ID does not exist (404 Not Found - Code 3007)
 GET {{baseUrl}}/api/v1/admin/users/999999
 Authorization: Bearer {{adminToken}}
 
-### API 11: admin01 / create_user - Admin tạo mới người dùng (201 Created - Mã 1001)
+### ADMIN_CREATE_USER - Admin creates a user (201 Created - Code 1001)
 POST {{baseUrl}}/api/v1/admin/users
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
@@ -133,7 +133,7 @@ Content-Type: application/json
   "is_active": "1"
 }
 
-### API 11: admin01 / create_user - Lỗi số điện thoại đã tồn tại (409 Conflict - Mã 3006)
+### ADMIN_CREATE_USER - Phone number already exists (409 Conflict - Code 3006)
 POST {{baseUrl}}/api/v1/admin/users
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
@@ -146,7 +146,7 @@ Content-Type: application/json
   "is_active": "1"
 }
 
-### API 11: admin01 / create_user - Lỗi thiếu trường bắt buộc (400 Bad Request - Mã 2001)
+### ADMIN_CREATE_USER - Required field is missing (400 Bad Request - Code 2001)
 POST {{baseUrl}}/api/v1/admin/users
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
@@ -158,7 +158,7 @@ Content-Type: application/json
   "role_id": ""
 }
 
-### API 11: admin01 / create_user - Lỗi định dạng số điện thoại sai chuẩn (400 Bad Request - Mã 2004)
+### ADMIN_CREATE_USER - Invalid phone number format (400 Bad Request - Code 2004)
 POST {{baseUrl}}/api/v1/admin/users
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
@@ -170,7 +170,7 @@ Content-Type: application/json
   "role_id": "2"
 }
 
-### API 12: admin04 / edit_user - Chỉnh sửa thông tin người dùng (200 OK - Mã 1000)
+### ADMIN_EDIT_USER - Update user information (200 OK - Code 1000)
 PUT {{baseUrl}}/api/v1/admin/users/1
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
@@ -180,7 +180,7 @@ Content-Type: application/json
   "is_active": "1"
 }
 
-### API 12: admin04 / edit_user - Chỉnh sửa user không tồn tại (404 Not Found - Mã 3007)
+### ADMIN_EDIT_USER - Update a nonexistent user (404 Not Found - Code 3007)
 PUT {{baseUrl}}/api/v1/admin/users/999999
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json

@@ -10,9 +10,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Endpoint hỗ trợ phát triển local (Dev Local Helper):
- * Cho phép lập trình viên tạo nhanh JWT token cho các vai trò (admin, patient, doctor)
- * để kiểm thử các APIs 7-12 qua Postman / cURL / HTTP Client mà không cần đợi API Login.
+ * Local development helper endpoint.
+ * Allows developers to quickly generate JWTs for roles (admin, patient, doctor)
+ * to test PROFILE_GET, PROFILE_PUT, ADMIN_GET_LIST_USERS, ADMIN_GET_USER_DETAILS,
+ * ADMIN_CREATE_USER, and ADMIN_EDIT_USER with Postman, cURL, or an HTTP client without using the login API.
  */
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -25,11 +26,11 @@ public class DevAuthController {
     }
 
     /**
-     * Sinh nhanh JWT Token để test API. Hỗ trợ cả Query Parameters lẫn JSON Request Body.
+     * Quickly generates a JWT for API testing. Supports query parameters and a JSON request body.
      *
-     * @param userId ID người dùng (mặc định 1 cho admin, 2 cho patient)
-     * @param phone Số điện thoại (mặc định 0900000001 cho admin, 0912345678 cho patient)
-     * @param role Vai trò: "admin", "patient", "benh_nhan", "bac_si" (mặc định "admin")
+     * @param userId User ID (defaults to 1 for admin and 2 for patient)
+     * @param phone Phone number (defaults to 0900000001 for admin and 0912345678 for patient)
+     * @param role Role: "admin", "patient", "benh_nhan", or "bac_si" (defaults to "admin")
      * @param body Optional JSON body
      * @return Token JWT Bearer
      */

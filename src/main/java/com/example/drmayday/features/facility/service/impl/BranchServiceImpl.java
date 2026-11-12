@@ -40,7 +40,7 @@ public class BranchServiceImpl implements BranchService {
     @Override
     @Transactional
     public BranchResponse createBranch(CreateBranchRequest req) {
-        log.info("Admin tạo chi nhánh mới");
+        log.info("Admin creating a branch");
         Branch branch = new Branch(null, req.getName().trim(), req.getAddress().trim(),
                 normalizePhone(req.getPhone()), true);
         return BranchResponse.from(branchRepository.saveAndFlush(branch));
@@ -63,7 +63,7 @@ public class BranchServiceImpl implements BranchService {
     @Override
     @Transactional
     public BranchResponse editBranch(String id, EditBranchRequest req) {
-        log.info("Admin sửa chi nhánh: id={}", id);
+        log.info("Admin updating a branch: id={}", id);
         Branch branch = findBranch(id);
 
         if (req.getName() != null) {
@@ -91,11 +91,11 @@ public class BranchServiceImpl implements BranchService {
     @Override
     @Transactional
     public void deleteBranch(String id) {
-        log.info("Admin xóa chi nhánh: id={}", id);
+        log.info("Admin deleting a branch: id={}", id);
         Branch branch = findBranch(id);
         Long branchId = branch.getBranchId();
 
-        // Kiểm tra chi nhánh cuối trước phụ thuộc: chi nhánh cuối luôn trả 2107 dù còn phòng hay nhân viên
+        // Check whether this is the last branch before checking dependencies; it always returns 2107.
         if (branchRepository.count() <= 1) {
             throw new AppException(ErrorCode.LAST_BRANCH_CANNOT_BE_DELETED);
         }
@@ -113,7 +113,7 @@ public class BranchServiceImpl implements BranchService {
             }
             throw ex;
         } catch (ObjectOptimisticLockingFailureException ex) {
-            // Admin khác đã xóa chi nhánh trước, câu DELETE không còn dòng nào để xóa
+            // Another admin already deleted the branch, so the DELETE statement found no row.
             throw new AppException(ErrorCode.BRANCH_NOT_FOUND);
         }
     }
@@ -131,7 +131,7 @@ public class BranchServiceImpl implements BranchService {
         }
     }
 
-    // Cột so_dien_thoai cấm chuỗi rỗng nên giá trị rỗng được lưu thành NULL
+    // The so_dien_thoai column disallows empty strings, so empty values are stored as null.
     private String normalizePhone(String phone) {
         if (phone == null) {
             return null;

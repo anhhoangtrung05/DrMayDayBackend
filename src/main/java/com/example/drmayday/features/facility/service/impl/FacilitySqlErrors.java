@@ -5,7 +5,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import java.sql.SQLException;
 
 /**
- * Nhận diện lỗi database theo SQLState. Không dùng tên ràng buộc vì tên của phongkham do PostgreSQL tự sinh.
+ * Identifies database errors by SQLState. Constraint names are not used because PostgreSQL generates
+ * the names for phongkham constraints.
  */
 final class FacilitySqlErrors {
 
