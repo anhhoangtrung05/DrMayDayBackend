@@ -15,10 +15,4 @@ public interface JwtTokenProvider {
     }
 
     Claims parseAndValidateClaims(String token);
-
-    Long getUserIdFromClaims(Claims claims);
-
-    String getRoleFromClaims(Claims claims);
-
-    String getPhoneFromClaims(Claims claims);
 }

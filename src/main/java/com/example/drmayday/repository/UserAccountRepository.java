@@ -19,11 +19,11 @@ public interface UserAccountRepository extends JpaRepository<UserAccount, Long> 
     boolean existsByUsername(String username);
 
     @Override
-    @EntityGraph(attributePaths = {"person", "role"})
+    @EntityGraph(attributePaths = {"person"})
     Optional<UserAccount> findById(Long accountId);
 
     @Override
-    @EntityGraph(attributePaths = {"person", "role"})
+    @EntityGraph(attributePaths = {"person"})
     Page<UserAccount> findAll(Pageable pageable);
 
     @Query(value = "SELECT u FROM UserAccount u JOIN FETCH u.person p JOIN FETCH u.role r " +

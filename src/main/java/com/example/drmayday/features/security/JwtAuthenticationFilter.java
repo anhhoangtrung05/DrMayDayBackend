@@ -38,11 +38,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (StringUtils.hasText(jwt)) {
                 Claims claims = jwtTokenProvider.parseAndValidateClaims(jwt);
-                Long userId = jwtTokenProvider.getUserIdFromClaims(claims);
-                String phone = jwtTokenProvider.getPhoneFromClaims(claims);
-                String role = jwtTokenProvider.getRoleFromClaims(claims);
+                Long userId = Long.valueOf(claims.getSubject());
+                String phone = claims.get("phone", String.class);
+                String role = claims.get("role", String.class);
 
-                UserPrincipal principal = UserPrincipal.create(userId, phone, phone, role);
+                UserPrincipal principal = UserPrincipal.create(userId, phone, role);
 
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
@@ -51,10 +51,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
         } catch (AppException ex) {
-            log.warn("Lỗi xác thực JWT [code={}, message={}]: {}", ex.getErrorCode().getCode(), ex.getMessage(), request.getRequestURI());
+            log.warn("JWT authentication failed [code={}, message={}]: {}", ex.getErrorCode().getCode(), ex.getMessage(), request.getRequestURI());
             request.setAttribute("AUTH_EXCEPTION", ex);
         } catch (Exception ex) {
-            log.warn("Không thể thiết lập xác thực người dùng trong Security Context: {}", ex.getMessage());
+            log.warn("Failed to set user authentication in the security context: {}", ex.getMessage());
             request.setAttribute("AUTH_EXCEPTION", ex);
         }
 
@@ -68,7 +68,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (trimmed.regionMatches(true, 0, "Bearer ", 0, 7)) {
                 return trimmed.substring(7).trim();
             }
-            // Hỗ trợ trường hợp client truyền trực tiếp chuỗi JWT (bắt đầu bằng ey... và có 2 dấu chấm)
+            // Support clients that send a raw JWT directly (starts with "ey" and contains two periods).
             if (trimmed.startsWith("ey") && trimmed.chars().filter(ch -> ch == '.').count() == 2) {
                 return trimmed;
             }

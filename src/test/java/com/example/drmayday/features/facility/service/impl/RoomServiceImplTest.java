@@ -2,13 +2,13 @@ package com.example.drmayday.features.facility.service.impl;
 
 import com.example.drmayday.common.exception.AppException;
 import com.example.drmayday.common.exception.ErrorCode;
-import com.example.drmayday.entity.ChiNhanh;
-import com.example.drmayday.entity.PhongKham;
+import com.example.drmayday.entity.Branch;
+import com.example.drmayday.entity.ClinicRoom;
 import com.example.drmayday.features.facility.dto.CreateRoomRequest;
 import com.example.drmayday.features.facility.dto.EditRoomRequest;
 import com.example.drmayday.features.facility.dto.RoomResponse;
-import com.example.drmayday.repository.ChiNhanhRepository;
-import com.example.drmayday.repository.PhongKhamRepository;
+import com.example.drmayday.repository.BranchRepository;
+import com.example.drmayday.repository.ClinicRoomRepository;
 import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -56,28 +56,28 @@ class RoomServiceImplTest {
     private static final String ROOM_NAME = "Phòng 101";
 
     @Mock
-    private PhongKhamRepository phongKhamRepository;
+    private ClinicRoomRepository clinicRoomRepository;
 
     @Mock
-    private ChiNhanhRepository chiNhanhRepository;
+    private BranchRepository branchRepository;
 
     private RoomServiceImpl service;
-    private ChiNhanh branch;
-    private ChiNhanh targetBranch;
-    private PhongKham room;
+    private Branch branch;
+    private Branch targetBranch;
+    private ClinicRoom room;
 
     @BeforeEach
     void setUp() {
-        service = new RoomServiceImpl(phongKhamRepository, chiNhanhRepository);
-        branch = new ChiNhanh(BRANCH_ID, "Cơ sở Hoàn Kiếm", "Số 1 Phố Huế", "0241234567", true);
-        targetBranch = new ChiNhanh(TARGET_BRANCH_ID, "Cơ sở Cầu Giấy", "Số 2 Duy Tân", "0241234568", true);
-        room = new PhongKham(ROOM_ID, branch, ROOM_NAME);
+        service = new RoomServiceImpl(clinicRoomRepository, branchRepository);
+        branch = new Branch(BRANCH_ID, "Cơ sở Hoàn Kiếm", "Số 1 Phố Huế", "0241234567", true);
+        targetBranch = new Branch(TARGET_BRANCH_ID, "Cơ sở Cầu Giấy", "Số 2 Duy Tân", "0241234568", true);
+        room = new ClinicRoom(ROOM_ID, branch.getBranchId(), ROOM_NAME, branch);
 
-        when(chiNhanhRepository.findById(BRANCH_ID)).thenReturn(Optional.of(branch));
-        when(chiNhanhRepository.findById(TARGET_BRANCH_ID)).thenReturn(Optional.of(targetBranch));
-        when(phongKhamRepository.findById(ROOM_ID)).thenReturn(Optional.of(room));
-        when(phongKhamRepository.findByIdForUpdate(ROOM_ID)).thenReturn(Optional.of(room));
-        when(phongKhamRepository.saveAndFlush(any(PhongKham.class))).thenAnswer(call -> call.getArgument(0));
+        when(branchRepository.findById(BRANCH_ID)).thenReturn(Optional.of(branch));
+        when(branchRepository.findById(TARGET_BRANCH_ID)).thenReturn(Optional.of(targetBranch));
+        when(clinicRoomRepository.findById(ROOM_ID)).thenReturn(Optional.of(room));
+        when(clinicRoomRepository.findByIdForUpdate(ROOM_ID)).thenReturn(Optional.of(room));
+        when(clinicRoomRepository.saveAndFlush(any(ClinicRoom.class))).thenAnswer(call -> call.getArgument(0));
     }
 
     private static CreateRoomRequest createRequest(String branchId, String name) {
@@ -104,8 +104,8 @@ class RoomServiceImplTest {
     }
 
     private void assertRoomUntouched() {
-        assertThat(room.getChiNhanh()).isSameAs(branch);
-        assertThat(room.getTenPhongKham()).isEqualTo(ROOM_NAME);
+        assertThat(room.getBranch()).isSameAs(branch);
+        assertThat(room.getName()).isEqualTo(ROOM_NAME);
     }
 
     // API 29
@@ -113,9 +113,9 @@ class RoomServiceImplTest {
     @Test
     @DisplayName("AC-14: tạo phòng lưu tên đã trim và trả đúng các trường của phòng mới")
     void createTrimsNameAndMapsResponse() {
-        when(phongKhamRepository.saveAndFlush(any(PhongKham.class))).thenAnswer(call -> {
-            PhongKham saved = call.getArgument(0);
-            saved.setMaPhongKham(55L);
+        when(clinicRoomRepository.saveAndFlush(any(ClinicRoom.class))).thenAnswer(call -> {
+            ClinicRoom saved = call.getArgument(0);
+            saved.setClinicRoomId(55L);
             return saved;
         });
 
@@ -130,12 +130,12 @@ class RoomServiceImplTest {
     @Test
     @DisplayName("AC-16: kiểm tra trùng tên dùng tên đã trim")
     void createChecksDuplicateAfterTrim() {
-        when(phongKhamRepository.existsByChiNhanh_MaChiNhanhAndTenPhongKham(BRANCH_ID, ROOM_NAME)).thenReturn(true);
+        when(clinicRoomRepository.existsByBranchIdAndName(BRANCH_ID, ROOM_NAME)).thenReturn(true);
 
         assertFailsWith(ErrorCode.ROOM_NAME_ALREADY_EXISTS,
                 () -> service.createRoom(createRequest("7", "  " + ROOM_NAME + "  ")));
 
-        verify(phongKhamRepository, never()).saveAndFlush(any());
+        verify(clinicRoomRepository, never()).saveAndFlush(any());
     }
 
     @ParameterizedTest
@@ -144,24 +144,24 @@ class RoomServiceImplTest {
     void createRejectsNonNumericBranchId(String branchId) {
         assertFailsWith(ErrorCode.INVALID_PARAMETER_TYPE, () -> service.createRoom(createRequest(branchId, ROOM_NAME)));
 
-        verifyNoInteractions(chiNhanhRepository, phongKhamRepository);
+        verifyNoInteractions(branchRepository, clinicRoomRepository);
     }
 
     @Test
     @DisplayName("AC-15: chi nhánh không tồn tại trả 2101 và không ghi")
     void createRejectsMissingBranch() {
-        when(chiNhanhRepository.findById(404L)).thenReturn(Optional.empty());
+        when(branchRepository.findById(404L)).thenReturn(Optional.empty());
 
         assertFailsWith(ErrorCode.BRANCH_NOT_FOUND, () -> service.createRoom(createRequest("404", ROOM_NAME)));
 
-        verify(phongKhamRepository, never()).saveAndFlush(any());
+        verify(clinicRoomRepository, never()).saveAndFlush(any());
     }
 
     @Test
     @DisplayName("Thứ tự API 29: chi nhánh ngừng hoạt động thắng lỗi trùng tên")
     void createChecksInactiveBranchBeforeDuplicateName() {
-        branch.setTrangThai(false);
-        when(phongKhamRepository.existsByChiNhanh_MaChiNhanhAndTenPhongKham(anyLong(), anyString())).thenReturn(true);
+        branch.setActive(false);
+        when(clinicRoomRepository.existsByBranchIdAndName(anyLong(), anyString())).thenReturn(true);
 
         assertFailsWith(ErrorCode.BRANCH_INACTIVE, () -> service.createRoom(createRequest("7", ROOM_NAME)));
     }
@@ -169,7 +169,7 @@ class RoomServiceImplTest {
     @Test
     @DisplayName("AC-5: tạo phòng gặp lỗi trùng khóa từ database thì trả 2104, không phải 3006")
     void createTranslatesUniqueViolation() {
-        when(phongKhamRepository.saveAndFlush(any())).thenThrow(sqlError("23505"));
+        when(clinicRoomRepository.saveAndFlush(any())).thenThrow(sqlError("23505"));
 
         assertFailsWith(ErrorCode.ROOM_NAME_ALREADY_EXISTS, () -> service.createRoom(createRequest("7", ROOM_NAME)));
     }
@@ -177,7 +177,7 @@ class RoomServiceImplTest {
     @Test
     @DisplayName("AC-5: tạo phòng gặp lỗi khóa ngoại từ database thì trả 2101")
     void createTranslatesForeignKeyViolation() {
-        when(phongKhamRepository.saveAndFlush(any())).thenThrow(sqlError("23503"));
+        when(clinicRoomRepository.saveAndFlush(any())).thenThrow(sqlError("23503"));
 
         assertFailsWith(ErrorCode.BRANCH_NOT_FOUND, () -> service.createRoom(createRequest("7", ROOM_NAME)));
     }
@@ -186,7 +186,7 @@ class RoomServiceImplTest {
     @DisplayName("Lỗi database khác khi tạo phòng không bị đổi thành mã 21xx")
     void createRethrowsOtherDatabaseErrors() {
         DataIntegrityViolationException checkViolation = sqlError("23514");
-        when(phongKhamRepository.saveAndFlush(any())).thenThrow(checkViolation);
+        when(clinicRoomRepository.saveAndFlush(any())).thenThrow(checkViolation);
 
         assertThatThrownBy(() -> service.createRoom(createRequest("7", ROOM_NAME))).isSameAs(checkViolation);
     }
@@ -196,19 +196,19 @@ class RoomServiceImplTest {
     @Test
     @DisplayName("AC-17: không có branch_id thì lấy mọi phòng và không kiểm tra chi nhánh")
     void listWithoutFilterSkipsBranchCheck() {
-        when(phongKhamRepository.findAllWithChiNhanh()).thenReturn(List.of(room));
+        when(clinicRoomRepository.findAll()).thenReturn(List.of(room));
 
         List<RoomResponse> rooms = service.getListRooms(null);
 
-        assertThat(rooms).extracting(RoomResponse::getRoomId).containsExactly(ID);
-        verifyNoInteractions(chiNhanhRepository);
+        assertThat(rooms).extracting(roomResponse -> roomResponse.getRoomId()).containsExactly(ID);
+        verifyNoInteractions(branchRepository);
     }
 
     @Test
     @DisplayName("AC-17: chi nhánh tồn tại nhưng không có phòng thì trả mảng rỗng")
     void listReturnsEmptyForBranchWithoutRooms() {
-        when(chiNhanhRepository.existsById(BRANCH_ID)).thenReturn(true);
-        when(phongKhamRepository.findAllByBranchWithChiNhanh(BRANCH_ID)).thenReturn(List.of());
+        when(branchRepository.existsById(BRANCH_ID)).thenReturn(true);
+        when(clinicRoomRepository.findAllByBranchId(BRANCH_ID)).thenReturn(List.of());
 
         assertThat(service.getListRooms(BRANCH_ID)).isEmpty();
     }
@@ -216,11 +216,11 @@ class RoomServiceImplTest {
     @Test
     @DisplayName("AC-17: bộ lọc với chi nhánh không tồn tại trả 2101")
     void listRejectsMissingBranch() {
-        when(chiNhanhRepository.existsById(404L)).thenReturn(false);
+        when(branchRepository.existsById(404L)).thenReturn(false);
 
         assertFailsWith(ErrorCode.BRANCH_NOT_FOUND, () -> service.getListRooms(404L));
 
-        verify(phongKhamRepository, never()).findAllByBranchWithChiNhanh(anyLong());
+        verify(clinicRoomRepository, never()).findAllByBranchId(anyLong());
     }
 
     // API 31
@@ -231,7 +231,7 @@ class RoomServiceImplTest {
     void detailRejectsNonNumericId(String id) {
         assertFailsWith(ErrorCode.ROOM_NOT_FOUND, () -> service.getRoomDetails(id));
 
-        verifyNoInteractions(phongKhamRepository);
+        verifyNoInteractions(clinicRoomRepository);
     }
 
     // API 32
@@ -241,14 +241,14 @@ class RoomServiceImplTest {
     void editReadsRoomThroughRowLock() {
         service.editRoom(ID, editRequest(null, "Phòng mới"));
 
-        verify(phongKhamRepository).findByIdForUpdate(ROOM_ID);
-        verify(phongKhamRepository, never()).findById(anyLong());
+        verify(clinicRoomRepository).findByIdForUpdate(ROOM_ID);
+        verify(clinicRoomRepository, never()).findById(anyLong());
     }
 
     @Test
     @DisplayName("Thứ tự API 32: id sai thắng tên rỗng")
     void editChecksRoomBeforeName() {
-        when(phongKhamRepository.findByIdForUpdate(404L)).thenReturn(Optional.empty());
+        when(clinicRoomRepository.findByIdForUpdate(404L)).thenReturn(Optional.empty());
 
         assertFailsWith(ErrorCode.ROOM_NOT_FOUND, () -> service.editRoom("404", editRequest(null, "")));
     }
@@ -262,8 +262,8 @@ class RoomServiceImplTest {
     @Test
     @DisplayName("Thứ tự API 32: chi nhánh đích ngừng hoạt động thắng lỗi phòng có phiên khám")
     void editChecksTargetBranchBeforeExamSessions() {
-        targetBranch.setTrangThai(false);
-        when(phongKhamRepository.hasPhienKham(ROOM_ID)).thenReturn(true);
+        targetBranch.setActive(false);
+        when(clinicRoomRepository.hasMedicalVisits(ROOM_ID)).thenReturn(true);
 
         assertFailsWith(ErrorCode.BRANCH_INACTIVE, () -> service.editRoom(ID, editRequest("8", null)));
 
@@ -277,7 +277,7 @@ class RoomServiceImplTest {
 
         assertThat(response.getName()).isEqualTo(ROOM_NAME);
         assertThat(response.getBranchId()).isEqualTo("7");
-        verify(phongKhamRepository, never()).saveAndFlush(any());
+        verify(clinicRoomRepository, never()).saveAndFlush(any());
     }
 
     @Test
@@ -285,37 +285,37 @@ class RoomServiceImplTest {
     void editWithSameValuesWritesNothing() {
         service.editRoom(ID, editRequest("7", "  " + ROOM_NAME + "  "));
 
-        verify(phongKhamRepository, never())
-                .existsByChiNhanh_MaChiNhanhAndTenPhongKhamAndMaPhongKhamNot(anyLong(), anyString(), anyLong());
-        verify(phongKhamRepository, never()).saveAndFlush(any());
+        verify(clinicRoomRepository, never())
+                .existsByBranchIdAndNameAndRoomIdNot(anyLong(), anyString(), anyLong());
+        verify(clinicRoomRepository, never()).saveAndFlush(any());
     }
 
     @Test
     @DisplayName("AC-20: gửi branch_id trùng chi nhánh hiện tại không tính là chuyển nên không xét phiên khám")
     void editWithCurrentBranchIsNotAMove() {
-        when(phongKhamRepository.hasPhienKham(ROOM_ID)).thenReturn(true);
+        when(clinicRoomRepository.hasMedicalVisits(ROOM_ID)).thenReturn(true);
 
         RoomResponse response = service.editRoom(ID, editRequest("7", "Phòng mới"));
 
         assertThat(response.getName()).isEqualTo("Phòng mới");
-        verify(phongKhamRepository, never()).hasPhienKham(anyLong());
+        verify(clinicRoomRepository, never()).hasMedicalVisits(anyLong());
     }
 
     @Test
     @DisplayName("AC-20: phòng có phiên khám không chuyển được, tên gửi kèm cũng không đổi")
     void editRefusesToMoveRoomWithExamSessions() {
-        when(phongKhamRepository.hasPhienKham(ROOM_ID)).thenReturn(true);
+        when(clinicRoomRepository.hasMedicalVisits(ROOM_ID)).thenReturn(true);
 
         assertFailsWith(ErrorCode.ROOM_HAS_EXAM_SESSIONS, () -> service.editRoom(ID, editRequest("8", "Phòng mới")));
 
         assertRoomUntouched();
-        verify(phongKhamRepository, never()).saveAndFlush(any());
+        verify(clinicRoomRepository, never()).saveAndFlush(any());
     }
 
     @Test
     @DisplayName("AC-20: chuyển phòng kiểm tra trùng tên ở chi nhánh đích, trừ chính phòng này")
     void editChecksDuplicateInTargetBranch() {
-        when(phongKhamRepository.existsByChiNhanh_MaChiNhanhAndTenPhongKhamAndMaPhongKhamNot(
+        when(clinicRoomRepository.existsByBranchIdAndNameAndRoomIdNot(
                 TARGET_BRANCH_ID, ROOM_NAME, ROOM_ID)).thenReturn(true);
 
         assertFailsWith(ErrorCode.ROOM_NAME_ALREADY_EXISTS, () -> service.editRoom(ID, editRequest("8", null)));
@@ -328,16 +328,16 @@ class RoomServiceImplTest {
     void editMovesRoomToTargetBranch() {
         service.editRoom(ID, editRequest("8", null));
 
-        ArgumentCaptor<PhongKham> saved = ArgumentCaptor.forClass(PhongKham.class);
-        verify(phongKhamRepository).saveAndFlush(saved.capture());
-        assertThat(saved.getValue().getChiNhanh()).isSameAs(targetBranch);
-        assertThat(saved.getValue().getTenPhongKham()).isEqualTo(ROOM_NAME);
+        ArgumentCaptor<ClinicRoom> saved = ArgumentCaptor.forClass(ClinicRoom.class);
+        verify(clinicRoomRepository).saveAndFlush(saved.capture());
+        assertThat(saved.getValue().getBranch()).isSameAs(targetBranch);
+        assertThat(saved.getValue().getName()).isEqualTo(ROOM_NAME);
     }
 
     @Test
     @DisplayName("AC-5: sửa phòng gặp lỗi trùng khóa từ database thì trả 2104")
     void editTranslatesUniqueViolation() {
-        when(phongKhamRepository.saveAndFlush(any())).thenThrow(sqlError("23505"));
+        when(clinicRoomRepository.saveAndFlush(any())).thenThrow(sqlError("23505"));
 
         assertFailsWith(ErrorCode.ROOM_NAME_ALREADY_EXISTS, () -> service.editRoom(ID, editRequest(null, "Phòng mới")));
     }
@@ -345,7 +345,7 @@ class RoomServiceImplTest {
     @Test
     @DisplayName("AC-5: chuyển phòng gặp lỗi khóa ngoại từ database thì trả 2101")
     void editTranslatesForeignKeyViolation() {
-        when(phongKhamRepository.saveAndFlush(any())).thenThrow(sqlError("23503"));
+        when(clinicRoomRepository.saveAndFlush(any())).thenThrow(sqlError("23503"));
 
         assertFailsWith(ErrorCode.BRANCH_NOT_FOUND, () -> service.editRoom(ID, editRequest("8", null)));
     }
@@ -357,25 +357,25 @@ class RoomServiceImplTest {
     void deleteFlushesInsideTheTry() {
         service.deleteRoom(ID);
 
-        InOrder order = inOrder(phongKhamRepository);
-        order.verify(phongKhamRepository).delete(room);
-        order.verify(phongKhamRepository).flush();
+        InOrder order = inOrder(clinicRoomRepository);
+        order.verify(clinicRoomRepository).delete(room);
+        order.verify(clinicRoomRepository).flush();
     }
 
     @Test
     @DisplayName("AC-22: phòng có phiên khám trả 2105 và không gọi xóa")
     void deleteRefusesRoomWithExamSessions() {
-        when(phongKhamRepository.hasPhienKham(ROOM_ID)).thenReturn(true);
+        when(clinicRoomRepository.hasMedicalVisits(ROOM_ID)).thenReturn(true);
 
         assertFailsWith(ErrorCode.ROOM_HAS_EXAM_SESSIONS, () -> service.deleteRoom(ID));
 
-        verify(phongKhamRepository, never()).delete(any(PhongKham.class));
+        verify(clinicRoomRepository, never()).delete(any(ClinicRoom.class));
     }
 
     @Test
     @DisplayName("AC-5: phiên khám chen vào lúc xóa, database báo khóa ngoại thì trả 2105")
     void deleteTranslatesForeignKeyViolation() {
-        doThrow(sqlError("23503")).when(phongKhamRepository).flush();
+        doThrow(sqlError("23503")).when(clinicRoomRepository).flush();
 
         assertFailsWith(ErrorCode.ROOM_HAS_EXAM_SESSIONS, () -> service.deleteRoom(ID));
     }
@@ -383,8 +383,8 @@ class RoomServiceImplTest {
     @Test
     @DisplayName("AC-5: Admin khác đã xóa phòng trước thì trả 2103, không phải 9999")
     void deleteTranslatesLostRace() {
-        doThrow(new ObjectOptimisticLockingFailureException(PhongKham.class, ROOM_ID))
-                .when(phongKhamRepository).flush();
+        doThrow(new ObjectOptimisticLockingFailureException(ClinicRoom.class, ROOM_ID))
+                .when(clinicRoomRepository).flush();
 
         assertFailsWith(ErrorCode.ROOM_NOT_FOUND, () -> service.deleteRoom(ID));
     }
@@ -393,7 +393,7 @@ class RoomServiceImplTest {
     @DisplayName("Lỗi database khác khi xóa phòng không bị đổi thành mã 21xx")
     void deleteRethrowsOtherDatabaseErrors() {
         DataIntegrityViolationException checkViolation = sqlError("23514");
-        doThrow(checkViolation).when(phongKhamRepository).flush();
+        doThrow(checkViolation).when(clinicRoomRepository).flush();
 
         assertThatThrownBy(() -> service.deleteRoom(ID)).isSameAs(checkViolation);
     }
@@ -401,7 +401,7 @@ class RoomServiceImplTest {
     @Test
     @DisplayName("AC-18: xóa phòng với id không tồn tại trả 2103")
     void deleteRejectsMissingRoom() {
-        when(phongKhamRepository.findById(404L)).thenReturn(Optional.empty());
+        when(clinicRoomRepository.findById(404L)).thenReturn(Optional.empty());
 
         assertFailsWith(ErrorCode.ROOM_NOT_FOUND, () -> service.deleteRoom("404"));
     }

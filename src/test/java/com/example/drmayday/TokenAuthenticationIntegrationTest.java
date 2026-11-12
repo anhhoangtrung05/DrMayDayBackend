@@ -1,9 +1,9 @@
 package com.example.drmayday;
 
-import com.example.drmayday.features.authorization.dto.CreateUserRequest;
-import com.example.drmayday.features.authorization.dto.EditUserRequest;
-import com.example.drmayday.features.authorization.dto.UpdateProfileRequest;
-import com.example.drmayday.repository.TaiKhoanRepository;
+import com.example.drmayday.features.admin.dto.CreateUserRequest;
+import com.example.drmayday.features.admin.dto.EditUserRequest;
+import com.example.drmayday.features.profile.dto.UpdateProfileRequest;
+import com.example.drmayday.repository.UserAccountRepository;
 import com.example.drmayday.features.security.JwtTokenProvider;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -33,7 +33,7 @@ public class TokenAuthenticationIntegrationTest {
     private JwtTokenProvider jwtTokenProvider;
 
     @Autowired
-    private TaiKhoanRepository taiKhoanRepository;
+    private UserAccountRepository userAccountRepository;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -179,7 +179,7 @@ public class TokenAuthenticationIntegrationTest {
                 .andExpect(jsonPath("$.code").value("1001"))
                 .andExpect(jsonPath("$.data.phone").value(localPhone));
 
-        assertEquals(true, taiKhoanRepository.existsByTenDangNhap(localPhone));
+        assertEquals(true, userAccountRepository.existsByUsername(localPhone));
 
         // Cùng số đó ở dạng 0xxxxxxxxx bị từ chối vì đã tồn tại
         mockMvc.perform(post("/api/v1/admin/users")

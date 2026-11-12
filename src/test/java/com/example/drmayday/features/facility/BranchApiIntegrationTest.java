@@ -1,8 +1,8 @@
 package com.example.drmayday.features.facility;
 
-import com.example.drmayday.entity.ChiNhanh;
+import com.example.drmayday.entity.Branch;
 import com.example.drmayday.features.security.JwtTokenProvider;
-import com.example.drmayday.repository.ChiNhanhRepository;
+import com.example.drmayday.repository.BranchRepository;
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -50,7 +50,7 @@ class BranchApiIntegrationTest {
     private JwtTokenProvider jwtTokenProvider;
 
     @Autowired
-    private ChiNhanhRepository chiNhanhRepository;
+    private BranchRepository branchRepository;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -89,9 +89,9 @@ class BranchApiIntegrationTest {
     }
 
     private long givenBranch(String name, String phone, boolean active) {
-        return chiNhanhRepository
-                .saveAndFlush(new ChiNhanh(null, name, "Số 1 Phố Huế", phone, active))
-                .getMaChiNhanh();
+        return branchRepository
+                .saveAndFlush(new Branch(null, name, "Số 1 Phố Huế", phone, active))
+                .getBranchId();
     }
 
     private long givenBranch() {
@@ -175,11 +175,11 @@ class BranchApiIntegrationTest {
     @ValueSource(strings = {"patient", "doctor"})
     @DisplayName("AC-2: không phải Admin thì POST nhận 403, mã 3102 và không tạo thêm chi nhánh")
     void nonAdminCannotCreate(String who) throws Exception {
-        long before = chiNhanhRepository.count();
+        long before = branchRepository.count();
 
         expectError(send(post(BRANCHES), tokenOf(who), validBody()), 403, "3102");
 
-        assertThat(chiNhanhRepository.count()).isEqualTo(before);
+        assertThat(branchRepository.count()).isEqualTo(before);
     }
 
     @ParameterizedTest

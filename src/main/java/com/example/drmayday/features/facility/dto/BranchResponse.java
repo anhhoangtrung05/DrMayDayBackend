@@ -1,6 +1,6 @@
 package com.example.drmayday.features.facility.dto;
 
-import com.example.drmayday.entity.ChiNhanh;
+import com.example.drmayday.entity.Branch;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
@@ -34,13 +34,13 @@ public class BranchResponse {
         this.status = status;
     }
 
-    public static BranchResponse from(ChiNhanh chiNhanh) {
+    public static BranchResponse from(Branch branch) {
         return new BranchResponse(
-                String.valueOf(chiNhanh.getMaChiNhanh()),
-                chiNhanh.getTenChiNhanh(),
-                chiNhanh.getDiaChi(),
-                chiNhanh.getSoDienThoai(),
-                chiNhanh.getTrangThai());
+                String.valueOf(branch.getBranchId()),
+                branch.getName(),
+                branch.getAddress(),
+                branch.getPhoneNumber(),
+                branch.getActive());
     }
 
     public String getBranchId() {

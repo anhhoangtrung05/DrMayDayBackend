@@ -2,14 +2,14 @@ package com.example.drmayday.features.facility.service.impl;
 
 import com.example.drmayday.common.exception.AppException;
 import com.example.drmayday.common.exception.ErrorCode;
-import com.example.drmayday.entity.ChiNhanh;
+import com.example.drmayday.entity.Branch;
 import com.example.drmayday.features.facility.dto.BranchResponse;
 import com.example.drmayday.features.facility.dto.CreateBranchRequest;
 import com.example.drmayday.features.facility.dto.EditBranchRequest;
 import com.example.drmayday.features.facility.service.BranchService;
-import com.example.drmayday.repository.ChiNhanhRepository;
+import com.example.drmayday.repository.BranchRepository;
 import com.example.drmayday.repository.EmployeeRepository;
-import com.example.drmayday.repository.PhongKhamRepository;
+import com.example.drmayday.repository.ClinicRoomRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -25,31 +25,31 @@ public class BranchServiceImpl implements BranchService {
 
     private static final Logger log = LoggerFactory.getLogger(BranchServiceImpl.class);
 
-    private final ChiNhanhRepository chiNhanhRepository;
-    private final PhongKhamRepository phongKhamRepository;
-    private final EmployeeRepository EmployeeRepository;
+    private final BranchRepository branchRepository;
+    private final ClinicRoomRepository clinicRoomRepository;
+    private final EmployeeRepository employeeRepository;
 
-    public BranchServiceImpl(ChiNhanhRepository chiNhanhRepository,
-                             PhongKhamRepository phongKhamRepository,
-                             EmployeeRepository EmployeeRepository) {
-        this.chiNhanhRepository = chiNhanhRepository;
-        this.phongKhamRepository = phongKhamRepository;
-        this.EmployeeRepository = EmployeeRepository;
+    public BranchServiceImpl(BranchRepository branchRepository,
+                             ClinicRoomRepository clinicRoomRepository,
+                             EmployeeRepository employeeRepository) {
+        this.branchRepository = branchRepository;
+        this.clinicRoomRepository = clinicRoomRepository;
+        this.employeeRepository = employeeRepository;
     }
 
     @Override
     @Transactional
     public BranchResponse createBranch(CreateBranchRequest req) {
         log.info("Admin tạo chi nhánh mới");
-        ChiNhanh chiNhanh = new ChiNhanh(null, req.getName().trim(), req.getAddress().trim(),
+        Branch branch = new Branch(null, req.getName().trim(), req.getAddress().trim(),
                 normalizePhone(req.getPhone()), true);
-        return BranchResponse.from(chiNhanhRepository.saveAndFlush(chiNhanh));
+        return BranchResponse.from(branchRepository.saveAndFlush(branch));
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<BranchResponse> getListBranches() {
-        return chiNhanhRepository.findAll(Sort.by(Sort.Direction.ASC, "maChiNhanh")).stream()
+        return branchRepository.findAll(Sort.by(Sort.Direction.ASC, "branchId")).stream()
                 .map(BranchResponse::from)
                 .toList();
     }
@@ -64,49 +64,49 @@ public class BranchServiceImpl implements BranchService {
     @Transactional
     public BranchResponse editBranch(String id, EditBranchRequest req) {
         log.info("Admin sửa chi nhánh: id={}", id);
-        ChiNhanh chiNhanh = findBranch(id);
+        Branch branch = findBranch(id);
 
         if (req.getName() != null) {
             if (req.getName().isBlank()) {
                 throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE);
             }
-            chiNhanh.setTenChiNhanh(req.getName().trim());
+            branch.setName(req.getName().trim());
         }
         if (req.getAddress() != null) {
             if (req.getAddress().isBlank()) {
                 throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE);
             }
-            chiNhanh.setDiaChi(req.getAddress().trim());
+            branch.setAddress(req.getAddress().trim());
         }
         if (req.getPhone() != null) {
-            chiNhanh.setSoDienThoai(normalizePhone(req.getPhone()));
+            branch.setPhoneNumber(normalizePhone(req.getPhone()));
         }
         if (req.getStatus() != null) {
-            chiNhanh.setTrangThai(req.getStatus());
+            branch.setActive(req.getStatus());
         }
 
-        return BranchResponse.from(chiNhanhRepository.saveAndFlush(chiNhanh));
+        return BranchResponse.from(branchRepository.saveAndFlush(branch));
     }
 
     @Override
     @Transactional
     public void deleteBranch(String id) {
         log.info("Admin xóa chi nhánh: id={}", id);
-        ChiNhanh chiNhanh = findBranch(id);
-        Long branchId = chiNhanh.getMaChiNhanh();
+        Branch branch = findBranch(id);
+        Long branchId = branch.getBranchId();
 
         // Kiểm tra chi nhánh cuối trước phụ thuộc: chi nhánh cuối luôn trả 2107 dù còn phòng hay nhân viên
-        if (chiNhanhRepository.count() <= 1) {
+        if (branchRepository.count() <= 1) {
             throw new AppException(ErrorCode.LAST_BRANCH_CANNOT_BE_DELETED);
         }
-        if (phongKhamRepository.existsByChiNhanh_MaChiNhanh(branchId)
-                || EmployeeRepository.existsByBranchId(branchId)) {
+        if (clinicRoomRepository.existsByBranchId(branchId)
+                || employeeRepository.existsByBranchId(branchId)) {
             throw new AppException(ErrorCode.BRANCH_HAS_DEPENDENCIES);
         }
 
         try {
-            chiNhanhRepository.delete(chiNhanh);
-            chiNhanhRepository.flush();
+            branchRepository.delete(branch);
+            branchRepository.flush();
         } catch (DataIntegrityViolationException ex) {
             if (FacilitySqlErrors.isForeignKeyViolation(ex)) {
                 throw new AppException(ErrorCode.BRANCH_HAS_DEPENDENCIES);
@@ -118,8 +118,8 @@ public class BranchServiceImpl implements BranchService {
         }
     }
 
-    private ChiNhanh findBranch(String id) {
-        return chiNhanhRepository.findById(parseBranchId(id))
+    private Branch findBranch(String id) {
+        return branchRepository.findById(parseBranchId(id))
                 .orElseThrow(() -> new AppException(ErrorCode.BRANCH_NOT_FOUND));
     }
 

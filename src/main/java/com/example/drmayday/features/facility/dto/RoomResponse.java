@@ -1,7 +1,7 @@
 package com.example.drmayday.features.facility.dto;
 
-import com.example.drmayday.entity.ChiNhanh;
-import com.example.drmayday.entity.PhongKham;
+import com.example.drmayday.entity.Branch;
+import com.example.drmayday.entity.ClinicRoom;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
@@ -31,13 +31,13 @@ public class RoomResponse {
         this.name = name;
     }
 
-    public static RoomResponse from(PhongKham phongKham) {
-        ChiNhanh chiNhanh = phongKham.getChiNhanh();
+    public static RoomResponse from(ClinicRoom clinicRoom) {
+        Branch branch = clinicRoom.getBranch();
         return new RoomResponse(
-                String.valueOf(phongKham.getMaPhongKham()),
-                String.valueOf(chiNhanh.getMaChiNhanh()),
-                chiNhanh.getTenChiNhanh(),
-                phongKham.getTenPhongKham());
+                String.valueOf(clinicRoom.getClinicRoomId()),
+                String.valueOf(branch.getBranchId()),
+                branch.getName(),
+                clinicRoom.getName());
     }
 
     public String getRoomId() {

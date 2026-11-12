@@ -18,11 +18,11 @@ public class UserAccount {
     @Column(name = "ma_tai_khoan")
     private Long accountId;
 
-    @OneToOne(fetch = FetchType.EAGER)
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "ma_nguoi", nullable = false)
     private Person person;
 
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "ma_vai_tro", nullable = false)
     private Role role;
 

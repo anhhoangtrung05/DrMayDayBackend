@@ -6,7 +6,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 /**
- * SecurityUtils tiện ích trích xuất thông tin người dùng đang đăng nhập từ SecurityContext.
+ * Utility for extracting the currently authenticated user from the security context.
  */
 public final class SecurityUtils {
 

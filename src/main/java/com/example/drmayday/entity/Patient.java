@@ -2,7 +2,6 @@ package com.example.drmayday.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.data.domain.Persistable;
 
 import java.time.LocalDate;
 
@@ -13,7 +12,7 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Patient implements Persistable<Long> {
+public class Patient {
     @Id
     @Column(name = "ma_benh_nhan")
     private Long patientId;
@@ -39,27 +38,8 @@ public class Patient implements Persistable<Long> {
     @Column(name = "nguoi_nha_so_dien_thoai", length = 10)
     private String emergencyContactPhone;
 
-    @Transient
-    @Builder.Default
-    private boolean newEntity = true;
-
-    @Override
-    public Long getId() {
-        return patientId;
-    }
-
-    @Override
-    public boolean isNew() {
-        return newEntity;
-    }
-
-    @PostLoad
-    @PostPersist
-    void markExisting() {
-        newEntity = false;
-    }
-
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "ma_benh_nhan", referencedColumnName = "ma_nguoi", insertable = false, updatable = false)
+    @MapsId
+    @JoinColumn(name = "ma_benh_nhan", referencedColumnName = "ma_nguoi")
     private Person person;
 }

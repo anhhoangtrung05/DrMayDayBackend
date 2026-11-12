@@ -1,15 +1,15 @@
 package com.example.drmayday;
 
-import com.example.drmayday.features.authorization.controller.AdminUserController;
-import com.example.drmayday.features.authorization.controller.ProfileController;
-import com.example.drmayday.features.authorization.dto.CreateUserRequest;
-import com.example.drmayday.features.authorization.dto.EditUserRequest;
-import com.example.drmayday.features.authorization.dto.PatientProfileResponse;
-import com.example.drmayday.features.authorization.dto.UpdateProfileRequest;
-import com.example.drmayday.features.authorization.dto.UserDetailsResponse;
-import com.example.drmayday.features.authorization.dto.UserResponse;
-import com.example.drmayday.entity.TaiKhoan;
-import com.example.drmayday.repository.TaiKhoanRepository;
+import com.example.drmayday.features.admin.controller.AdminUserController;
+import com.example.drmayday.features.profile.controller.ProfileController;
+import com.example.drmayday.features.admin.dto.CreateUserRequest;
+import com.example.drmayday.features.admin.dto.EditUserRequest;
+import com.example.drmayday.features.profile.dto.PatientProfileResponse;
+import com.example.drmayday.features.profile.dto.UpdateProfileRequest;
+import com.example.drmayday.features.admin.dto.UserDetailsResponse;
+import com.example.drmayday.features.admin.dto.UserResponse;
+import com.example.drmayday.entity.UserAccount;
+import com.example.drmayday.repository.UserAccountRepository;
 import com.example.drmayday.common.dto.BaseResponse;
 import com.example.drmayday.common.security.UserPrincipal;
 import org.junit.jupiter.api.AfterEach;
@@ -35,10 +35,10 @@ public class Apis7To12PostgresIntegrationTest {
     private AdminUserController adminUserController;
 
     @Autowired
-    private TaiKhoanRepository taiKhoanRepository;
+    private UserAccountRepository userAccountRepository;
 
     @Autowired
-    private com.example.drmayday.repository.NguoiRepository nguoiRepository;
+    private com.example.drmayday.repository.PersonRepository personRepository;
 
     @AfterEach
     void tearDown() {
@@ -46,7 +46,7 @@ public class Apis7To12PostgresIntegrationTest {
     }
 
     private void authenticateUser(Long userId, String phone, String role) {
-        UserPrincipal principal = UserPrincipal.create(userId, phone, phone, role);
+        UserPrincipal principal = UserPrincipal.create(userId, phone, role);
         UsernamePasswordAuthenticationToken auth =
                 new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
         SecurityContextHolder.getContext().setAuthentication(auth);
@@ -56,19 +56,19 @@ public class Apis7To12PostgresIntegrationTest {
     @DisplayName("Kiểm thử tích hợp toàn diện APIs 7-12 trực tiếp với PostgreSQL")
     void testApis7To12AgainstPostgres() {
         // 1. Kiểm tra tài khoản mẫu đã được seed
-        TaiKhoan patientAcc = taiKhoanRepository.findByTenDangNhap("0912345678")
+        UserAccount patientAcc = userAccountRepository.findByUsername("0912345678")
                 .orElseThrow(() -> new AssertionError("Patient account 0912345678 was not seeded"));
-        TaiKhoan adminAcc = taiKhoanRepository.findByTenDangNhap("0900000001")
+        UserAccount adminAcc = userAccountRepository.findByUsername("0900000001")
                 .orElseThrow(() -> new AssertionError("Admin account 0900000001 was not seeded"));
 
         // Reset dữ liệu bệnh nhân về trạng thái ban đầu để test chạy lặp lại an toàn (idempotent)
-        patientAcc.getNguoi().setHoTen("Nguyễn Văn A");
-        nguoiRepository.save(patientAcc.getNguoi());
+        patientAcc.getPerson().setFullName("Nguyễn Văn A");
+        personRepository.save(patientAcc.getPerson());
 
         // ==========================================
         // API 7: PROFILE_GET
         // ==========================================
-        authenticateUser(patientAcc.getMaTaiKhoan(), "0912345678", "benh_nhan");
+        authenticateUser(patientAcc.getAccountId(), "0912345678", "benh_nhan");
         ResponseEntity<BaseResponse<PatientProfileResponse>> getProfileRes = profileController.getProfile(null);
         assertEquals(HttpStatus.OK, getProfileRes.getStatusCode());
         assertNotNull(getProfileRes.getBody());
@@ -104,7 +104,7 @@ public class Apis7To12PostgresIntegrationTest {
         // ==========================================
         // API 9: admin02 / get_list_users
         // ==========================================
-        authenticateUser(adminAcc.getMaTaiKhoan(), "0900000001", "admin");
+        authenticateUser(adminAcc.getAccountId(), "0900000001", "admin");
         ResponseEntity<BaseResponse<Page<UserResponse>>> listUsersRes =
                 adminUserController.getListUsers(1, 10);
         assertEquals(HttpStatus.OK, listUsersRes.getStatusCode());
@@ -117,7 +117,7 @@ public class Apis7To12PostgresIntegrationTest {
         // API 10: admin03 / get_user_details
         // ==========================================
         ResponseEntity<BaseResponse<UserDetailsResponse>> userDetailsRes =
-                adminUserController.getUserDetails(String.valueOf(adminAcc.getMaTaiKhoan()));
+                adminUserController.getUserDetails(String.valueOf(adminAcc.getAccountId()));
         assertEquals(HttpStatus.OK, userDetailsRes.getStatusCode());
         assertEquals("1000", userDetailsRes.getBody().getCode());
         UserDetailsResponse adminDetails = userDetailsRes.getBody().getData();
@@ -129,7 +129,7 @@ public class Apis7To12PostgresIntegrationTest {
         // API 11: admin01 / create_user
         // ==========================================
         String testPhone = "0988776655";
-        if (taiKhoanRepository.existsByTenDangNhap(testPhone)) {
+        if (userAccountRepository.existsByUsername(testPhone)) {
             testPhone = String.format("098%07d", (int) (System.currentTimeMillis() % 10000000L));
         }
         CreateUserRequest createReq = CreateUserRequest.builder()

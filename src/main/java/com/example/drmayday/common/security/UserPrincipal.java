@@ -8,30 +8,24 @@ import java.util.Collection;
 import java.util.Collections;
 
 /**
- * UserPrincipal lưu trữ thông tin nhận diện người dùng đã xác thực trong Spring Security Context.
+ * Stores the identity information of an authenticated user in the Spring Security context.
  */
 public class UserPrincipal implements UserDetails {
 
     private final Long userId;
     private final String phone;
-    private final String fullName;
     private final String roleName;
     private final Collection<? extends GrantedAuthority> authorities;
 
-    public UserPrincipal(Long userId, String phone, String fullName, String roleName, Collection<? extends GrantedAuthority> authorities) {
+    public UserPrincipal(Long userId, String phone, String roleName, Collection<? extends GrantedAuthority> authorities) {
         this.userId = userId;
         this.phone = phone;
-        this.fullName = fullName;
         this.roleName = roleName;
         this.authorities = authorities;
     }
 
-    public UserPrincipal(Integer userId, String phone, String fullName, String roleName, Collection<? extends GrantedAuthority> authorities) {
-        this(userId != null ? userId.longValue() : null, phone, fullName, roleName, authorities);
-    }
-
-    public static UserPrincipal create(Long userId, String phone, String fullName, String roleName) {
-        String roleStr = roleName != null ? roleName.trim() : "patient";
+    public static UserPrincipal create(Long userId, String phone, String roleName) {
+        String roleStr = roleName != null ? roleName.trim() : "benh_nhan";
         String normalized = roleStr.toUpperCase();
         if (normalized.startsWith("ROLE_")) {
             normalized = normalized.substring(5);
@@ -41,14 +35,9 @@ public class UserPrincipal implements UserDetails {
         return new UserPrincipal(
                 userId,
                 phone,
-                fullName,
                 roleStr,
                 Collections.singletonList(new SimpleGrantedAuthority(authority))
         );
-    }
-
-    public static UserPrincipal create(Integer userId, String phone, String fullName, String roleName) {
-        return create(userId != null ? userId.longValue() : null, phone, fullName, roleName);
     }
 
     public Long getUserId() {
@@ -61,10 +50,6 @@ public class UserPrincipal implements UserDetails {
 
     public String getPhone() {
         return phone;
-    }
-
-    public String getFullName() {
-        return fullName;
     }
 
     public String getRoleName() {
