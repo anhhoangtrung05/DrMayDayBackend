@@ -73,6 +73,7 @@ public class DatabaseSeeder implements CommandLineRunner {
             ensurePermissions();
             ensureAdminAccount(defaultBranch);
             ensurePatientAccount();
+            ensureSampleClinicalData(defaultBranch);
             log.info("DatabaseSeeder hoàn tất khởi tạo dữ liệu mẫu thành công.");
         } catch (Exception ex) {
             log.warn("Lỗi trong quá trình DatabaseSeeder: {}", ex.getMessage());
@@ -256,6 +257,53 @@ public class DatabaseSeeder implements CommandLineRunner {
                     .build();
             taiKhoanRepository.save(taiKhoan);
             log.info("Đã khởi tạo tài khoản Bệnh nhân mặc định: {}", patientPhone);
+        }
+    }
+
+    private void ensureSampleClinicalData(Branch defaultBranch) {
+        try {
+            // 1. Khởi tạo danh mục đặc điểm sẩn phù nếu rỗng
+            Integer featureCount = jdbcTemplate.queryForObject("SELECT count(*) FROM dacdiemsanphu", Integer.class);
+            if (featureCount == null || featureCount == 0) {
+                jdbcTemplate.execute("INSERT INTO dacdiemsanphu (ten_dac_diem, mo_ta) VALUES " +
+                        "('Hinh dang tron / bau duc', 'San phu tron hoac bau duc'), " +
+                        "('Hinh dang dia ly', 'San phu da cung, vien nham nho'), " +
+                        "('Mau do hong', 'San phu mau do hong')");
+                log.info("Đã khởi tạo danh mục đặc điểm sẩn phù mẫu.");
+            }
+
+            // 2. Khởi tạo hồ sơ & phiên khám mẫu phục vụ kiểm thử nếu chưa có
+            Integer visitCount = jdbcTemplate.queryForObject("SELECT count(*) FROM phienkham", Integer.class);
+            if (visitCount == null || visitCount == 0) {
+                Long patientId = jdbcTemplate.queryForObject("SELECT ma_benh_nhan FROM benhnhan LIMIT 1", Long.class);
+                Long doctorId = jdbcTemplate.queryForObject("SELECT ma_nhan_vien FROM nhanvien LIMIT 1", Long.class);
+
+                if (patientId != null && doctorId != null) {
+                    // Hồ sơ CAP & Phiên khám CAP (exam_id = 1)
+                    Long capRecordId = jdbcTemplate.queryForObject(
+                            "INSERT INTO hosobenhan (ma_benh_nhan, loai_benh_an, trang_thai) VALUES (?, 'CAP', 'in_progress') RETURNING ma_ho_so",
+                            Long.class, patientId);
+                    jdbcTemplate.update("INSERT INTO benhanmaydaycap (ma_ho_so, nhap_vien) VALUES (?, false)", capRecordId);
+                    Long capVisitId = jdbcTemplate.queryForObject(
+                            "INSERT INTO phienkham (ma_ho_so, ma_bac_si, loai_benh_an, ngay_kham, lan_kham_thu) VALUES (?, ?, 'CAP', CURRENT_DATE, 1) RETURNING ma_phien_kham",
+                            Long.class, capRecordId, doctorId);
+                    jdbcTemplate.update("INSERT INTO phienkhamcap (ma_phien_kham, co_san_phu, so_lan_non) VALUES (?, true, 0)", capVisitId);
+
+                    // Hồ sơ MAN & Phiên khám MAN (exam_id = 2)
+                    Long manRecordId = jdbcTemplate.queryForObject(
+                            "INSERT INTO hosobenhan (ma_benh_nhan, loai_benh_an, trang_thai) VALUES (?, 'MAN', 'in_progress') RETURNING ma_ho_so",
+                            Long.class, patientId);
+                    jdbcTemplate.update("INSERT INTO benhanmaydayman (ma_ho_so) VALUES (?)", manRecordId);
+                    Long manVisitId = jdbcTemplate.queryForObject(
+                            "INSERT INTO phienkham (ma_ho_so, ma_bac_si, loai_benh_an, ngay_kham, lan_kham_thu) VALUES (?, ?, 'MAN', CURRENT_DATE, 1) RETURNING ma_phien_kham",
+                            Long.class, manRecordId, doctorId);
+                    jdbcTemplate.update("INSERT INTO phienkhamman (ma_phien_kham, hien_tai_co_san_phu) VALUES (?, true)", manVisitId);
+
+                    log.info("Đã khởi tạo hồ sơ và phiên khám mẫu: CAP exam_id={}, MAN exam_id={}", capVisitId, manVisitId);
+                }
+            }
+        } catch (Exception e) {
+            log.debug("Bỏ qua khởi tạo dữ liệu lâm sàng mẫu: {}", e.getMessage());
         }
     }
 }
