@@ -26,8 +26,26 @@ public class VitalSign {
     @Column(name = "huyet_ap_tam_thu") private BigDecimal systolicBloodPressure;
     @Column(name = "huyet_ap_tam_truong") private BigDecimal diastolicBloodPressure;
     @Column(name = "nhip_tho") private BigDecimal respiratoryRate;
+    @Column(name = "bat_thuong_co_quan_khac") private Boolean otherOrganAbnormality;
+    @Column(name = "bat_thuong_co_quan_khac_ghi_ro") private String otherOrganAbnormalityDescription;
     @Column(name = "thoi_diem_tao", nullable = false) private OffsetDateTime createdAt;
     @Column(name = "thoi_diem_cap_nhat", nullable = false) private OffsetDateTime updatedAt;
+
+    @PrePersist
+    void beforeInsert() {
+        OffsetDateTime now = OffsetDateTime.now();
+        if (createdAt == null) {
+            createdAt = now;
+        }
+        if (updatedAt == null) {
+            updatedAt = now;
+        }
+    }
+
+    @PreUpdate
+    void beforeUpdate() {
+        updatedAt = OffsetDateTime.now();
+    }
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "ma_phien_kham", referencedColumnName = "ma_phien_kham", insertable = false, updatable = false)
