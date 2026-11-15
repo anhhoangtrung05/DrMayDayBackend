@@ -2,6 +2,7 @@ package com.example.drmayday.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.data.domain.Persistable;
 
 @Entity
 @Table(name = "phienkhamcap")
@@ -10,7 +11,7 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class AcuteVisit {
+public class AcuteVisit implements Persistable<Long> {
     @Id
     @Column(name = "ma_phien_kham", nullable = false) private Long medicalVisitId;
     @Column(name = "loai_benh_an", insertable = false, updatable = false) private String medicalRecordType;
@@ -24,6 +25,25 @@ public class AcuteVisit {
     @Column(name = "co_san_phu") private Boolean hasWheals;
     @Column(name = "co_anh_san_phu") private Boolean hasWhealPhotos;
     @Column(name = "so_lan_non") private Integer vomitingEpisodes;
+
+    @Transient
+    @Builder.Default
+    private boolean newEntity = true;
+
+    @Override
+    public Long getId() {
+        return medicalVisitId;
+    }
+
+    @Override
+    public boolean isNew() {
+        return newEntity;
+    }
+
+    @PostLoad
+    void markNotNew() {
+        this.newEntity = false;
+    }
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumns({
