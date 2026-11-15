@@ -1,10 +1,11 @@
 package com.example.drmayday.features.facility.dto;
 
-import com.example.drmayday.entity.ChiNhanh;
+import com.example.drmayday.entity.Branch;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * DTO phản hồi chi nhánh (API 24 đến 27). branch_id luôn là chuỗi trong JSON.
+ * Branch response DTO for TOPOLOGY_SET_BRANCH, TOPOLOGY_GET_LIST_BRANCHES,
+ * TOPOLOGY_GET_BRANCH_DETAIL, and TOPOLOGY_EDIT_BRANCH. branch_id is always serialized as a JSON string.
  */
 public class BranchResponse {
 
@@ -34,13 +35,13 @@ public class BranchResponse {
         this.status = status;
     }
 
-    public static BranchResponse from(ChiNhanh chiNhanh) {
+    public static BranchResponse from(Branch branch) {
         return new BranchResponse(
-                String.valueOf(chiNhanh.getMaChiNhanh()),
-                chiNhanh.getTenChiNhanh(),
-                chiNhanh.getDiaChi(),
-                chiNhanh.getSoDienThoai(),
-                chiNhanh.getTrangThai());
+                String.valueOf(branch.getBranchId()),
+                branch.getName(),
+                branch.getAddress(),
+                branch.getPhoneNumber(),
+                branch.getActive());
     }
 
     public String getBranchId() {

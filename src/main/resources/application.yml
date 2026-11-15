@@ -5,6 +5,12 @@ spring:
   application:
     name: drmayday-backend
 
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+
   datasource:
     url: ${SPRING_DATASOURCE_URL:${DB_URL:jdbc:postgresql://localhost:5433/drmayday}}
     username: ${SPRING_DATASOURCE_USERNAME:${DB_USER:${DB_USERNAME:postgres}}}

@@ -9,7 +9,7 @@ import java.sql.SQLException;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Khóa cách nhận diện lỗi database theo SQLState. covers: AC-5
+ * Covers database error classification by SQLState (AC-5).
  */
 class FacilitySqlErrorsTest {
 
@@ -18,7 +18,7 @@ class FacilitySqlErrorsTest {
     }
 
     @Test
-    @DisplayName("SQLState 23505 là lỗi trùng khóa, không phải lỗi khóa ngoại")
+    @DisplayName("SQLState 23505 is a unique constraint violation, not a foreign key violation")
     void recognizesUniqueViolation() {
         DataIntegrityViolationException ex = withSqlState("23505");
 
@@ -27,7 +27,7 @@ class FacilitySqlErrorsTest {
     }
 
     @Test
-    @DisplayName("SQLState 23503 là lỗi khóa ngoại, không phải lỗi trùng khóa")
+    @DisplayName("SQLState 23503 is a foreign key violation, not a unique constraint violation")
     void recognizesForeignKeyViolation() {
         DataIntegrityViolationException ex = withSqlState("23503");
 
@@ -36,7 +36,7 @@ class FacilitySqlErrorsTest {
     }
 
     @Test
-    @DisplayName("SQLState nằm sâu trong chuỗi nguyên nhân vẫn được nhận ra")
+    @DisplayName("SQLState is recognized when nested deep in the cause chain")
     void readsSqlStateFromDeepestCause() {
         DataIntegrityViolationException ex = new DataIntegrityViolationException("lỗi ghi",
                 new RuntimeException("lớp giữa", new SQLException("lỗi gốc", "23503")));
@@ -45,7 +45,7 @@ class FacilitySqlErrorsTest {
     }
 
     @Test
-    @DisplayName("SQLState khác, ví dụ vi phạm CHECK, không khớp mã nào")
+    @DisplayName("Other SQLState values, such as a CHECK violation, do not match either code")
     void ignoresOtherSqlStates() {
         DataIntegrityViolationException ex = withSqlState("23514");
 
@@ -54,7 +54,7 @@ class FacilitySqlErrorsTest {
     }
 
     @Test
-    @DisplayName("Nguyên nhân không phải SQLException thì không khớp mã nào")
+    @DisplayName("A cause that is not SQLException does not match either code")
     void ignoresNonSqlCauses() {
         DataIntegrityViolationException ex =
                 new DataIntegrityViolationException("lỗi ghi", new IllegalStateException("không phải SQL"));
@@ -64,7 +64,7 @@ class FacilitySqlErrorsTest {
     }
 
     @Test
-    @DisplayName("Ngoại lệ không có nguyên nhân thì không khớp mã nào")
+    @DisplayName("An exception with no cause does not match either code")
     void ignoresExceptionWithoutCause() {
         DataIntegrityViolationException ex = new DataIntegrityViolationException("lỗi ghi");
 
