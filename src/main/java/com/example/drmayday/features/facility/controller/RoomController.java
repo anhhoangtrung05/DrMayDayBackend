@@ -14,9 +14,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * Controller quản lý phòng khám (Phân hệ Cơ sở vật chất).
- * Chứa API 29 (set_room), API 30 (get_list_rooms), API 31 (get_room_detail),
- * API 32 (edit_room), API 33 (delete_room).
+ * Controller for clinic room management (Facility module).
+ * Handles TOPOLOGY_SET_ROOM, TOPOLOGY_GET_LIST_ROOMS, TOPOLOGY_GET_ROOM_DETAIL,
+ * TOPOLOGY_EDIT_ROOM, and TOPOLOGY_DELETE_ROOM.
  */
 @RestController
 @RequestMapping("/api/v1/rooms")
@@ -29,11 +29,11 @@ public class RoomController {
     }
 
     /**
-     * API 29: room01 / set_room
-     * Admin tạo phòng khám trong một chi nhánh đang hoạt động.
+     * TOPOLOGY_SET_ROOM
+     * Creates a clinic room in a branch. Access is restricted to admins.
      *
-     * @param req Dữ liệu phòng khám mới
-     * @return Phòng khám vừa tạo
+     * @param req New clinic room data
+     * @return The created clinic room
      */
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -44,11 +44,11 @@ public class RoomController {
     }
 
     /**
-     * API 30: room02 / get_list_rooms
-     * Lấy mọi phòng khám, xếp theo room_id tăng dần, có thể lọc theo chi nhánh.
+     * TOPOLOGY_GET_LIST_ROOMS
+     * Retrieves clinic rooms, optionally filtered by branch.
      *
-     * @param branchId ID chi nhánh cần lọc, để trống nghĩa là không lọc
-     * @return Danh sách phòng khám
+     * @param branchId Branch ID to filter by; omit it to return all rooms
+     * @return The list of clinic rooms
      */
     @GetMapping
     public ResponseEntity<BaseResponse<List<RoomResponse>>> getListRooms(
@@ -57,11 +57,11 @@ public class RoomController {
     }
 
     /**
-     * API 31: room03 / get_room_detail
-     * Lấy chi tiết một phòng khám.
+     * TOPOLOGY_GET_ROOM_DETAIL
+     * Retrieves a clinic room by ID.
      *
-     * @param id ID phòng khám
-     * @return Chi tiết phòng khám
+     * @param id Clinic room ID
+     * @return Clinic room details
      */
     @GetMapping("/{id}")
     public ResponseEntity<BaseResponse<RoomResponse>> getRoomDetails(@PathVariable String id) {
@@ -69,12 +69,12 @@ public class RoomController {
     }
 
     /**
-     * API 32: room04 / edit_room
-     * Admin đổi tên phòng hoặc chuyển phòng sang chi nhánh khác khi phòng chưa có phiên khám.
+     * TOPOLOGY_EDIT_ROOM
+     * Updates the supplied clinic room fields. Access is restricted to admins.
      *
-     * @param id ID phòng khám cần sửa
-     * @param req Thông tin cập nhật
-     * @return Phòng khám sau khi sửa
+     * @param id ID of the clinic room to update
+     * @param req Updated room data
+     * @return The updated clinic room
      */
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
@@ -85,11 +85,11 @@ public class RoomController {
     }
 
     /**
-     * API 33: room05 / delete_room
-     * Admin xóa phòng khám chưa có phiên khám.
+     * TOPOLOGY_DELETE_ROOM
+     * Deletes a clinic room with no exam sessions. Access is restricted to admins.
      *
-     * @param id ID phòng khám cần xóa
-     * @return Phản hồi thành công, không có data
+     * @param id ID of the clinic room to delete
+     * @return A success response with no data
      */
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")

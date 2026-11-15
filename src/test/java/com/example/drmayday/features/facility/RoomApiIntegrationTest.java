@@ -31,9 +31,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Kiểm thử API 29 đến 33 qua filter chain thật, xuống PostgreSQL thật.
- * Mỗi test nằm trong một transaction được rollback, nên không để lại dòng nào trong database.
- * Các khóa ngoại subtype là DEFERRED, chỉ kiểm tra lúc commit, nên phiên khám ở đây không cần dòng subtype.
+ * Tests clinic room management endpoints through the real filter chain against PostgreSQL.
+ * Each test runs in a rolled-back transaction, so it leaves no rows in the database.
+ * Subtype foreign keys are deferred until commit, so the exam session does not need a subtype row here.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -110,7 +110,7 @@ class RoomApiIntegrationTest {
         return givenRoom(branchId, "Phòng 101");
     }
 
-    // phienkham cần hồ sơ thật của một bệnh nhân thật, transaction của test sẽ hoàn tác toàn bộ
+    // phienkham requires a real patient record; the test transaction will roll back all changes.
     private void givenExamSessionIn(long roomId) {
         Long patient = jdbcTemplate.queryForObject(
                 "INSERT INTO nguoi (ho_ten, so_dien_thoai) VALUES ('Bệnh nhân Test', '0987654321') RETURNING ma_nguoi",
@@ -120,7 +120,7 @@ class RoomApiIntegrationTest {
                 "INSERT INTO hosobenhan (ma_benh_nhan, loai_benh_an) VALUES (?, 'CAP') RETURNING ma_ho_so",
                 Long.class, patient);
         Long doctor = jdbcTemplate.queryForObject("SELECT min(ma_nhan_vien) FROM nhanvien", Long.class);
-        assertThat(doctor).as("database phải có sẵn nhân viên do DatabaseSeeder tạo").isNotNull();
+        assertThat(doctor).as("The database must contain an employee seeded by DatabaseSeeder").isNotNull();
         jdbcTemplate.update("""
                 INSERT INTO phienkham (ma_ho_so, ma_bac_si, ma_phong_kham, loai_benh_an, ngay_kham, lan_kham_thu)
                 VALUES (?, ?, ?, 'CAP', CURRENT_DATE, 1)
@@ -175,10 +175,10 @@ class RoomApiIntegrationTest {
                 """.formatted(branch);
     }
 
-    // Quyền truy cập, áp dụng chung cho phòng khám
+    // Access control shared by all clinic room endpoints.
 
     @Test
-    @DisplayName("AC-1: chưa đăng nhập thì mọi API phòng khám trả 401, mã 3003")
+    @DisplayName("AC-1: all clinic room endpoints return 401 with code 3003 when unauthenticated")
     void anonymousIsRejectedEverywhere() throws Exception {
         long room = givenRoom();
 
@@ -191,7 +191,7 @@ class RoomApiIntegrationTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"benh_nhan", "bac_si"})
-    @DisplayName("AC-2: tài khoản không phải Admin bị chặn khi ghi, trả 403, mã 3102, dữ liệu không đổi")
+    @DisplayName("AC-2: non-admin accounts are blocked from writes with 403 and code 3102; data remains unchanged")
     void nonAdminCannotWrite(String role) throws Exception {
         String token = tokenFor(role);
         long room = givenRoom();
@@ -206,7 +206,7 @@ class RoomApiIntegrationTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"benh_nhan", "bac_si"})
-    @DisplayName("AC-3: người đã đăng nhập xem được danh sách và chi tiết phòng")
+    @DisplayName("AC-3: authenticated users can view the room list and details")
     void anyAuthenticatedUserCanRead(String role) throws Exception {
         String token = tokenFor(role);
         long room = givenRoom();
@@ -217,10 +217,10 @@ class RoomApiIntegrationTest {
                 .andExpect(jsonPath("$.code").value("1000"));
     }
 
-    // API 29
+    // TOPOLOGY_SET_ROOM
 
     @Test
-    @DisplayName("AC-14: Admin tạo phòng nhận 201, mã 1001, và room_id khớp dòng mới trong database")
+    @DisplayName("AC-14: creating a room returns 201 with code 1001, and room_id matches the new database row")
     void adminCreatesRoom() throws Exception {
         ResultActions result = createAsAdmin(body(branchId, "Phòng 202"))
                 .andExpect(status().isCreated())
@@ -235,7 +235,7 @@ class RoomApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("AC-4: branch_id gửi dạng số JSON vẫn được nhận, room_id và branch_id trả về là chuỗi")
+    @DisplayName("AC-4: a numeric JSON branch_id is accepted; room_id and branch_id are returned as strings")
     void acceptsNumericBranchIdAndAnswersWithStrings() throws Exception {
         createAsAdmin("""
                 {"branch_id": %d, "name": "Phòng 202"}
@@ -246,7 +246,7 @@ class RoomApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("Tên có khoảng trắng hai đầu được lưu sau khi trim")
+    @DisplayName("A name with surrounding whitespace is trimmed before saving")
     void trimsNameOnCreate() throws Exception {
         ResultActions result = createAsAdmin(body(branchId, "  Phòng 202  "))
                 .andExpect(status().isCreated())
@@ -257,7 +257,7 @@ class RoomApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("AC-15: thiếu branch_id, thiếu name, hoặc name chỉ có khoảng trắng đều trả 2001")
+    @DisplayName("AC-15: missing branch_id, missing name, or a whitespace-only name returns 2001")
     void missingFieldsReturn2001() throws Exception {
         expectError(createAsAdmin(nameBody("Phòng 202")), 400, "2001");
         expectError(createAsAdmin(branchBody(branchId)), 400, "2001");
@@ -265,7 +265,7 @@ class RoomApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("AC-15: name đúng 150 ký tự được nhận, 151 ký tự trả 2003")
+    @DisplayName("AC-15: a 150-character name is accepted, while a 151-character name returns 2003")
     void nameLengthLimitIs150() throws Exception {
         createAsAdmin(body(branchId, "P".repeat(150))).andExpect(status().isCreated());
 
@@ -274,19 +274,19 @@ class RoomApiIntegrationTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"abc", "1.5", TOO_BIG_FOR_LONG})
-    @DisplayName("AC-15: branch_id không phải số hoặc tràn số trả 2002")
+    @DisplayName("AC-15: a non-numeric or overflowing branch_id returns 2002")
     void nonNumericBranchIdReturns2002(String branch) throws Exception {
         expectError(createAsAdmin(body(branch, "Phòng 202")), 400, "2002");
     }
 
     @Test
-    @DisplayName("AC-15: chi nhánh không tồn tại trả 404, mã 2101")
+    @DisplayName("AC-15: a nonexistent branch returns 404 with code 2101")
     void missingBranchReturns2101() throws Exception {
         expectError(createAsAdmin(body(NO_SUCH_ID, "Phòng 202")), 404, "2101");
     }
 
     @Test
-    @DisplayName("AC-15: chi nhánh ngừng hoạt động trả 400, mã 2106, không tạo phòng")
+    @DisplayName("AC-15: an inactive branch returns 400 with code 2106 and no room is created")
     void inactiveBranchReturns2106() throws Exception {
         long inactive = givenBranch("Cơ sở Đóng Cửa", false);
 
@@ -296,13 +296,13 @@ class RoomApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("JSON hỏng trả 2003, không phải 2001")
+    @DisplayName("Malformed JSON returns 2003 instead of 2001")
     void malformedJsonReturns2003() throws Exception {
         expectError(createAsAdmin("{\"branch_id\": "), 400, "2003");
     }
 
     @Test
-    @DisplayName("AC-16: trùng tên trong cùng chi nhánh trả 409, mã 2104, không phải 3006")
+    @DisplayName("AC-16: a duplicate name in the same branch returns 409 with code 2104, not 3006")
     void duplicateNameReturns2104() throws Exception {
         givenRoom();
 
@@ -312,7 +312,7 @@ class RoomApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("AC-16: tên chỉ trùng sau khi trim vẫn trả 2104")
+    @DisplayName("AC-16: a name that becomes a duplicate after trimming still returns 2104")
     void duplicateAfterTrimReturns2104() throws Exception {
         givenRoom();
 
@@ -320,7 +320,7 @@ class RoomApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("AC-16: tên khác hoa thường được chấp nhận")
+    @DisplayName("AC-16: names with different letter case are accepted")
     void differentCaseIsNotADuplicate() throws Exception {
         givenRoom();
 
@@ -328,7 +328,7 @@ class RoomApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("AC-16: cùng tên ở chi nhánh khác được chấp nhận")
+    @DisplayName("AC-16: the same name is accepted in a different branch")
     void sameNameInOtherBranchIsAccepted() throws Exception {
         givenRoom();
         long other = givenBranch("Cơ sở Khác", true);
@@ -336,10 +336,10 @@ class RoomApiIntegrationTest {
         createAsAdmin(body(other, "Phòng 101")).andExpect(status().isCreated());
     }
 
-    // API 30
+    // TOPOLOGY_GET_LIST_ROOMS
 
     @Test
-    @DisplayName("AC-17: danh sách xếp room_id tăng dần và có cả phòng của chi nhánh ngừng hoạt động")
+    @DisplayName("AC-17: the list sorts room_id in ascending order and includes rooms from inactive branches")
     void listsAllRoomsInOrderIncludingInactiveBranches() throws Exception {
         long first = givenRoom();
         long second = givenRoom(givenBranch("Cơ sở Đóng Cửa", false), "Phòng 909");
@@ -354,7 +354,7 @@ class RoomApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("AC-17: bộ lọc branch_id chỉ trả phòng của chi nhánh đó")
+    @DisplayName("AC-17: the branch_id filter returns only rooms from that branch")
     void filtersByBranch() throws Exception {
         long mine = givenRoom();
         long other = givenBranch("Cơ sở Khác", true);
@@ -368,7 +368,7 @@ class RoomApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("AC-17: chi nhánh không có phòng trả mảng rỗng, không phải 2101")
+    @DisplayName("AC-17: a branch with no rooms returns an empty array, not 2101")
     void branchWithoutRoomsReturnsEmptyArray() throws Exception {
         listAsAdmin("?branch_id=" + branchId)
                 .andExpect(status().isOk())
@@ -377,20 +377,20 @@ class RoomApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("AC-17: bộ lọc với chi nhánh không tồn tại trả 404, mã 2101")
+    @DisplayName("AC-17: filtering by a nonexistent branch returns 404 with code 2101")
     void filterWithMissingBranchReturns2101() throws Exception {
         expectError(listAsAdmin("?branch_id=" + NO_SUCH_ID), 404, "2101");
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"abc", TOO_BIG_FOR_LONG})
-    @DisplayName("AC-17: bộ lọc không phải số hoặc tràn số trả 2002")
+    @DisplayName("AC-17: a non-numeric or overflowing filter returns 2002")
     void filterWithNonNumericBranchReturns2002(String branch) throws Exception {
         expectError(listAsAdmin("?branch_id=" + branch), 400, "2002");
     }
 
     @Test
-    @DisplayName("AC-17: branch_id để trống được coi như không lọc")
+    @DisplayName("AC-17: an empty branch_id is treated as no filter")
     void blankFilterMeansNoFilter() throws Exception {
         long room = givenRoom();
 
@@ -399,10 +399,10 @@ class RoomApiIntegrationTest {
                 .andExpect(jsonPath("$.data[*].room_id", hasItems(String.valueOf(room))));
     }
 
-    // API 31
+    // TOPOLOGY_GET_ROOM_DETAIL
 
     @Test
-    @DisplayName("AC-18: chi tiết trả đúng phòng với các trường dạng chuỗi")
+    @DisplayName("AC-18: room details return the correct room with string-valued fields")
     void returnsRoomDetails() throws Exception {
         long room = givenRoom();
 
@@ -417,13 +417,13 @@ class RoomApiIntegrationTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"999999999", "abc", TOO_BIG_FOR_LONG, "-1", "0"})
-    @DisplayName("AC-18: id không tồn tại hoặc không phải số trả 404, mã 2103")
+    @DisplayName("AC-18: a nonexistent or non-numeric ID returns 404 with code 2103")
     void invalidIdReturns2103(String id) throws Exception {
         expectError(send(get(ROOMS + "/" + id), adminToken, null), 404, "2103");
     }
 
     @Test
-    @DisplayName("Đổi tên chi nhánh thì branch_name của phòng đổi theo")
+    @DisplayName("Renaming a branch also updates the room's branch_name")
     void branchNameFollowsTheBranch() throws Exception {
         long room = givenRoom();
 
@@ -433,10 +433,10 @@ class RoomApiIntegrationTest {
                 .andExpect(jsonPath("$.data.branch_name").value("Cơ sở Đổi Tên"));
     }
 
-    // API 32, đổi tên
+    // TOPOLOGY_EDIT_ROOM: rename the room.
 
     @Test
-    @DisplayName("AC-19: đổi tên được lưu sau khi trim, chi nhánh giữ nguyên")
+    @DisplayName("AC-19: the trimmed new name is saved and the branch remains unchanged")
     void renamesRoom() throws Exception {
         long room = givenRoom();
 
@@ -451,7 +451,7 @@ class RoomApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("AC-19: đổi tên được cả khi chi nhánh đang ngừng hoạt động")
+    @DisplayName("AC-19: a room can be renamed while its branch is inactive")
     void renamesRoomInInactiveBranch() throws Exception {
         long inactive = givenBranch("Cơ sở Đóng Cửa", false);
         long room = givenRoom(inactive, "Phòng 101");
@@ -462,7 +462,7 @@ class RoomApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("Gửi lại chi nhánh ngừng hoạt động hiện tại không tính là chuyển, nên không trả 2106")
+    @DisplayName("Resubmitting the current inactive branch does not count as a move and does not return 2106")
     void currentInactiveBranchIsNotAMove() throws Exception {
         long inactive = givenBranch("Cơ sở Đóng Cửa", false);
         long room = givenRoom(inactive, "Phòng 101");
@@ -472,7 +472,7 @@ class RoomApiIntegrationTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"", "   "})
-    @DisplayName("AC-19: name rỗng hoặc chỉ có khoảng trắng trả 2003, tên cũ giữ nguyên")
+    @DisplayName("AC-19: an empty or whitespace-only name returns 2003 and preserves the old name")
     void blankNameReturns2003(String name) throws Exception {
         long room = givenRoom();
 
@@ -482,13 +482,13 @@ class RoomApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("AC-19: name 151 ký tự trả 2003")
+    @DisplayName("AC-19: a 151-character name returns 2003")
     void tooLongNameReturns2003OnEdit() throws Exception {
         expectError(editAsAdmin(givenRoom(), nameBody("P".repeat(151))), 400, "2003");
     }
 
     @Test
-    @DisplayName("AC-19: đổi sang tên phòng khác trong chi nhánh trả 409, mã 2104")
+    @DisplayName("AC-19: changing to another room's name in the same branch returns 409 with code 2104")
     void renameToExistingNameReturns2104() throws Exception {
         long room = givenRoom();
         givenRoom(branchId, "Phòng 202");
@@ -500,14 +500,14 @@ class RoomApiIntegrationTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"999999999", "abc", TOO_BIG_FOR_LONG})
-    @DisplayName("AC-19: id sai khi sửa trả 404, mã 2103")
+    @DisplayName("AC-19: updating with an invalid ID returns 404 with code 2103")
     void editWithInvalidIdReturns2103(String id) throws Exception {
         expectError(editAsAdmin(id, nameBody("Phòng 202")), 404, "2103");
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"{}", "{\"name\": \"Phòng 101\"}", "{\"name\": null, \"branch_id\": null}"})
-    @DisplayName("AC-19, AC-20: body rỗng, giá trị không đổi, hoặc null thì trả 200 với dữ liệu hiện tại")
+    @DisplayName("AC-19, AC-20: an empty body, unchanged values, or null values return 200 with the current data")
     void noChangeReturnsCurrentData(String json) throws Exception {
         long room = givenRoom();
 
@@ -518,10 +518,10 @@ class RoomApiIntegrationTest {
                 .andExpect(jsonPath("$.data.name").value("Phòng 101"));
     }
 
-    // API 32, chuyển chi nhánh
+    // TOPOLOGY_EDIT_ROOM: move the room to another branch.
 
     @Test
-    @DisplayName("AC-20: chuyển phòng chưa có phiên khám trả branch_id và branch_name mới")
+    @DisplayName("AC-20: moving a room with no exam sessions returns the new branch_id and branch_name")
     void movesRoomToOtherBranch() throws Exception {
         long room = givenRoom();
         long target = givenBranch("Cơ sở Đích", true);
@@ -536,7 +536,7 @@ class RoomApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("AC-20: chi nhánh đích không tồn tại trả 404, mã 2101")
+    @DisplayName("AC-20: a nonexistent target branch returns 404 with code 2101")
     void moveToMissingBranchReturns2101() throws Exception {
         long room = givenRoom();
 
@@ -546,7 +546,7 @@ class RoomApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("AC-20: chi nhánh đích ngừng hoạt động trả 400, mã 2106")
+    @DisplayName("AC-20: an inactive target branch returns 400 with code 2106")
     void moveToInactiveBranchReturns2106() throws Exception {
         long room = givenRoom();
         long inactive = givenBranch("Cơ sở Đóng Cửa", false);
@@ -558,13 +558,13 @@ class RoomApiIntegrationTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"", "abc", TOO_BIG_FOR_LONG})
-    @DisplayName("AC-20: branch_id rỗng, không phải số, hoặc tràn số trả 2002")
+    @DisplayName("AC-20: an empty, non-numeric, or overflowing branch_id returns 2002")
     void moveWithBadBranchIdReturns2002(String branch) throws Exception {
         expectError(editAsAdmin(givenRoom(), branchBody(branch)), 400, "2002");
     }
 
     @Test
-    @DisplayName("AC-20: chi nhánh đích đã có phòng cùng tên trả 409, mã 2104")
+    @DisplayName("AC-20: a target branch with a room of the same name returns 409 with code 2104")
     void moveIntoNameClashReturns2104() throws Exception {
         long room = givenRoom();
         long target = givenBranch("Cơ sở Đích", true);
@@ -576,7 +576,7 @@ class RoomApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("AC-20: phòng có phiên khám không chuyển được, trả 400, mã 2105")
+    @DisplayName("AC-20: a room with exam sessions cannot be moved and returns 400 with code 2105")
     void roomWithExamSessionCannotMove() throws Exception {
         long room = givenRoom();
         long target = givenBranch("Cơ sở Đích", true);
@@ -588,7 +588,7 @@ class RoomApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("AC-20: phòng có phiên khám vẫn đổi tên được khi gửi branch_id trùng chi nhánh hiện tại")
+    @DisplayName("AC-20: a room with exam sessions can still be renamed when branch_id matches its current branch")
     void roomWithExamSessionCanStillBeRenamed() throws Exception {
         long room = givenRoom();
         givenExamSessionIn(room);
@@ -598,10 +598,10 @@ class RoomApiIntegrationTest {
         assertThat(roomName(room)).isEqualTo("Phòng 202");
     }
 
-    // API 33
+    // TOPOLOGY_DELETE_ROOM
 
     @Test
-    @DisplayName("AC-21: xóa phòng chưa có phiên khám trả 200, mã 1000, không có data")
+    @DisplayName("AC-21: deleting a room with no exam sessions returns 200 with code 1000 and no data")
     void deletesRoomWithoutExamSessions() throws Exception {
         long room = givenRoom();
 
@@ -614,7 +614,7 @@ class RoomApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("AC-22: xóa phòng có phiên khám trả 400, mã 2105, phòng vẫn còn")
+    @DisplayName("AC-22: deleting a room with exam sessions returns 400 with code 2105 and the room remains")
     void roomWithExamSessionCannotBeDeleted() throws Exception {
         long room = givenRoom();
         givenExamSessionIn(room);
@@ -626,7 +626,7 @@ class RoomApiIntegrationTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"999999999", "abc", TOO_BIG_FOR_LONG})
-    @DisplayName("Xóa với id sai trả 404, mã 2103")
+    @DisplayName("Deleting with an invalid ID returns 404 with code 2103")
     void deleteWithInvalidIdReturns2103(String id) throws Exception {
         expectError(deleteAsAdmin(id), 404, "2103");
     }

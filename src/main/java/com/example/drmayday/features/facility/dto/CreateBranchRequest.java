@@ -6,7 +6,7 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 /**
- * DTO yêu cầu tạo chi nhánh mới (API 24 set_branch).
+ * Request DTO for TOPOLOGY_SET_BRANCH.
  */
 public class CreateBranchRequest {
 
@@ -20,7 +20,7 @@ public class CreateBranchRequest {
     @JsonProperty("address")
     private String address;
 
-    // Cho phép chuỗi rỗng và khoảng trắng đầu cuối, service sẽ trim rồi đổi rỗng thành NULL
+    // Allows empty or whitespace-only strings; the service trims them and converts empty values to null.
     @Pattern(regexp = "^\\s*(\\+?[0-9]{8,15})?\\s*$", message = "2004")
     @JsonProperty("phone")
     private String phone;

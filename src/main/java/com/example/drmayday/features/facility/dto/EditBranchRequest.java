@@ -5,7 +5,7 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 /**
- * DTO yêu cầu sửa chi nhánh (API 27 edit_branch). Trường nào không gửi thì giữ nguyên.
+ * Request DTO for TOPOLOGY_EDIT_BRANCH. Omitted fields remain unchanged.
  */
 public class EditBranchRequest {
 
@@ -17,7 +17,7 @@ public class EditBranchRequest {
     @JsonProperty("address")
     private String address;
 
-    // phone rỗng nghĩa là xóa số điện thoại
+    // An empty phone value means the phone number should be removed.
     @Pattern(regexp = "^\\s*(\\+?[0-9]{8,15})?\\s*$", message = "2004")
     @JsonProperty("phone")
     private String phone;

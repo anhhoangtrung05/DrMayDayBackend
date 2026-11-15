@@ -1,11 +1,12 @@
 package com.example.drmayday.features.facility.dto;
 
-import com.example.drmayday.entity.ChiNhanh;
-import com.example.drmayday.entity.PhongKham;
+import com.example.drmayday.entity.Branch;
+import com.example.drmayday.entity.ClinicRoom;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * DTO phản hồi phòng khám (API 29 đến 32). room_id và branch_id luôn là chuỗi trong JSON.
+ * Clinic room response DTO for TOPOLOGY_SET_ROOM, TOPOLOGY_GET_LIST_ROOMS,
+ * TOPOLOGY_GET_ROOM_DETAIL, and TOPOLOGY_EDIT_ROOM. room_id and branch_id are always serialized as JSON strings.
  */
 public class RoomResponse {
 
@@ -31,13 +32,13 @@ public class RoomResponse {
         this.name = name;
     }
 
-    public static RoomResponse from(PhongKham phongKham) {
-        ChiNhanh chiNhanh = phongKham.getChiNhanh();
+    public static RoomResponse from(ClinicRoom clinicRoom) {
+        Branch branch = clinicRoom.getBranch();
         return new RoomResponse(
-                String.valueOf(phongKham.getMaPhongKham()),
-                String.valueOf(chiNhanh.getMaChiNhanh()),
-                chiNhanh.getTenChiNhanh(),
-                phongKham.getTenPhongKham());
+                String.valueOf(clinicRoom.getClinicRoomId()),
+                String.valueOf(branch.getBranchId()),
+                branch.getName(),
+                clinicRoom.getName());
     }
 
     public String getRoomId() {
