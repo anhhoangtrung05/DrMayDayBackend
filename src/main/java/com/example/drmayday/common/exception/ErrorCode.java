@@ -47,12 +47,17 @@ public enum ErrorCode {
     MEDICAL_RECORD_NOT_FOUND("4001", "Medical record not found", HttpStatus.NOT_FOUND),
     ACTIVE_MEDICAL_RECORD_REQUIRED("4002", "Active medical record required", HttpStatus.BAD_REQUEST),
     MEDICAL_RECORD_ALREADY_COMPLETED("4003", "Medical record already completed", HttpStatus.BAD_REQUEST),
+    RECORD_EXAM_TYPE_MISMATCH("4008", "Record/Exam type mismatch", HttpStatus.CONFLICT),
     TEMPLATE_NOT_FOUND("4101", "Template not found", HttpStatus.NOT_FOUND),
 
-    // 5xxx - Lỗi Thang điểm UAS7
+    // 5xxx - Lỗi Thang điểm UAS7 & Phiên khám
     UAS7_RECORD_ALREADY_EXISTS_TODAY("5002", "UAS7 score record already exists for today", HttpStatus.CONFLICT),
     UAS7_SCORE_OUT_OF_RANGE("5003", "ISS7 or HSS7 score out of range (0-3)", HttpStatus.BAD_REQUEST),
     UAS7_NO_ACTIVE_RECORD("5004", "Patient has no active medical record for UAS7", HttpStatus.BAD_REQUEST),
+    EXAM_NOT_FOUND("5008", "Exam not found", HttpStatus.NOT_FOUND),
+
+    // 7xxx - Lỗi Chi tiết tổn thương
+    LESION_DETAIL_NOT_FOUND("7010", "Lesion detail not found", HttpStatus.NOT_FOUND),
 
     // 9xxx - Lỗi hệ thống chung
     INTERNAL_SERVER_ERROR("9999", "Internal server error", HttpStatus.INTERNAL_SERVER_ERROR);
