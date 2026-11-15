@@ -2,14 +2,14 @@ package com.example.drmayday.features.facility.service.impl;
 
 import com.example.drmayday.common.exception.AppException;
 import com.example.drmayday.common.exception.ErrorCode;
-import com.example.drmayday.entity.ChiNhanh;
-import com.example.drmayday.entity.PhongKham;
+import com.example.drmayday.entity.Branch;
+import com.example.drmayday.entity.ClinicRoom;
 import com.example.drmayday.features.facility.dto.CreateRoomRequest;
 import com.example.drmayday.features.facility.dto.EditRoomRequest;
 import com.example.drmayday.features.facility.dto.RoomResponse;
 import com.example.drmayday.features.facility.service.RoomService;
-import com.example.drmayday.repository.ChiNhanhRepository;
-import com.example.drmayday.repository.PhongKhamRepository;
+import com.example.drmayday.repository.BranchRepository;
+import com.example.drmayday.repository.ClinicRoomRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -24,12 +24,12 @@ public class RoomServiceImpl implements RoomService {
 
     private static final Logger log = LoggerFactory.getLogger(RoomServiceImpl.class);
 
-    private final PhongKhamRepository phongKhamRepository;
-    private final ChiNhanhRepository chiNhanhRepository;
+    private final ClinicRoomRepository clinicRoomRepository;
+    private final BranchRepository branchRepository;
 
-    public RoomServiceImpl(PhongKhamRepository phongKhamRepository, ChiNhanhRepository chiNhanhRepository) {
-        this.phongKhamRepository = phongKhamRepository;
-        this.chiNhanhRepository = chiNhanhRepository;
+    public RoomServiceImpl(ClinicRoomRepository clinicRoomRepository, BranchRepository branchRepository) {
+        this.clinicRoomRepository = clinicRoomRepository;
+        this.branchRepository = branchRepository;
     }
 
     @Override
@@ -37,27 +37,28 @@ public class RoomServiceImpl implements RoomService {
     public RoomResponse createRoom(CreateRoomRequest req) {
         log.info("Admin tạo phòng khám mới: branchId={}", req.getBranchId());
         Long branchId = parseBodyBranchId(req.getBranchId());
-        ChiNhanh chiNhanh = findActiveBranch(branchId);
+        Branch branch = findActiveBranch(branchId);
         String name = req.getName().trim();
 
-        if (phongKhamRepository.existsByChiNhanh_MaChiNhanhAndTenPhongKham(branchId, name)) {
+        if (clinicRoomRepository.existsByBranchIdAndName(branchId, name)) {
             throw new AppException(ErrorCode.ROOM_NAME_ALREADY_EXISTS);
         }
 
-        PhongKham phongKham = PhongKham.builder().chiNhanh(chiNhanh).tenPhongKham(name).build();
-        return RoomResponse.from(saveRoom(phongKham));
+        // Cột ma_chi_nhanh được ghi qua branchId, còn branch chỉ để đọc (insertable = false)
+        ClinicRoom room = ClinicRoom.builder().branchId(branchId).branch(branch).name(name).build();
+        return RoomResponse.from(saveRoom(room));
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<RoomResponse> getListRooms(Long branchId) {
         if (branchId == null) {
-            return toResponses(phongKhamRepository.findAllWithChiNhanh());
+            return toResponses(clinicRoomRepository.findAllWithBranch());
         }
-        if (!chiNhanhRepository.existsById(branchId)) {
+        if (!branchRepository.existsById(branchId)) {
             throw new AppException(ErrorCode.BRANCH_NOT_FOUND);
         }
-        return toResponses(phongKhamRepository.findAllByBranchWithChiNhanh(branchId));
+        return toResponses(clinicRoomRepository.findAllByBranchIdWithBranch(branchId));
     }
 
     @Override
@@ -70,54 +71,57 @@ public class RoomServiceImpl implements RoomService {
     @Transactional
     public RoomResponse editRoom(String id, EditRoomRequest req) {
         log.info("Admin sửa phòng khám: id={}", id);
-        PhongKham phongKham = phongKhamRepository.findByIdForUpdate(parseRoomId(id))
+        ClinicRoom room = clinicRoomRepository.findByIdForUpdate(parseRoomId(id))
                 .orElseThrow(() -> new AppException(ErrorCode.ROOM_NOT_FOUND));
 
         if (req.getName() != null && req.getName().isBlank()) {
             throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE);
         }
-        String name = req.getName() != null ? req.getName().trim() : phongKham.getTenPhongKham();
+        String name = req.getName() != null ? req.getName().trim() : room.getName();
 
-        ChiNhanh chiNhanh = phongKham.getChiNhanh();
+        Branch targetBranch = null;
         if (req.getBranchId() != null) {
             Long targetBranchId = parseBodyBranchId(req.getBranchId());
             // Gửi trùng chi nhánh hiện tại thì không tính là chuyển phòng
-            if (!targetBranchId.equals(chiNhanh.getMaChiNhanh())) {
-                chiNhanh = findActiveBranch(targetBranchId);
-                if (phongKhamRepository.hasPhienKham(phongKham.getMaPhongKham())) {
+            if (!targetBranchId.equals(room.getBranchId())) {
+                targetBranch = findActiveBranch(targetBranchId);
+                if (clinicRoomRepository.hasPhienKham(room.getClinicRoomId())) {
                     throw new AppException(ErrorCode.ROOM_HAS_EXAM_SESSIONS);
                 }
             }
         }
 
-        boolean branchChanged = chiNhanh != phongKham.getChiNhanh();
-        if (!branchChanged && name.equals(phongKham.getTenPhongKham())) {
-            return RoomResponse.from(phongKham);
+        boolean branchChanged = targetBranch != null;
+        if (!branchChanged && name.equals(room.getName())) {
+            return RoomResponse.from(room);
         }
 
-        if (phongKhamRepository.existsByChiNhanh_MaChiNhanhAndTenPhongKhamAndMaPhongKhamNot(
-                chiNhanh.getMaChiNhanh(), name, phongKham.getMaPhongKham())) {
+        Long branchId = branchChanged ? targetBranch.getBranchId() : room.getBranchId();
+        if (clinicRoomRepository.existsByBranchIdAndNameAndClinicRoomIdNot(branchId, name, room.getClinicRoomId())) {
             throw new AppException(ErrorCode.ROOM_NAME_ALREADY_EXISTS);
         }
 
-        phongKham.setChiNhanh(chiNhanh);
-        phongKham.setTenPhongKham(name);
-        return RoomResponse.from(saveRoom(phongKham));
+        if (branchChanged) {
+            room.setBranchId(branchId);
+            room.setBranch(targetBranch);
+        }
+        room.setName(name);
+        return RoomResponse.from(saveRoom(room));
     }
 
     @Override
     @Transactional
     public void deleteRoom(String id) {
         log.info("Admin xóa phòng khám: id={}", id);
-        PhongKham phongKham = findRoom(id);
+        ClinicRoom room = findRoom(id);
 
-        if (phongKhamRepository.hasPhienKham(phongKham.getMaPhongKham())) {
+        if (clinicRoomRepository.hasPhienKham(room.getClinicRoomId())) {
             throw new AppException(ErrorCode.ROOM_HAS_EXAM_SESSIONS);
         }
 
         try {
-            phongKhamRepository.delete(phongKham);
-            phongKhamRepository.flush();
+            clinicRoomRepository.delete(room);
+            clinicRoomRepository.flush();
         } catch (DataIntegrityViolationException ex) {
             if (FacilitySqlErrors.isForeignKeyViolation(ex)) {
                 throw new AppException(ErrorCode.ROOM_HAS_EXAM_SESSIONS);
@@ -130,9 +134,9 @@ public class RoomServiceImpl implements RoomService {
     }
 
     // Phải saveAndFlush để lỗi database xảy ra trong khối try, không phải lúc commit
-    private PhongKham saveRoom(PhongKham phongKham) {
+    private ClinicRoom saveRoom(ClinicRoom room) {
         try {
-            return phongKhamRepository.saveAndFlush(phongKham);
+            return clinicRoomRepository.saveAndFlush(room);
         } catch (DataIntegrityViolationException ex) {
             if (FacilitySqlErrors.isUniqueViolation(ex)) {
                 throw new AppException(ErrorCode.ROOM_NAME_ALREADY_EXISTS);
@@ -144,17 +148,17 @@ public class RoomServiceImpl implements RoomService {
         }
     }
 
-    private ChiNhanh findActiveBranch(Long branchId) {
-        ChiNhanh chiNhanh = chiNhanhRepository.findById(branchId)
+    private Branch findActiveBranch(Long branchId) {
+        Branch branch = branchRepository.findById(branchId)
                 .orElseThrow(() -> new AppException(ErrorCode.BRANCH_NOT_FOUND));
-        if (!Boolean.TRUE.equals(chiNhanh.getTrangThai())) {
+        if (!Boolean.TRUE.equals(branch.getActive())) {
             throw new AppException(ErrorCode.BRANCH_INACTIVE);
         }
-        return chiNhanh;
+        return branch;
     }
 
-    private PhongKham findRoom(String id) {
-        return phongKhamRepository.findById(parseRoomId(id))
+    private ClinicRoom findRoom(String id) {
+        return clinicRoomRepository.findById(parseRoomId(id))
                 .orElseThrow(() -> new AppException(ErrorCode.ROOM_NOT_FOUND));
     }
 
@@ -174,7 +178,7 @@ public class RoomServiceImpl implements RoomService {
         }
     }
 
-    private List<RoomResponse> toResponses(List<PhongKham> rooms) {
+    private List<RoomResponse> toResponses(List<ClinicRoom> rooms) {
         return rooms.stream().map(RoomResponse::from).toList();
     }
 }

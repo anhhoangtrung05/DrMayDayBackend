@@ -2,12 +2,12 @@ package com.example.drmayday.features.facility.service.impl;
 
 import com.example.drmayday.common.exception.AppException;
 import com.example.drmayday.common.exception.ErrorCode;
-import com.example.drmayday.entity.ChiNhanh;
+import com.example.drmayday.entity.Branch;
 import com.example.drmayday.features.facility.dto.CreateBranchRequest;
 import com.example.drmayday.features.facility.dto.EditBranchRequest;
-import com.example.drmayday.repository.ChiNhanhRepository;
+import com.example.drmayday.repository.BranchRepository;
 import com.example.drmayday.repository.EmployeeRepository;
-import com.example.drmayday.repository.PhongKhamRepository;
+import com.example.drmayday.repository.ClinicRoomRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -48,27 +48,27 @@ class BranchServiceImplTest {
     private static final String ID = "7";
 
     @Mock
-    private ChiNhanhRepository chiNhanhRepository;
+    private BranchRepository branchRepository;
 
     @Mock
-    private PhongKhamRepository phongKhamRepository;
+    private ClinicRoomRepository clinicRoomRepository;
 
     @Mock
-    private EmployeeRepository EmployeeRepository;
+    private EmployeeRepository employeeRepository;
 
     private BranchServiceImpl service;
-    private ChiNhanh branch;
+    private Branch branch;
 
     @BeforeEach
     void setUp() {
-        service = new BranchServiceImpl(chiNhanhRepository, phongKhamRepository, EmployeeRepository);
-        branch = new ChiNhanh(BRANCH_ID, "Cơ sở Hoàn Kiếm", "Số 1 Phố Huế", "0241234567", true);
-        when(chiNhanhRepository.findById(BRANCH_ID)).thenReturn(Optional.of(branch));
-        when(chiNhanhRepository.saveAndFlush(any(ChiNhanh.class))).thenAnswer(call -> call.getArgument(0));
+        service = new BranchServiceImpl(branchRepository, clinicRoomRepository, employeeRepository);
+        branch = new Branch(BRANCH_ID, "Cơ sở Hoàn Kiếm", "Số 1 Phố Huế", "0241234567", true);
+        when(branchRepository.findById(BRANCH_ID)).thenReturn(Optional.of(branch));
+        when(branchRepository.saveAndFlush(any(Branch.class))).thenAnswer(call -> call.getArgument(0));
     }
 
     private void givenBranchCount(long count) {
-        when(chiNhanhRepository.count()).thenReturn(count);
+        when(branchRepository.count()).thenReturn(count);
     }
 
     private static void assertFailsWith(ErrorCode expected, Runnable action) {
@@ -83,12 +83,12 @@ class BranchServiceImplTest {
     @DisplayName("AC-13: chi nhánh cuối còn phòng và nhân viên trả 2107 chứ không phải 2102")
     void lastBranchWinsOverDependencies() {
         givenBranchCount(1);
-        when(phongKhamRepository.existsByChiNhanh_MaChiNhanh(BRANCH_ID)).thenReturn(true);
-        when(EmployeeRepository.existsByBranchId(BRANCH_ID)).thenReturn(true);
+        when(clinicRoomRepository.existsByBranchId(BRANCH_ID)).thenReturn(true);
+        when(employeeRepository.existsByBranchId(BRANCH_ID)).thenReturn(true);
 
         assertFailsWith(ErrorCode.LAST_BRANCH_CANNOT_BE_DELETED, () -> service.deleteBranch(ID));
 
-        verify(chiNhanhRepository, never()).delete(any());
+        verify(branchRepository, never()).delete(any());
     }
 
     @Test
@@ -98,29 +98,29 @@ class BranchServiceImplTest {
 
         assertFailsWith(ErrorCode.LAST_BRANCH_CANNOT_BE_DELETED, () -> service.deleteBranch(ID));
 
-        verify(chiNhanhRepository, never()).delete(any());
+        verify(branchRepository, never()).delete(any());
     }
 
     @Test
     @DisplayName("AC-12: còn từ hai chi nhánh và chi nhánh này còn phòng thì trả 2102")
     void branchWithRoomsCannotBeDeleted() {
         givenBranchCount(2);
-        when(phongKhamRepository.existsByChiNhanh_MaChiNhanh(BRANCH_ID)).thenReturn(true);
+        when(clinicRoomRepository.existsByBranchId(BRANCH_ID)).thenReturn(true);
 
         assertFailsWith(ErrorCode.BRANCH_HAS_DEPENDENCIES, () -> service.deleteBranch(ID));
 
-        verify(chiNhanhRepository, never()).delete(any());
+        verify(branchRepository, never()).delete(any());
     }
 
     @Test
     @DisplayName("AC-12: còn từ hai chi nhánh và chi nhánh này còn nhân viên thì trả 2102")
     void branchWithStaffCannotBeDeleted() {
         givenBranchCount(2);
-        when(EmployeeRepository.existsByBranchId(BRANCH_ID)).thenReturn(true);
+        when(employeeRepository.existsByBranchId(BRANCH_ID)).thenReturn(true);
 
         assertFailsWith(ErrorCode.BRANCH_HAS_DEPENDENCIES, () -> service.deleteBranch(ID));
 
-        verify(chiNhanhRepository, never()).delete(any());
+        verify(branchRepository, never()).delete(any());
     }
 
     @Test
@@ -130,20 +130,20 @@ class BranchServiceImplTest {
 
         service.deleteBranch(ID);
 
-        InOrder order = inOrder(chiNhanhRepository);
-        order.verify(chiNhanhRepository).delete(branch);
-        order.verify(chiNhanhRepository).flush();
+        InOrder order = inOrder(branchRepository);
+        order.verify(branchRepository).delete(branch);
+        order.verify(branchRepository).flush();
     }
 
     @Test
     @DisplayName("AC-9: id không tồn tại trả 2101 trước mọi kiểm tra khác")
     void missingBranchFailsBeforeOtherChecks() {
-        when(chiNhanhRepository.findById(99L)).thenReturn(Optional.empty());
+        when(branchRepository.findById(99L)).thenReturn(Optional.empty());
 
         assertFailsWith(ErrorCode.BRANCH_NOT_FOUND, () -> service.deleteBranch("99"));
 
-        verify(chiNhanhRepository, never()).count();
-        verifyNoInteractions(phongKhamRepository, EmployeeRepository);
+        verify(branchRepository, never()).count();
+        verifyNoInteractions(clinicRoomRepository, employeeRepository);
     }
 
     // API 28: đổi lỗi database khi hai Admin thao tác cùng lúc
@@ -153,7 +153,7 @@ class BranchServiceImplTest {
     void foreignKeyViolationBecomesBranchHasDependencies() {
         givenBranchCount(2);
         doThrow(new DataIntegrityViolationException("fk", new SQLException("fk", "23503")))
-                .when(chiNhanhRepository).flush();
+                .when(branchRepository).flush();
 
         assertFailsWith(ErrorCode.BRANCH_HAS_DEPENDENCIES, () -> service.deleteBranch(ID));
     }
@@ -164,7 +164,7 @@ class BranchServiceImplTest {
         givenBranchCount(2);
         DataIntegrityViolationException original =
                 new DataIntegrityViolationException("check", new SQLException("check", "23514"));
-        doThrow(original).when(chiNhanhRepository).flush();
+        doThrow(original).when(branchRepository).flush();
 
         assertThatThrownBy(() -> service.deleteBranch(ID)).isSameAs(original);
     }
@@ -173,8 +173,8 @@ class BranchServiceImplTest {
     @DisplayName("AC-5: Admin khác đã xóa trước thì bên sau nhận 2101")
     void concurrentDeleteBecomesBranchNotFound() {
         givenBranchCount(2);
-        doThrow(new ObjectOptimisticLockingFailureException(ChiNhanh.class, BRANCH_ID))
-                .when(chiNhanhRepository).flush();
+        doThrow(new ObjectOptimisticLockingFailureException(Branch.class, BRANCH_ID))
+                .when(branchRepository).flush();
 
         assertFailsWith(ErrorCode.BRANCH_NOT_FOUND, () -> service.deleteBranch(ID));
     }
@@ -187,14 +187,14 @@ class BranchServiceImplTest {
     void unparsableIdIsNotFound(String id) {
         assertFailsWith(ErrorCode.BRANCH_NOT_FOUND, () -> service.getBranchDetails(id));
 
-        verify(chiNhanhRepository, never()).findById(any());
+        verify(branchRepository, never()).findById(any());
     }
 
     // API 24 và API 27: chuẩn hóa dữ liệu trước khi lưu
 
-    private ChiNhanh savedBranch() {
-        ArgumentCaptor<ChiNhanh> captor = ArgumentCaptor.forClass(ChiNhanh.class);
-        verify(chiNhanhRepository).saveAndFlush(captor.capture());
+    private Branch savedBranch() {
+        ArgumentCaptor<Branch> captor = ArgumentCaptor.forClass(Branch.class);
+        verify(branchRepository).saveAndFlush(captor.capture());
         return captor.getValue();
     }
 
@@ -211,11 +211,11 @@ class BranchServiceImplTest {
     void createTrimsValuesAndStartsActive() {
         service.createBranch(createRequest(" +84901234567 "));
 
-        ChiNhanh saved = savedBranch();
-        assertThat(saved.getTenChiNhanh()).isEqualTo("Cơ sở Cầu Giấy");
-        assertThat(saved.getDiaChi()).isEqualTo("Số 2 Duy Tân");
-        assertThat(saved.getSoDienThoai()).isEqualTo("+84901234567");
-        assertThat(saved.getTrangThai()).isTrue();
+        Branch saved = savedBranch();
+        assertThat(saved.getName()).isEqualTo("Cơ sở Cầu Giấy");
+        assertThat(saved.getAddress()).isEqualTo("Số 2 Duy Tân");
+        assertThat(saved.getPhoneNumber()).isEqualTo("+84901234567");
+        assertThat(saved.getActive()).isTrue();
     }
 
     @ParameterizedTest
@@ -224,7 +224,7 @@ class BranchServiceImplTest {
     void createStoresBlankPhoneAsNull(String phone) {
         service.createBranch(createRequest(phone));
 
-        assertThat(savedBranch().getSoDienThoai()).isNull();
+        assertThat(savedBranch().getPhoneNumber()).isNull();
     }
 
     @Test
@@ -232,7 +232,7 @@ class BranchServiceImplTest {
     void editKeepsPhoneWhenNotSent() {
         service.editBranch(ID, new EditBranchRequest());
 
-        assertThat(savedBranch().getSoDienThoai()).isEqualTo("0241234567");
+        assertThat(savedBranch().getPhoneNumber()).isEqualTo("0241234567");
     }
 
     @ParameterizedTest
@@ -244,7 +244,7 @@ class BranchServiceImplTest {
 
         service.editBranch(ID, req);
 
-        assertThat(savedBranch().getSoDienThoai()).isNull();
+        assertThat(savedBranch().getPhoneNumber()).isNull();
     }
 
     @Test
@@ -255,6 +255,6 @@ class BranchServiceImplTest {
 
         assertFailsWith(ErrorCode.INVALID_PARAMETER_VALUE, () -> service.editBranch(ID, req));
 
-        verify(chiNhanhRepository, never()).saveAndFlush(any());
+        verify(branchRepository, never()).saveAndFlush(any());
     }
 }
