@@ -31,7 +31,7 @@ public class UserPrincipal implements UserDetails {
     }
 
     public static UserPrincipal create(Long userId, String phone, String fullName, String roleName) {
-        String roleStr = roleName != null ? roleName.trim() : "patient";
+        String roleStr = roleName != null ? roleName.trim() : "benh_nhan";
         String normalized = roleStr.toUpperCase();
         if (normalized.startsWith("ROLE_")) {
             normalized = normalized.substring(5);

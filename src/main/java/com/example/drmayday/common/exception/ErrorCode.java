@@ -47,6 +47,9 @@ public enum ErrorCode {
     MEDICAL_RECORD_NOT_FOUND("4001", "Medical record not found", HttpStatus.NOT_FOUND),
     ACTIVE_MEDICAL_RECORD_REQUIRED("4002", "Active medical record required", HttpStatus.BAD_REQUEST),
     MEDICAL_RECORD_ALREADY_COMPLETED("4003", "Medical record already completed", HttpStatus.BAD_REQUEST),
+    PATIENT_ALREADY_HAS_ACTIVE_RECORD("4006", "Patient already has active medical record", HttpStatus.CONFLICT),
+    MEDICAL_RECORD_HAS_CHILD_DATA("4007", "Medical record has child data", HttpStatus.CONFLICT),
+    RECORD_TYPE_MISMATCH("4008", "Record type mismatch", HttpStatus.BAD_REQUEST),
     TEMPLATE_NOT_FOUND("4101", "Template not found", HttpStatus.NOT_FOUND),
 
     // 5xxx - Lỗi Thang điểm UAS7
