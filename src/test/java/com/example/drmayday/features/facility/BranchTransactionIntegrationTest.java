@@ -34,9 +34,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
 /**
- * Kiểm thử hành vi cần transaction commit thật: tranh chấp giữa hai Admin (AC-5) và rollback toàn bộ.
- * Lớp này ghi thật vào database rồi tự dọn, nên chỉ chạy trên Postgres local. Gặp server khác thì test bị bỏ qua.
- * Thay vì chờ một khoảng cố định, test đọc pg_stat_activity để biết chắc request đã bị database chặn.
+ * Tests behavior that requires committed transactions: contention between two admins (AC-5) and full rollback.
+ * This class writes to the database and cleans up afterward, so it only runs against local PostgreSQL.
+ * Tests inspect pg_stat_activity to confirm that the database blocked a request instead of waiting for a fixed duration.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -70,7 +70,7 @@ class BranchTransactionIntegrationTest {
             url = connection.getMetaData().getURL();
         }
         assumeTrue(url.contains("localhost") || url.contains("127.0.0.1"),
-                "Lớp test này commit dữ liệu thật nên chỉ chạy trên Postgres local");
+                "This test class commits real data and therefore only runs against local PostgreSQL.");
 
         adminToken = jwtTokenProvider.generateToken(1L, "0900000001", "admin");
         otherAdmin = dataSource.getConnection();
@@ -137,7 +137,7 @@ class BranchTransactionIntegrationTest {
     }
 
     @Test
-    @DisplayName("AC-5: phòng được chèn vào chi nhánh đúng lúc đang xóa thì bên xóa nhận 2102, không phải 3006 hay 2003")
+    @DisplayName("AC-5: a room inserted while a branch is being deleted makes the delete return 2102, not 3006 or 2003")
     void deleteBlockedByConcurrentRoomInsertReturns2102() throws Exception {
         long id = givenBranch();
         otherAdminRuns("INSERT INTO phongkham (ma_chi_nhanh, ten_phong_kham) VALUES (?, ?)", id, "Phòng tranh chấp");
@@ -153,7 +153,7 @@ class BranchTransactionIntegrationTest {
     }
 
     @Test
-    @DisplayName("AC-5: hai Admin cùng xóa một chi nhánh thì một bên 1000, bên kia 2101, không có 9999")
+    @DisplayName("AC-5: when two admins delete the same branch, one receives 1000 and the other 2101, never 9999")
     void concurrentDeletesReturnSuccessAndNotFound() throws Exception {
         long id = givenBranch();
         otherAdminRuns("SELECT 1 FROM chinhanh WHERE ma_chi_nhanh = ? FOR KEY SHARE", id);
@@ -171,7 +171,7 @@ class BranchTransactionIntegrationTest {
     }
 
     @Test
-    @DisplayName("Sửa thất bại giữa chừng thì trường hợp lệ gửi cùng request cũng không được lưu")
+    @DisplayName("If an update fails midway, valid fields in the same request are not saved")
     void failedEditLeavesRowUntouched() throws Exception {
         long id = givenBranch();
 

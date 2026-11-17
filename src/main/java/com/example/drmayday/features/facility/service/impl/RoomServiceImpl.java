@@ -35,7 +35,7 @@ public class RoomServiceImpl implements RoomService {
     @Override
     @Transactional
     public RoomResponse createRoom(CreateRoomRequest req) {
-        log.info("Admin tạo phòng khám mới: branchId={}", req.getBranchId());
+        log.info("Admin creating a clinic room: branchId={}", req.getBranchId());
         Long branchId = parseBodyBranchId(req.getBranchId());
         Branch branch = findActiveBranch(branchId);
         String name = req.getName().trim();
@@ -128,7 +128,7 @@ public class RoomServiceImpl implements RoomService {
             }
             throw ex;
         } catch (ObjectOptimisticLockingFailureException ex) {
-            // Admin khác đã xóa phòng trước, câu DELETE không còn dòng nào để xóa
+            // Another admin already deleted the room, so the DELETE statement found no row.
             throw new AppException(ErrorCode.ROOM_NOT_FOUND);
         }
     }

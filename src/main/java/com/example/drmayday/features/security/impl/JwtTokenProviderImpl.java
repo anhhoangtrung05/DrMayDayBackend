@@ -1,9 +1,7 @@
 package com.example.drmayday.features.security.impl;
 
-import com.example.drmayday.repository.TokenBlacklistRepository;
 import com.example.drmayday.common.exception.AppException;
 import com.example.drmayday.common.exception.ErrorCode;
-import com.example.drmayday.entity.TokenBlacklist;
 import com.example.drmayday.features.security.JwtTokenProvider;
 
 import io.jsonwebtoken.Claims;
@@ -11,47 +9,38 @@ import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
-import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.dao.EmptyResultDataAccessException;
-import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.util.Collection;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Date;
-import java.util.Set;
+import java.util.Objects;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 @ConfigurationProperties(prefix = "jwt")
 public class JwtTokenProviderImpl implements JwtTokenProvider {
-
     private static final Logger log = LoggerFactory.getLogger(JwtTokenProviderImpl.class);
+
+    // Redis key prefixes
+    private static final String BLACKLIST_KEY_PREFIX = "jwt:blacklist:";
+    private static final String USER_VERSION_KEY_PREFIX = "jwt:user-version:";
 
     private final SecretKey key;
     private final long accessTokenExpirationMs;
-    private final TokenBlacklistRepository tokenBlacklistRepository;
-    private final JdbcTemplate jdbcTemplate;
-    private final Set<String> inMemoryBlacklist = ConcurrentHashMap.newKeySet();
-    private final ConcurrentHashMap<Long, Long> inMemoryTokenVersions = new ConcurrentHashMap<>();
-    private volatile boolean blacklistTableExists = false;
-    private volatile boolean tokenVersionTableExists = false;
+    private final StringRedisTemplate redisTemplate;
 
     public JwtTokenProviderImpl(
             @Value("${jwt.secret:default-secret-key-that-is-at-least-256-bits-long-for-hmac-sha-algorithm-safety}") String secret,
             @Value("${jwt.access-token-expiration-ms:3600000}") long accessTokenExpirationMs,
-            @Value("${jwt.refresh-token-expiration-ms:604800000}") long refreshTokenExpirationMs,
-            @Autowired(required = false) TokenBlacklistRepository tokenBlacklistRepository,
-            @Autowired(required = false) JdbcTemplate jdbcTemplate) {
+            StringRedisTemplate redisTemplate) {
         byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
         if (keyBytes.length < 32) {
             byte[] padded = new byte[32];
@@ -61,34 +50,7 @@ public class JwtTokenProviderImpl implements JwtTokenProvider {
             this.key = Keys.hmacShaKeyFor(keyBytes);
         }
         this.accessTokenExpirationMs = accessTokenExpirationMs;
-        this.tokenBlacklistRepository = tokenBlacklistRepository;
-        this.jdbcTemplate = jdbcTemplate;
-    }
-
-    @PostConstruct
-    public void init() {
-        try {
-            if (jdbcTemplate != null) {
-                Boolean exists = jdbcTemplate.queryForObject(
-                        "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'token_blacklist')",
-                        Boolean.class
-                );
-                this.blacklistTableExists = Boolean.TRUE.equals(exists);
-                if (this.blacklistTableExists) {
-                    log.info("Bảng token_blacklist đã sẵn sàng trong CSDL.");
-                } else {
-                    log.info("Bảng token_blacklist chưa có trong CSDL. Hệ thống tự động kích hoạt in-memory blacklist.");
-                }
-                Boolean versionTableExists = jdbcTemplate.queryForObject(
-                        "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user_token_versions')",
-                        Boolean.class
-                );
-                this.tokenVersionTableExists = Boolean.TRUE.equals(versionTableExists);
-            }
-        } catch (Exception ex) {
-            this.blacklistTableExists = false;
-            log.info("Không thể kiểm tra bảng token_blacklist qua information_schema, dùng in-memory blacklist.");
-        }
+        this.redisTemplate = redisTemplate;
     }
 
     @Override
@@ -99,13 +61,10 @@ public class JwtTokenProviderImpl implements JwtTokenProvider {
 
         return Jwts.builder()
                 .id(jti)
-                .subject(phone)
-                .claim("userId", userId)
-                .claim("user_id", userId)
+                .subject(Objects.requireNonNull(userId, "userId").toString())
                 .claim("phone", phone)
                 .claim("role", roleName)
-                .claim("role_name", roleName)
-                .claim("tokenVersion", getTokenVersion(userId))
+                .claim("tokenVersion", getTokenVersion(userId)) // Read the current version from Redis
                 .issuedAt(now)
                 .expiration(expiryDate)
                 .signWith(key)
@@ -117,21 +76,12 @@ public class JwtTokenProviderImpl implements JwtTokenProvider {
         Claims claims = parseAndValidateClaims(token);
         String jti = claims.getId();
         Date expiration = claims.getExpiration();
-        Long userId = getUserIdFromClaims(claims);
+        Long userId = getUserId(claims);
         if (jti == null || jti.isBlank() || expiration == null || userId == null) {
             throw new AppException(ErrorCode.TOKEN_INVALID);
         }
 
-        if (tokenBlacklistRepository != null) {
-            TokenBlacklist blacklistEntry = TokenBlacklist.builder()
-                    .jti(jti)
-                    .userId(userId)
-                    .expiresAt(LocalDateTime.ofInstant(expiration.toInstant(), ZoneId.systemDefault()))
-                    .build();
-            tokenBlacklistRepository.save(blacklistEntry);
-            blacklistTableExists = true;
-        }
-        blacklistToken(jti);
+        blacklistToken(jti, expiration);
     }
 
     @Override
@@ -140,24 +90,13 @@ public class JwtTokenProviderImpl implements JwtTokenProvider {
             throw new AppException(ErrorCode.USER_NOT_AUTHENTICATED);
         }
 
-        if (refreshTokenVersionTableAvailability()) {
-            jdbcTemplate.update(
-                    "INSERT INTO user_token_versions (user_id, token_version, updated_at) " +
-                            "VALUES (?, 1, CURRENT_TIMESTAMP) " +
-                            "ON CONFLICT (user_id) DO UPDATE " +
-                            "SET token_version = user_token_versions.token_version + 1, updated_at = CURRENT_TIMESTAMP",
-                    userId
-            );
-            inMemoryTokenVersions.compute(userId, (key, version) -> Math.max(
-                    version == null ? 0L : version,
-                    getTokenVersionFromDatabase(userId)
-            ));
-            return;
+        try {
+            // Atomically increment the version in Redis, initializing it to 1 if it does not exist.
+            redisTemplate.opsForValue().increment(USER_VERSION_KEY_PREFIX + userId);
+        } catch (Exception ex) {
+            log.error("Unable to update the token version in Redis for userId={}", userId, ex);
+            throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
-
-        inMemoryTokenVersions.merge(userId, 1L, (existingVersion, increment) ->
-                (existingVersion == null ? 0L : existingVersion) + (increment == null ? 0L : increment)
-        );
     }
 
     @Override
@@ -182,18 +121,18 @@ public class JwtTokenProviderImpl implements JwtTokenProvider {
 
             String jti = claims.getId();
             if (jti != null && isTokenBlacklisted(jti)) {
-                log.warn("Token với jti={} nằm trong danh sách token_blacklist", jti);
+                log.warn("Token with jti={} is on the Redis blacklist", jti);
                 throw new AppException(ErrorCode.TOKEN_INVALID);
             }
 
             return claims;
         } catch (ExpiredJwtException ex) {
-            log.warn("JWT token đã hết hạn: {}", ex.getMessage());
+            log.warn("JWT token has expired: {}", ex.getMessage());
             throw new AppException(ErrorCode.TOKEN_EXPIRED);
         } catch (AppException ex) {
             throw ex;
         } catch (JwtException | IllegalArgumentException ex) {
-            log.warn("JWT token không hợp lệ (sai signature / cấu trúc): {}", ex.getMessage());
+            log.warn("JWT token is invalid (signature or structure): {}", ex.getMessage());
             throw new AppException(ErrorCode.TOKEN_INVALID);
         }
     }
@@ -202,51 +141,23 @@ public class JwtTokenProviderImpl implements JwtTokenProvider {
         if (jti == null) {
             return false;
         }
-        if (inMemoryBlacklist.contains(jti)) {
-            return true;
-        }
-        if (tokenBlacklistRepository == null || !refreshBlacklistTableAvailability()) {
-            return false;
-        }
         try {
-            boolean blacklisted = tokenBlacklistRepository.existsByJti(jti);
-            blacklistTableExists = true;
-            return blacklisted;
+            return Boolean.TRUE.equals(redisTemplate.hasKey(BLACKLIST_KEY_PREFIX + jti));
         } catch (Exception ex) {
-            log.debug("Lỗi truy vấn token_blacklist CSDL, chuyển sang in-memory: {}", ex.getMessage());
-            this.blacklistTableExists = false;
-            return false;
-        }
-    }
-
-    private boolean refreshBlacklistTableAvailability() {
-        if (blacklistTableExists) {
-            return true;
-        }
-        if (jdbcTemplate == null) {
-            return false;
-        }
-        try {
-            Boolean exists = jdbcTemplate.queryForObject(
-                    "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'token_blacklist')",
-                    Boolean.class
-            );
-            blacklistTableExists = Boolean.TRUE.equals(exists);
-            return blacklistTableExists;
-        } catch (Exception ex) {
-            log.debug("Không thể kiểm tra bảng token_blacklist: {}", ex.getMessage());
-            return false;
+            log.error("Unable to check the token blacklist in Redis", ex);
+            throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
     }
 
     private void validateTokenVersion(Claims claims) {
-        Long userId = getUserIdFromClaims(claims);
+        Long userId = getUserId(claims);
         if (userId == null) {
-            return;
+            throw new AppException(ErrorCode.TOKEN_INVALID);
         }
 
         Object versionClaim = claims.get("tokenVersion");
         long tokenVersion = versionClaim instanceof Number number ? number.longValue() : 0L;
+
         if (tokenVersion < getTokenVersion(userId)) {
             throw new AppException(ErrorCode.TOKEN_INVALID);
         }
@@ -256,136 +167,39 @@ public class JwtTokenProviderImpl implements JwtTokenProvider {
         if (userId == null) {
             return 0L;
         }
-        if (refreshTokenVersionTableAvailability()) {
-            return getTokenVersionFromDatabase(userId);
-        }
-        return inMemoryTokenVersions.getOrDefault(userId, 0L);
-    }
-
-    private boolean refreshTokenVersionTableAvailability() {
-        if (tokenVersionTableExists) {
-            return true;
-        }
-        if (jdbcTemplate == null) {
-            return false;
-        }
         try {
-            Boolean exists = jdbcTemplate.queryForObject(
-                    "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user_token_versions')",
-                    Boolean.class
-            );
-            tokenVersionTableExists = Boolean.TRUE.equals(exists);
-            return tokenVersionTableExists;
+            String versionStr = redisTemplate.opsForValue().get(USER_VERSION_KEY_PREFIX + userId);
+            return versionStr != null ? Long.parseLong(versionStr) : 0L;
         } catch (Exception ex) {
-            log.error("Không thể kiểm tra bảng user_token_versions", ex);
-            throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR);
+            log.error("Unable to retrieve the token version from Redis for userId={}", userId, ex);
+            return 0L; // Safely fall back to allowing the token when Redis is unavailable; this can be changed to fail closed.
         }
     }
 
-    private long getTokenVersionFromDatabase(Long userId) {
-        try {
-            Long version = jdbcTemplate.queryForObject(
-                    "SELECT token_version FROM user_token_versions WHERE user_id = ?",
-                    Long.class,
-                    userId
-            );
-            return version != null ? version : 0L;
-        } catch (EmptyResultDataAccessException ex) {
-            return 0L;
-        } catch (Exception ex) {
-            log.error("Không thể truy vấn phiên bản token người dùng từ CSDL", ex);
-            throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    public void blacklistToken(String jti) {
-        if (jti != null) {
-            inMemoryBlacklist.add(jti);
-        }
-    }
-
-    @Override
-    public Long getUserIdFromClaims(Claims claims) {
-        if (claims == null) {
-            return null;
-        }
-
-        Object userIdObj = claims.get("userId");
-        if (userIdObj == null) {
-            userIdObj = claims.get("user_id");
-        }
-        if (userIdObj == null) {
-            userIdObj = claims.get("id");
-        }
-
-        if (userIdObj instanceof Number) {
-            return ((Number) userIdObj).longValue();
-        }
-        if (userIdObj instanceof String str && !str.isBlank()) {
+    private void blacklistToken(String jti, Date expiration) {
+        Duration ttl = Duration.between(Instant.now(), expiration.toInstant());
+        if (ttl.isPositive()) {
             try {
-                return Long.parseLong(str.trim());
-            } catch (NumberFormatException ignored) {
+                redisTemplate.opsForValue().set(BLACKLIST_KEY_PREFIX + jti, "1", ttl);
+            } catch (Exception ex) {
+                log.error("Unable to add the token to the Redis blacklist", ex);
+                throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR);
             }
         }
-
-        // Fallback: Nếu subject là chuỗi số ID người dùng
-        String sub = claims.getSubject();
-        if (sub != null && sub.matches("^[0-9]+$") && sub.length() < 10) {
-            try {
-                return Long.parseLong(sub);
-            } catch (NumberFormatException ignored) {
-            }
-        }
-
-        return null;
     }
 
-    @Override
-    public String getRoleFromClaims(Claims claims) {
+    private Long getUserId(Claims claims) {
         if (claims == null) {
             return null;
         }
-
-        Object roleObj = claims.get("role");
-        if (roleObj == null) {
-            roleObj = claims.get("roles");
-        }
-        if (roleObj == null) {
-            roleObj = claims.get("role_name");
-        }
-        if (roleObj == null) {
-            roleObj = claims.get("authorities");
-        }
-
-        if (roleObj instanceof String) {
-            return (String) roleObj;
-        }
-        if (roleObj instanceof Collection<?> list && !list.isEmpty()) {
-            return String.valueOf(list.iterator().next());
-        }
-
-        return null;
-    }
-
-    @Override
-    public String getPhoneFromClaims(Claims claims) {
-        if (claims == null) {
+        String subject = claims.getSubject();
+        if (subject == null || subject.isBlank()) {
             return null;
         }
-
-        String sub = claims.getSubject();
-        if (sub != null && sub.matches("^[0-9]{10}$")) {
-            return sub;
+        try {
+            return Long.parseLong(subject);
+        } catch (NumberFormatException ignored) {
+            return null;
         }
-
-        Object phoneObj = claims.get("phone");
-        if (phoneObj == null) {
-            phoneObj = claims.get("so_dien_thoai");
-        }
-        if (phoneObj != null) {
-            return String.valueOf(phoneObj);
-        }
-
-        return sub;
     }
 }

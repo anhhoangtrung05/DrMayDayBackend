@@ -33,8 +33,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Kiểm thử API 24 đến 28 qua filter chain thật, xuống PostgreSQL thật.
- * Mỗi test nằm trong một transaction được rollback, nên không để lại dòng nào trong database.
+ * Tests branch management endpoints through the real filter chain against PostgreSQL.
+ * Each test runs in a rolled-back transaction, so it leaves no rows in the database.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -103,12 +103,12 @@ class BranchApiIntegrationTest {
                 branchId, "Phòng 101");
     }
 
-    // Chuyển một nhân viên có sẵn sang chi nhánh này, transaction của test sẽ hoàn tác
+    // Move an existing employee to this branch; the test transaction will roll back the change.
     private void givenStaffIn(long branchId) {
         int moved = jdbcTemplate.update(
                 "UPDATE nhanvien SET ma_chi_nhanh = ? WHERE ma_nhan_vien = (SELECT min(ma_nhan_vien) FROM nhanvien)",
                 branchId);
-        assertThat(moved).as("database phải có sẵn nhân viên admin do DatabaseSeeder tạo").isEqualTo(1);
+        assertThat(moved).as("The database must contain an employee seeded by DatabaseSeeder").isEqualTo(1);
     }
 
     private boolean branchExists(long id) {
@@ -149,20 +149,20 @@ class BranchApiIntegrationTest {
                 """.formatted(name, address);
     }
 
-    // Quyền truy cập
+    // Access control.
 
     @ParameterizedTest
     @CsvSource({"GET, /api/v1/branches", "GET, /api/v1/branches/1", "POST, /api/v1/branches",
             "PUT, /api/v1/branches/1", "DELETE, /api/v1/branches/1"})
-    @DisplayName("AC-1: không có token thì nhận 401, mã 3003")
+    @DisplayName("AC-1: no token returns 401 with code 3003")
     void rejectsMissingToken(String method, String path) throws Exception {
         expectError(send(request(HttpMethod.valueOf(method), path), null, validBody()), 401, "3003");
     }
 
     @Test
-    @DisplayName("AC-1: token giả mạo thì nhận 401, mã 3001")
+    @DisplayName("AC-1: a forged token returns 401 with code 3001")
     void rejectsTamperedToken() throws Exception {
-        // Đổi ký tự đầu của chữ ký. Thêm ký tự vào cuối không đủ, vì base64 bỏ qua phần thừa chưa đủ một byte
+        // Change the first signature character. Appending a character is insufficient because Base64 ignores incomplete trailing bytes.
         int signatureStart = adminToken.lastIndexOf('.') + 1;
         char replacement = adminToken.charAt(signatureStart) == 'A' ? 'B' : 'A';
         String tampered = adminToken.substring(0, signatureStart) + replacement
@@ -173,7 +173,7 @@ class BranchApiIntegrationTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"patient", "doctor"})
-    @DisplayName("AC-2: không phải Admin thì POST nhận 403, mã 3102 và không tạo thêm chi nhánh")
+    @DisplayName("AC-2: a non-admin POST returns 403 with code 3102 and does not create a branch")
     void nonAdminCannotCreate(String who) throws Exception {
         long before = branchRepository.count();
 
@@ -184,7 +184,7 @@ class BranchApiIntegrationTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"patient", "doctor"})
-    @DisplayName("AC-2: không phải Admin thì PUT nhận 403, mã 3102 và dữ liệu không đổi")
+    @DisplayName("AC-2: a non-admin PUT returns 403 with code 3102 and leaves the data unchanged")
     void nonAdminCannotEdit(String who) throws Exception {
         long id = givenBranch();
 
@@ -195,7 +195,7 @@ class BranchApiIntegrationTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"patient", "doctor"})
-    @DisplayName("AC-2: không phải Admin thì DELETE nhận 403, mã 3102 và chi nhánh vẫn còn")
+    @DisplayName("AC-2: a non-admin DELETE returns 403 with code 3102 and the branch remains")
     void nonAdminCannotDelete(String who) throws Exception {
         long id = givenBranch();
 
@@ -210,7 +210,7 @@ class BranchApiIntegrationTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"benh_nhan", "bac_si", "dieu_duong", "admin"})
-    @DisplayName("AC-3: mọi vai trò đã đăng nhập đều đọc được danh sách và chi tiết")
+    @DisplayName("AC-3: every authenticated role can read the branch list and details")
     void everyRoleCanRead(String role) throws Exception {
         long id = givenBranch();
         String token = jwtTokenProvider.generateToken(9L, "0900000009", role);
@@ -223,10 +223,10 @@ class BranchApiIntegrationTest {
                 .andExpect(jsonPath("$.code").value("1000"));
     }
 
-    // API 24
+    // TOPOLOGY_SET_BRANCH
 
     @Test
-    @DisplayName("AC-4, AC-6: tạo hợp lệ trả 201, mã 1001, branch_id là chuỗi và khớp dòng mới trong database")
+    @DisplayName("AC-4, AC-6: valid creation returns 201 with code 1001; branch_id is a string matching the new database row")
     void createsBranch() throws Exception {
         String response = createAsAdmin(bodyWithPhone("0241234567"))
                 .andExpect(status().isCreated())
@@ -243,7 +243,7 @@ class BranchApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("AC-6: tên và địa chỉ được trim trước khi lưu")
+    @DisplayName("AC-6: the name and address are trimmed before saving")
     void trimsNameAndAddress() throws Exception {
         createAsAdmin(body("  Cơ sở Đống Đa  ", "  Số 3 Tây Sơn  "))
                 .andExpect(status().isCreated())
@@ -252,7 +252,7 @@ class BranchApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("AC-6: client gửi status false khi tạo thì vẫn là true")
+    @DisplayName("AC-6: a false status supplied by the client is still set to true on creation")
     void createIgnoresClientStatus() throws Exception {
         createAsAdmin("""
                 {"name": "Cơ sở A", "address": "Địa chỉ A", "status": false}
@@ -262,7 +262,7 @@ class BranchApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("AC-6: tạo với phone rỗng lưu NULL trong database")
+    @DisplayName("AC-6: creating a branch with an empty phone stores NULL in the database")
     void createStoresEmptyPhoneAsNull() throws Exception {
         String response = createAsAdmin(bodyWithPhone(""))
                 .andExpect(status().isCreated())
@@ -280,13 +280,13 @@ class BranchApiIntegrationTest {
             "{\"name\": \"   \", \"address\": \"Số 2 Duy Tân\"}",
             "{\"name\": \"Cơ sở A\", \"address\": \"   \"}",
             "{}"})
-    @DisplayName("AC-7: thiếu hoặc rỗng name, address trả 2001")
+    @DisplayName("AC-7: missing or empty name or address returns 2001")
     void createRequiresNameAndAddress(String json) throws Exception {
         expectError(createAsAdmin(json), 400, "2001");
     }
 
     @Test
-    @DisplayName("AC-7: name 150 ký tự được nhận, 151 ký tự trả 2003")
+    @DisplayName("AC-7: a 150-character name is accepted, while a 151-character name returns 2003")
     void createEnforcesNameLength() throws Exception {
         createAsAdmin(body("a".repeat(150), "Số 2")).andExpect(status().isCreated());
 
@@ -294,7 +294,7 @@ class BranchApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("AC-7: address 500 ký tự được nhận, 501 ký tự trả 2003")
+    @DisplayName("AC-7: a 500-character address is accepted, while a 501-character address returns 2003")
     void createEnforcesAddressLength() throws Exception {
         createAsAdmin(body("Cơ sở A", "a".repeat(500))).andExpect(status().isCreated());
 
@@ -303,14 +303,14 @@ class BranchApiIntegrationTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"abc", "1234567", "1234567890123456", "++84901234567", "0901 234 567"})
-    @DisplayName("AC-7: phone sai định dạng trả 2004")
+    @DisplayName("AC-7: an invalid phone format returns 2004")
     void createRejectsBadPhone(String phone) throws Exception {
         expectError(createAsAdmin(bodyWithPhone(phone)), 400, "2004");
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"12345678", "123456789012345", "+84901234567", "19001234"})
-    @DisplayName("AC-7: phone từ 8 đến 15 chữ số, có thể có dấu cộng, được nhận và giữ nguyên")
+    @DisplayName("AC-7: an 8- to 15-digit phone number, optionally prefixed with a plus sign, is accepted unchanged")
     void createAcceptsValidPhone(String phone) throws Exception {
         createAsAdmin(bodyWithPhone(phone))
                 .andExpect(status().isCreated())
@@ -318,7 +318,7 @@ class BranchApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("AC-7: trùng tên chi nhánh vẫn được chấp nhận")
+    @DisplayName("AC-7: duplicate branch names are accepted")
     void createAllowsDuplicateName() throws Exception {
         createAsAdmin(validBody()).andExpect(status().isCreated());
 
@@ -326,15 +326,15 @@ class BranchApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("JSON hỏng trả 2003 chứ không phải 2001")
+    @DisplayName("Malformed JSON returns 2003 instead of 2001")
     void createRejectsMalformedJson() throws Exception {
         expectError(createAsAdmin("{\"name\": "), 400, "2003");
     }
 
-    // API 25
+    // TOPOLOGY_GET_LIST_BRANCHES
 
     @Test
-    @DisplayName("AC-8: danh sách có cả chi nhánh ngừng hoạt động, xếp branch_id tăng dần theo số")
+    @DisplayName("AC-8: the list includes inactive branches and sorts branch_id numerically in ascending order")
     void listsAllBranchesInAscendingIdOrder() throws Exception {
         long active = givenBranch("Cơ sở Đang Mở", null, true);
         long inactive = givenBranch("Cơ sở Đã Đóng", null, false);
@@ -350,10 +350,10 @@ class BranchApiIntegrationTest {
         assertThat(numericIds).contains(active, inactive).isSorted();
     }
 
-    // API 26
+    // TOPOLOGY_GET_BRANCH_DETAIL
 
     @Test
-    @DisplayName("AC-4, AC-9: chi tiết trả đúng mọi cột của chi nhánh, branch_id là chuỗi")
+    @DisplayName("AC-4, AC-9: details return all branch fields, with branch_id as a string")
     void returnsBranchDetails() throws Exception {
         long id = givenBranch("Cơ sở Hoàn Kiếm", "0241234567", false);
 
@@ -369,15 +369,15 @@ class BranchApiIntegrationTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"9223372036854775807", "abc", "9223372036854775808", "-1", "0"})
-    @DisplayName("AC-9: id không tồn tại hoặc không phải số trả 404, mã 2101")
+    @DisplayName("AC-9: a missing or non-numeric ID returns 404 with code 2101")
     void detailOfUnknownIdIsNotFound(String id) throws Exception {
         expectError(send(get(BRANCHES + "/" + id), adminToken, null), 404, "2101");
     }
 
-    // API 27
+    // TOPOLOGY_EDIT_BRANCH
 
     @Test
-    @DisplayName("AC-10: chỉ gửi address thì các trường khác giữ nguyên")
+    @DisplayName("AC-10: supplying only address leaves the other fields unchanged")
     void editChangesOnlySentFields() throws Exception {
         long id = givenBranch("Cơ sở Cũ", "0241234567", true);
 
@@ -392,7 +392,7 @@ class BranchApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("AC-10: status đổi được qua lại")
+    @DisplayName("AC-10: status can be toggled")
     void editTogglesStatus() throws Exception {
         long id = givenBranch();
 
@@ -402,7 +402,7 @@ class BranchApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("AC-10: phone rỗng được lưu NULL trong database")
+    @DisplayName("AC-10: an empty phone is stored as NULL in the database")
     void editClearsPhone() throws Exception {
         long id = givenBranch();
 
@@ -412,7 +412,7 @@ class BranchApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("Body rỗng {} trả 200 với dữ liệu hiện tại")
+    @DisplayName("An empty {} body returns 200 with the current data")
     void editWithEmptyBodyKeepsEverything() throws Exception {
         long id = givenBranch("Cơ sở Cũ", "0241234567", true);
 
@@ -423,7 +423,7 @@ class BranchApiIntegrationTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"{\"name\": \"\"}", "{\"name\": \"   \"}", "{\"address\": \"\"}", "{\"address\": \"   \"}"})
-    @DisplayName("AC-10: name hoặc address rỗng trả 2003")
+    @DisplayName("AC-10: an empty name or address returns 2003")
     void editRejectsBlankRequiredFields(String json) throws Exception {
         long id = givenBranch();
 
@@ -431,7 +431,7 @@ class BranchApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("AC-7: sửa với name 151 ký tự trả 2003")
+    @DisplayName("AC-7: updating with a 151-character name returns 2003")
     void editEnforcesNameLength() throws Exception {
         long id = givenBranch();
 
@@ -439,7 +439,7 @@ class BranchApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("AC-7: sửa với address 501 ký tự trả 2003")
+    @DisplayName("AC-7: updating with a 501-character address returns 2003")
     void editEnforcesAddressLength() throws Exception {
         long id = givenBranch();
 
@@ -447,7 +447,7 @@ class BranchApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("AC-7: sửa với phone sai định dạng trả 2004")
+    @DisplayName("AC-7: updating with an invalid phone format returns 2004")
     void editRejectsBadPhone() throws Exception {
         long id = givenBranch();
 
@@ -455,7 +455,7 @@ class BranchApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("Status sai kiểu trả 2003")
+    @DisplayName("A status with an invalid type returns 2003")
     void editRejectsNonBooleanStatus() throws Exception {
         long id = givenBranch();
 
@@ -464,15 +464,15 @@ class BranchApiIntegrationTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"9223372036854775807", "abc"})
-    @DisplayName("AC-10: sửa id không tồn tại trả 404, mã 2101")
+    @DisplayName("AC-10: updating a nonexistent ID returns 404 with code 2101")
     void editOfUnknownIdIsNotFound(String id) throws Exception {
         expectError(send(put(BRANCHES + "/" + id), adminToken, "{\"name\": \"Tên mới\"}"), 404, "2101");
     }
 
-    // API 28
+    // TOPOLOGY_DELETE_BRANCH
 
     @Test
-    @DisplayName("AC-11: xóa chi nhánh trống trả 200, mã 1000, không có data, rồi không đọc lại được")
+    @DisplayName("AC-11: deleting an empty branch returns 200 with code 1000 and no data; it can no longer be retrieved")
     void deletesEmptyBranch() throws Exception {
         long id = givenBranch();
 
@@ -486,7 +486,7 @@ class BranchApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("AC-12: chi nhánh còn phòng khám trả 400, mã 2102 và vẫn còn")
+    @DisplayName("AC-12: a branch with clinic rooms returns 400 with code 2102 and remains")
     void refusesToDeleteBranchWithRooms() throws Exception {
         long id = givenBranch();
         givenRoomIn(id);
@@ -497,7 +497,7 @@ class BranchApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("AC-12: chi nhánh còn nhân viên trả 400, mã 2102 và vẫn còn")
+    @DisplayName("AC-12: a branch with employees returns 400 with code 2102 and remains")
     void refusesToDeleteBranchWithStaff() throws Exception {
         long id = givenBranch();
         givenStaffIn(id);
@@ -509,7 +509,7 @@ class BranchApiIntegrationTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"9223372036854775807", "abc"})
-    @DisplayName("Xóa id không tồn tại trả 404, mã 2101")
+    @DisplayName("Deleting a nonexistent ID returns 404 with code 2101")
     void deleteOfUnknownIdIsNotFound(String id) throws Exception {
         expectError(send(delete(BRANCHES + "/" + id), adminToken, null), 404, "2101");
     }

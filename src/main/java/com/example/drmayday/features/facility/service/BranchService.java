@@ -7,7 +7,8 @@ import com.example.drmayday.features.facility.dto.EditBranchRequest;
 import java.util.List;
 
 /**
- * Nghiệp vụ quản lý chi nhánh (API 24 đến 28).
+ * Branch management operations for TOPOLOGY_SET_BRANCH, TOPOLOGY_GET_LIST_BRANCHES,
+ * TOPOLOGY_GET_BRANCH_DETAIL, TOPOLOGY_EDIT_BRANCH, and TOPOLOGY_DELETE_BRANCH.
  */
 public interface BranchService {
 
