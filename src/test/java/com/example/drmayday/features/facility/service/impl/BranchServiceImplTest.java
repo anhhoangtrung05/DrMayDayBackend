@@ -2,12 +2,12 @@ package com.example.drmayday.features.facility.service.impl;
 
 import com.example.drmayday.common.exception.AppException;
 import com.example.drmayday.common.exception.ErrorCode;
-import com.example.drmayday.entity.ChiNhanh;
+import com.example.drmayday.entity.Branch;
 import com.example.drmayday.features.facility.dto.CreateBranchRequest;
 import com.example.drmayday.features.facility.dto.EditBranchRequest;
-import com.example.drmayday.repository.ChiNhanhRepository;
+import com.example.drmayday.repository.BranchRepository;
 import com.example.drmayday.repository.EmployeeRepository;
-import com.example.drmayday.repository.PhongKhamRepository;
+import com.example.drmayday.repository.ClinicRoomRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -37,8 +37,8 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
- * Khóa các nhánh khó tạo bằng dữ liệu thật: thứ tự kiểm tra của API 28 và cách đổi lỗi database.
- * Chỉ giả lập repository, là ranh giới với database.
+ * Covers hard-to-reproduce branches using test data: TOPOLOGY_DELETE_BRANCH validation order and database error translation.
+ * Only the repository boundary is mocked.
  */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -48,27 +48,27 @@ class BranchServiceImplTest {
     private static final String ID = "7";
 
     @Mock
-    private ChiNhanhRepository chiNhanhRepository;
+    private BranchRepository branchRepository;
 
     @Mock
-    private PhongKhamRepository phongKhamRepository;
+    private ClinicRoomRepository clinicRoomRepository;
 
     @Mock
-    private EmployeeRepository EmployeeRepository;
+    private EmployeeRepository employeeRepository;
 
     private BranchServiceImpl service;
-    private ChiNhanh branch;
+    private Branch branch;
 
     @BeforeEach
     void setUp() {
-        service = new BranchServiceImpl(chiNhanhRepository, phongKhamRepository, EmployeeRepository);
-        branch = new ChiNhanh(BRANCH_ID, "Cơ sở Hoàn Kiếm", "Số 1 Phố Huế", "0241234567", true);
-        when(chiNhanhRepository.findById(BRANCH_ID)).thenReturn(Optional.of(branch));
-        when(chiNhanhRepository.saveAndFlush(any(ChiNhanh.class))).thenAnswer(call -> call.getArgument(0));
+        service = new BranchServiceImpl(branchRepository, clinicRoomRepository, employeeRepository);
+        branch = new Branch(BRANCH_ID, "Cơ sở Hoàn Kiếm", "Số 1 Phố Huế", "0241234567", true);
+        when(branchRepository.findById(BRANCH_ID)).thenReturn(Optional.of(branch));
+        when(branchRepository.saveAndFlush(any(Branch.class))).thenAnswer(call -> call.getArgument(0));
     }
 
     private void givenBranchCount(long count) {
-        when(chiNhanhRepository.count()).thenReturn(count);
+        when(branchRepository.count()).thenReturn(count);
     }
 
     private static void assertFailsWith(ErrorCode expected, Runnable action) {
@@ -77,124 +77,124 @@ class BranchServiceImplTest {
                         ex -> assertThat(ex.getErrorCode()).isEqualTo(expected));
     }
 
-    // API 28: thứ tự kiểm tra
+    // TOPOLOGY_DELETE_BRANCH: validation order.
 
     @Test
-    @DisplayName("AC-13: chi nhánh cuối còn phòng và nhân viên trả 2107 chứ không phải 2102")
+    @DisplayName("AC-13: the last branch returns 2107, not 2102, even when it has rooms and employees")
     void lastBranchWinsOverDependencies() {
         givenBranchCount(1);
-        when(phongKhamRepository.existsByChiNhanh_MaChiNhanh(BRANCH_ID)).thenReturn(true);
-        when(EmployeeRepository.existsByBranchId(BRANCH_ID)).thenReturn(true);
+        when(clinicRoomRepository.existsByBranchId(BRANCH_ID)).thenReturn(true);
+        when(employeeRepository.existsByBranchId(BRANCH_ID)).thenReturn(true);
 
         assertFailsWith(ErrorCode.LAST_BRANCH_CANNOT_BE_DELETED, () -> service.deleteBranch(ID));
 
-        verify(chiNhanhRepository, never()).delete(any());
+        verify(branchRepository, never()).delete(any());
     }
 
     @Test
-    @DisplayName("AC-13: chi nhánh cuối không còn gì vẫn không xóa được")
+    @DisplayName("AC-13: the last branch cannot be deleted even when it has no dependencies")
     void lastEmptyBranchCannotBeDeleted() {
         givenBranchCount(1);
 
         assertFailsWith(ErrorCode.LAST_BRANCH_CANNOT_BE_DELETED, () -> service.deleteBranch(ID));
 
-        verify(chiNhanhRepository, never()).delete(any());
+        verify(branchRepository, never()).delete(any());
     }
 
     @Test
-    @DisplayName("AC-12: còn từ hai chi nhánh và chi nhánh này còn phòng thì trả 2102")
+    @DisplayName("AC-12: with at least two branches, a branch containing rooms returns 2102")
     void branchWithRoomsCannotBeDeleted() {
         givenBranchCount(2);
-        when(phongKhamRepository.existsByChiNhanh_MaChiNhanh(BRANCH_ID)).thenReturn(true);
+        when(clinicRoomRepository.existsByBranchId(BRANCH_ID)).thenReturn(true);
 
         assertFailsWith(ErrorCode.BRANCH_HAS_DEPENDENCIES, () -> service.deleteBranch(ID));
 
-        verify(chiNhanhRepository, never()).delete(any());
+        verify(branchRepository, never()).delete(any());
     }
 
     @Test
-    @DisplayName("AC-12: còn từ hai chi nhánh và chi nhánh này còn nhân viên thì trả 2102")
+    @DisplayName("AC-12: with at least two branches, a branch containing employees returns 2102")
     void branchWithStaffCannotBeDeleted() {
         givenBranchCount(2);
-        when(EmployeeRepository.existsByBranchId(BRANCH_ID)).thenReturn(true);
+        when(employeeRepository.existsByBranchId(BRANCH_ID)).thenReturn(true);
 
         assertFailsWith(ErrorCode.BRANCH_HAS_DEPENDENCIES, () -> service.deleteBranch(ID));
 
-        verify(chiNhanhRepository, never()).delete(any());
+        verify(branchRepository, never()).delete(any());
     }
 
     @Test
-    @DisplayName("AC-11: chi nhánh trống được xóa và flush ngay để lỗi database lộ ra trong service")
+    @DisplayName("AC-11: an empty branch is deleted and flushed immediately so database errors surface in the service")
     void emptyBranchIsDeletedAndFlushed() {
         givenBranchCount(2);
 
         service.deleteBranch(ID);
 
-        InOrder order = inOrder(chiNhanhRepository);
-        order.verify(chiNhanhRepository).delete(branch);
-        order.verify(chiNhanhRepository).flush();
+        InOrder order = inOrder(branchRepository);
+        order.verify(branchRepository).delete(branch);
+        order.verify(branchRepository).flush();
     }
 
     @Test
-    @DisplayName("AC-9: id không tồn tại trả 2101 trước mọi kiểm tra khác")
+    @DisplayName("AC-9: a nonexistent ID returns 2101 before any other checks")
     void missingBranchFailsBeforeOtherChecks() {
-        when(chiNhanhRepository.findById(99L)).thenReturn(Optional.empty());
+        when(branchRepository.findById(99L)).thenReturn(Optional.empty());
 
         assertFailsWith(ErrorCode.BRANCH_NOT_FOUND, () -> service.deleteBranch("99"));
 
-        verify(chiNhanhRepository, never()).count();
-        verifyNoInteractions(phongKhamRepository, EmployeeRepository);
+        verify(branchRepository, never()).count();
+        verifyNoInteractions(clinicRoomRepository, employeeRepository);
     }
 
-    // API 28: đổi lỗi database khi hai Admin thao tác cùng lúc
+    // TOPOLOGY_DELETE_BRANCH: translate database errors when two admins act concurrently.
 
     @Test
-    @DisplayName("AC-5: lỗi khóa ngoại lúc flush được đổi thành 2102")
+    @DisplayName("AC-5: a foreign key violation during flush is translated to 2102")
     void foreignKeyViolationBecomesBranchHasDependencies() {
         givenBranchCount(2);
         doThrow(new DataIntegrityViolationException("fk", new SQLException("fk", "23503")))
-                .when(chiNhanhRepository).flush();
+                .when(branchRepository).flush();
 
         assertFailsWith(ErrorCode.BRANCH_HAS_DEPENDENCIES, () -> service.deleteBranch(ID));
     }
 
     @Test
-    @DisplayName("AC-5: lỗi database khác không bị đổi mã, ngoại lệ gốc được ném lại")
+    @DisplayName("AC-5: other database errors are not translated and the original exception is rethrown")
     void otherIntegrityViolationIsRethrown() {
         givenBranchCount(2);
         DataIntegrityViolationException original =
                 new DataIntegrityViolationException("check", new SQLException("check", "23514"));
-        doThrow(original).when(chiNhanhRepository).flush();
+        doThrow(original).when(branchRepository).flush();
 
         assertThatThrownBy(() -> service.deleteBranch(ID)).isSameAs(original);
     }
 
     @Test
-    @DisplayName("AC-5: Admin khác đã xóa trước thì bên sau nhận 2101")
+    @DisplayName("AC-5: if another admin deleted the branch first, the subsequent request receives 2101")
     void concurrentDeleteBecomesBranchNotFound() {
         givenBranchCount(2);
-        doThrow(new ObjectOptimisticLockingFailureException(ChiNhanh.class, BRANCH_ID))
-                .when(chiNhanhRepository).flush();
+        doThrow(new ObjectOptimisticLockingFailureException(Branch.class, BRANCH_ID))
+                .when(branchRepository).flush();
 
         assertFailsWith(ErrorCode.BRANCH_NOT_FOUND, () -> service.deleteBranch(ID));
     }
 
-    // Id trên đường dẫn
+    // Path ID.
 
     @ParameterizedTest
     @ValueSource(strings = {"abc", "", "1.5", "9223372036854775808"})
-    @DisplayName("AC-9: id không parse được thành Long trả 2101 mà không gọi database")
+    @DisplayName("AC-9: an ID that cannot be parsed as Long returns 2101 without calling the database")
     void unparsableIdIsNotFound(String id) {
         assertFailsWith(ErrorCode.BRANCH_NOT_FOUND, () -> service.getBranchDetails(id));
 
-        verify(chiNhanhRepository, never()).findById(any());
+        verify(branchRepository, never()).findById(any());
     }
 
-    // API 24 và API 27: chuẩn hóa dữ liệu trước khi lưu
+    // TOPOLOGY_SET_BRANCH and TOPOLOGY_EDIT_BRANCH: normalize data before saving.
 
-    private ChiNhanh savedBranch() {
-        ArgumentCaptor<ChiNhanh> captor = ArgumentCaptor.forClass(ChiNhanh.class);
-        verify(chiNhanhRepository).saveAndFlush(captor.capture());
+    private Branch savedBranch() {
+        ArgumentCaptor<Branch> captor = ArgumentCaptor.forClass(Branch.class);
+        verify(branchRepository).saveAndFlush(captor.capture());
         return captor.getValue();
     }
 
@@ -207,54 +207,54 @@ class BranchServiceImplTest {
     }
 
     @Test
-    @DisplayName("AC-6: tạo chi nhánh trim tên, địa chỉ, số điện thoại và luôn đang hoạt động")
+    @DisplayName("AC-6: branch creation trims the name, address, and phone and always activates the branch")
     void createTrimsValuesAndStartsActive() {
         service.createBranch(createRequest(" +84901234567 "));
 
-        ChiNhanh saved = savedBranch();
-        assertThat(saved.getTenChiNhanh()).isEqualTo("Cơ sở Cầu Giấy");
-        assertThat(saved.getDiaChi()).isEqualTo("Số 2 Duy Tân");
-        assertThat(saved.getSoDienThoai()).isEqualTo("+84901234567");
-        assertThat(saved.getTrangThai()).isTrue();
+        Branch saved = savedBranch();
+        assertThat(saved.getName()).isEqualTo("Cơ sở Cầu Giấy");
+        assertThat(saved.getAddress()).isEqualTo("Số 2 Duy Tân");
+        assertThat(saved.getPhoneNumber()).isEqualTo("+84901234567");
+        assertThat(saved.getActive()).isTrue();
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"", "   "})
-    @DisplayName("AC-6: số điện thoại rỗng khi tạo được lưu NULL vì cột cấm chuỗi rỗng")
+    @DisplayName("AC-6: an empty phone on creation is stored as NULL because the column disallows empty strings")
     void createStoresBlankPhoneAsNull(String phone) {
         service.createBranch(createRequest(phone));
 
-        assertThat(savedBranch().getSoDienThoai()).isNull();
+        assertThat(savedBranch().getPhoneNumber()).isNull();
     }
 
     @Test
-    @DisplayName("AC-10: không gửi phone thì giữ nguyên số cũ")
+    @DisplayName("AC-10: omitting phone preserves the existing number")
     void editKeepsPhoneWhenNotSent() {
         service.editBranch(ID, new EditBranchRequest());
 
-        assertThat(savedBranch().getSoDienThoai()).isEqualTo("0241234567");
+        assertThat(savedBranch().getPhoneNumber()).isEqualTo("0241234567");
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"", "   "})
-    @DisplayName("AC-10: phone rỗng xóa số điện thoại")
+    @DisplayName("AC-10: an empty phone removes the phone number")
     void editClearsPhoneWhenBlank(String phone) {
         EditBranchRequest req = new EditBranchRequest();
         req.setPhone(phone);
 
         service.editBranch(ID, req);
 
-        assertThat(savedBranch().getSoDienThoai()).isNull();
+        assertThat(savedBranch().getPhoneNumber()).isNull();
     }
 
     @Test
-    @DisplayName("AC-10: address rỗng trả 2003 và không ghi gì")
+    @DisplayName("AC-10: an empty address returns 2003 and does not write any data")
     void editRejectsBlankAddressWithoutSaving() {
         EditBranchRequest req = new EditBranchRequest();
         req.setAddress("   ");
 
         assertFailsWith(ErrorCode.INVALID_PARAMETER_VALUE, () -> service.editBranch(ID, req));
 
-        verify(chiNhanhRepository, never()).saveAndFlush(any());
+        verify(branchRepository, never()).saveAndFlush(any());
     }
 }

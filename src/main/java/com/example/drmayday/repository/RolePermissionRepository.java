@@ -12,16 +12,16 @@ import java.util.List;
 
 public interface RolePermissionRepository extends JpaRepository<RolePermission, RolePermissionId> {
 
-    @Query("SELECT rp.permission FROM RolePermission rp WHERE rp.roleId = :roleId ORDER BY rp.permissionId ASC")
+    @Query("SELECT rp.permission FROM RolePermission rp WHERE rp.id.roleId = :roleId ORDER BY rp.id.permissionId ASC")
     List<Permission> findPermissionsByRoleId(@Param("roleId") Long roleId);
 
     @Modifying
-    @Query("DELETE FROM RolePermission rp WHERE rp.roleId = :roleId")
+    @Query("DELETE FROM RolePermission rp WHERE rp.id.roleId = :roleId")
     void deleteByRoleId(@Param("roleId") Long roleId);
 
     @Modifying
-    @Query("DELETE FROM RolePermission rp WHERE rp.roleId = :roleId AND rp.permissionId = :permissionId")
+    @Query("DELETE FROM RolePermission rp WHERE rp.id.roleId = :roleId AND rp.id.permissionId = :permissionId")
     void deleteByRoleIdAndPermissionId(@Param("roleId") Long roleId, @Param("permissionId") Long permissionId);
 
-    boolean existsByRoleIdAndPermissionId(Long roleId, Long permissionId);
+    boolean existsByIdRoleIdAndIdPermissionId(Long roleId, Long permissionId);
 }

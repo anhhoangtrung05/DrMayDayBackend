@@ -5,8 +5,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 /**
- * DTO yêu cầu tạo phòng khám mới (API 29 set_room).
- * branch_id là chuỗi và được parse trong service để trả đúng mã 2002.
+ * Request DTO for TOPOLOGY_SET_ROOM.
+ * branch_id is a string and is parsed in the service to return the correct error code (2002).
  */
 public class CreateRoomRequest {
 
