@@ -38,7 +38,7 @@ public class Apis7To12PostgresIntegrationTest {
     private UserAccountRepository userAccountRepository;
 
     @Autowired
-    private com.example.drmayday.repository.PersonRepository personRepository;
+    private PersonRepository personRepository;
 
     @AfterEach
     void tearDown() {

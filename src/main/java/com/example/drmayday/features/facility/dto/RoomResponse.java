@@ -32,13 +32,13 @@ public class RoomResponse {
         this.name = name;
     }
 
-    public static RoomResponse from(ClinicRoom clinicRoom) {
-        Branch branch = clinicRoom.getBranch();
+    public static RoomResponse from(ClinicRoom room) {
+        Branch branch = room.getBranch();
         return new RoomResponse(
-                String.valueOf(clinicRoom.getClinicRoomId()),
+                String.valueOf(room.getClinicRoomId()),
                 String.valueOf(branch.getBranchId()),
                 branch.getName(),
-                clinicRoom.getName());
+                room.getName());
     }
 
     public String getRoomId() {

@@ -196,11 +196,11 @@ class RoomServiceImplTest {
     @Test
     @DisplayName("AC-17: when branch_id is omitted, all rooms are returned and no branch lookup is performed")
     void listWithoutFilterSkipsBranchCheck() {
-        when(clinicRoomRepository.findAll()).thenReturn(List.of(room));
+        when(clinicRoomRepository.findAllWithBranch()).thenReturn(List.of(room));
 
         List<RoomResponse> rooms = service.getListRooms(null);
 
-        assertThat(rooms).extracting(roomResponse -> roomResponse.getRoomId()).containsExactly(ID);
+        assertThat(rooms).extracting(RoomResponse::getRoomId).containsExactly(ID);
         verifyNoInteractions(branchRepository);
     }
 
@@ -208,7 +208,7 @@ class RoomServiceImplTest {
     @DisplayName("AC-17: an existing branch with no rooms returns an empty array")
     void listReturnsEmptyForBranchWithoutRooms() {
         when(branchRepository.existsById(BRANCH_ID)).thenReturn(true);
-        when(clinicRoomRepository.findAllByBranchId(BRANCH_ID)).thenReturn(List.of());
+        when(clinicRoomRepository.findAllByBranchIdWithBranch(BRANCH_ID)).thenReturn(List.of());
 
         assertThat(service.getListRooms(BRANCH_ID)).isEmpty();
     }
@@ -220,7 +220,7 @@ class RoomServiceImplTest {
 
         assertFailsWith(ErrorCode.BRANCH_NOT_FOUND, () -> service.getListRooms(404L));
 
-        verify(clinicRoomRepository, never()).findAllByBranchId(anyLong());
+        verify(clinicRoomRepository, never()).findAllByBranchIdWithBranch(anyLong());
     }
 
     // TOPOLOGY_GET_ROOM_DETAIL
@@ -263,7 +263,7 @@ class RoomServiceImplTest {
     @DisplayName("TOPOLOGY_EDIT_ROOM validation order: an inactive target branch takes precedence over an exam-session error")
     void editChecksTargetBranchBeforeExamSessions() {
         targetBranch.setActive(false);
-        when(clinicRoomRepository.hasMedicalVisits(ROOM_ID)).thenReturn(true);
+        when(clinicRoomRepository.hasPhienKham(ROOM_ID)).thenReturn(true);
 
         assertFailsWith(ErrorCode.BRANCH_INACTIVE, () -> service.editRoom(ID, editRequest("8", null)));
 
@@ -293,18 +293,18 @@ class RoomServiceImplTest {
     @Test
     @DisplayName("AC-20: sending the current branch_id is not a move, so exam sessions are not checked")
     void editWithCurrentBranchIsNotAMove() {
-        when(clinicRoomRepository.hasMedicalVisits(ROOM_ID)).thenReturn(true);
+        when(clinicRoomRepository.hasPhienKham(ROOM_ID)).thenReturn(true);
 
         RoomResponse response = service.editRoom(ID, editRequest("7", "Phòng mới"));
 
         assertThat(response.getName()).isEqualTo("Phòng mới");
-        verify(clinicRoomRepository, never()).hasMedicalVisits(anyLong());
+        verify(clinicRoomRepository, never()).hasPhienKham(anyLong());
     }
 
     @Test
     @DisplayName("AC-20: a room with exam sessions cannot be moved, and its supplied name is not changed")
     void editRefusesToMoveRoomWithExamSessions() {
-        when(clinicRoomRepository.hasMedicalVisits(ROOM_ID)).thenReturn(true);
+        when(clinicRoomRepository.hasPhienKham(ROOM_ID)).thenReturn(true);
 
         assertFailsWith(ErrorCode.ROOM_HAS_EXAM_SESSIONS, () -> service.editRoom(ID, editRequest("8", "Phòng mới")));
 
@@ -330,6 +330,7 @@ class RoomServiceImplTest {
 
         ArgumentCaptor<ClinicRoom> saved = ArgumentCaptor.forClass(ClinicRoom.class);
         verify(clinicRoomRepository).saveAndFlush(saved.capture());
+        assertThat(saved.getValue().getBranchId()).isEqualTo(TARGET_BRANCH_ID);
         assertThat(saved.getValue().getBranch()).isSameAs(targetBranch);
         assertThat(saved.getValue().getName()).isEqualTo(ROOM_NAME);
     }
@@ -365,7 +366,7 @@ class RoomServiceImplTest {
     @Test
     @DisplayName("AC-22: a room with exam sessions returns 2105 and is not deleted")
     void deleteRefusesRoomWithExamSessions() {
-        when(clinicRoomRepository.hasMedicalVisits(ROOM_ID)).thenReturn(true);
+        when(clinicRoomRepository.hasPhienKham(ROOM_ID)).thenReturn(true);
 
         assertFailsWith(ErrorCode.ROOM_HAS_EXAM_SESSIONS, () -> service.deleteRoom(ID));
 

@@ -8,8 +8,8 @@ import com.example.drmayday.features.facility.dto.CreateBranchRequest;
 import com.example.drmayday.features.facility.dto.EditBranchRequest;
 import com.example.drmayday.features.facility.service.BranchService;
 import com.example.drmayday.repository.BranchRepository;
-import com.example.drmayday.repository.EmployeeRepository;
 import com.example.drmayday.repository.ClinicRoomRepository;
+import com.example.drmayday.repository.EmployeeRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -40,9 +40,13 @@ public class BranchServiceImpl implements BranchService {
     @Override
     @Transactional
     public BranchResponse createBranch(CreateBranchRequest req) {
-        log.info("Admin creating a branch");
-        Branch branch = new Branch(null, req.getName().trim(), req.getAddress().trim(),
-                normalizePhone(req.getPhone()), true);
+        log.info("Admin tạo chi nhánh mới");
+        Branch branch = Branch.builder()
+                .name(req.getName().trim())
+                .address(req.getAddress().trim())
+                .phoneNumber(normalizePhone(req.getPhone()))
+                .active(true)
+                .build();
         return BranchResponse.from(branchRepository.saveAndFlush(branch));
     }
 
@@ -63,7 +67,7 @@ public class BranchServiceImpl implements BranchService {
     @Override
     @Transactional
     public BranchResponse editBranch(String id, EditBranchRequest req) {
-        log.info("Admin updating a branch: id={}", id);
+        log.info("Admin sửa chi nhánh: id={}", id);
         Branch branch = findBranch(id);
 
         if (req.getName() != null) {
@@ -91,11 +95,11 @@ public class BranchServiceImpl implements BranchService {
     @Override
     @Transactional
     public void deleteBranch(String id) {
-        log.info("Admin deleting a branch: id={}", id);
+        log.info("Admin xóa chi nhánh: id={}", id);
         Branch branch = findBranch(id);
         Long branchId = branch.getBranchId();
 
-        // Check whether this is the last branch before checking dependencies; it always returns 2107.
+        // Kiểm tra chi nhánh cuối trước phụ thuộc: chi nhánh cuối luôn trả 2107 dù còn phòng hay nhân viên
         if (branchRepository.count() <= 1) {
             throw new AppException(ErrorCode.LAST_BRANCH_CANNOT_BE_DELETED);
         }
