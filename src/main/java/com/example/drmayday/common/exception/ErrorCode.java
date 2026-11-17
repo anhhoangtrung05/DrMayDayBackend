@@ -43,10 +43,13 @@ public enum ErrorCode {
     DOCTOR_NOT_ASSIGNED("3105", "Bác sĩ chưa được phân công vào hồ sơ", HttpStatus.BAD_REQUEST),
     CANNOT_ACCESS_ANOTHER_USER_DATA("3106", "Không thể truy cập dữ liệu của người dùng khác", HttpStatus.FORBIDDEN),
 
-    // 4xxx - Medical record and form builder errors
+    // 4xxx - Lỗi Hồ sơ bệnh án & Form Builder
     MEDICAL_RECORD_NOT_FOUND("4001", "Không tìm thấy hồ sơ bệnh án", HttpStatus.NOT_FOUND),
     ACTIVE_MEDICAL_RECORD_REQUIRED("4002", "Yêu cầu hồ sơ bệnh án đang hoạt động", HttpStatus.BAD_REQUEST),
     MEDICAL_RECORD_ALREADY_COMPLETED("4003", "Hồ sơ bệnh án đã hoàn tất", HttpStatus.BAD_REQUEST),
+    PATIENT_ALREADY_HAS_ACTIVE_RECORD("4006", "Bệnh nhân đã có hồ sơ bệnh án đang hoạt động", HttpStatus.CONFLICT),
+    MEDICAL_RECORD_HAS_CHILD_DATA("4007", "Hồ sơ bệnh án vẫn còn dữ liệu con", HttpStatus.CONFLICT),
+    RECORD_TYPE_MISMATCH("4008", "Loại bệnh án không khớp", HttpStatus.BAD_REQUEST),
     TEMPLATE_NOT_FOUND("4101", "Không tìm thấy biểu mẫu", HttpStatus.NOT_FOUND),
 
     // 5xxx - UAS7 score errors
