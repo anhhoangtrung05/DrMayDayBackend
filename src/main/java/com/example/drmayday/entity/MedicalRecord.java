@@ -27,7 +27,7 @@ public class MedicalRecord {
     @Column(name = "chan_doan_ban_dau_phong_kham") private String initialClinicDiagnosis;
     @Column(name = "ket_qua_dieu_tri_bao_hiem") private String insuranceTreatmentOutcome;
     @Column(name = "thoi_gian_khoi_phat_tuan", precision = 12, scale = 2) private BigDecimal onsetDurationWeeks;
-    @Column(name = "trang_thai", nullable = false) private String status;
+    @Column(name = "trang_thai", nullable = false) @Builder.Default private String status = "draft";
     @Column(name = "tien_su_gia_dinh") private String familyHistory;
     @Column(name = "tien_su_gia_dinh_ghi_ro") private String familyHistoryDescription;
     @Column(name = "da_dieu_tri_truoc_kham") private Boolean treatedBeforeVisit;

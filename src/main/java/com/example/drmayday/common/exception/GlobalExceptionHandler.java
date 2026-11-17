@@ -3,15 +3,19 @@ package com.example.drmayday.common.exception;
 import com.example.drmayday.common.dto.BaseResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
  * Bộ xử lý ngoại lệ tập trung (Global Exception Handler) chuẩn hóa format lỗi toàn hệ thống.
@@ -60,6 +64,36 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(BaseResponse.error(ErrorCode.INVALID_PARAMETER_TYPE.getCode(),
                         ErrorCode.INVALID_PARAMETER_TYPE.getMessage()));
+    }
+
+    // Lỗi framework phía người gọi (spec 0005): trả đúng HTTP status, message lấy từ ErrorCode để không lộ đường dẫn
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<BaseResponse<Void>> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex) {
+        log.warn("Sai HTTP method: {}", ex.getMessage());
+        ErrorCode errorCode = ErrorCode.METHOD_NOT_ALLOWED;
+        HttpHeaders headers = new HttpHeaders();
+        if (ex.getSupportedHttpMethods() != null) {
+            headers.setAllow(ex.getSupportedHttpMethods());
+        }
+        return ResponseEntity.status(errorCode.getHttpStatus()).headers(headers)
+                .body(BaseResponse.error(errorCode.getCode(), errorCode.getMessage()));
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<BaseResponse<Void>> handleNoResource(NoResourceFoundException ex) {
+        log.warn("Không có route khớp đường dẫn: {}", ex.getMessage());
+        return clientError(ErrorCode.RESOURCE_NOT_FOUND);
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<BaseResponse<Void>> handleMediaTypeNotSupported(HttpMediaTypeNotSupportedException ex) {
+        log.warn("Content-Type không được hỗ trợ: {}", ex.getMessage());
+        return clientError(ErrorCode.UNSUPPORTED_MEDIA_TYPE);
+    }
+
+    private static ResponseEntity<BaseResponse<Void>> clientError(ErrorCode errorCode) {
+        return ResponseEntity.status(errorCode.getHttpStatus())
+                .body(BaseResponse.error(errorCode.getCode(), errorCode.getMessage()));
     }
 
     @ExceptionHandler(AccessDeniedException.class)

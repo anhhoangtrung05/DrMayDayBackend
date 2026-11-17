@@ -21,6 +21,9 @@ public enum ErrorCode {
     INVALID_PHONE_NUMBER_FORMAT("2004", "Invalid phone number format", HttpStatus.BAD_REQUEST),
     BAD_REQUEST("2005", "Bad request", HttpStatus.BAD_REQUEST),
     RESOURCE_NOT_FOUND("2006", "Resource not found", HttpStatus.NOT_FOUND),
+    // 2007, 2008 theo spec 0005, chưa có trong MÃ LỖI TỔNG HỢP.html
+    METHOD_NOT_ALLOWED("2007", "Method not allowed", HttpStatus.METHOD_NOT_ALLOWED),
+    UNSUPPORTED_MEDIA_TYPE("2008", "Unsupported media type", HttpStatus.UNSUPPORTED_MEDIA_TYPE),
 
     // 21xx - Lỗi nghiệp vụ Cơ sở vật chất (Chi nhánh & Phòng khám)
     BRANCH_NOT_FOUND("2101", "Branch not found", HttpStatus.NOT_FOUND),
@@ -47,12 +50,18 @@ public enum ErrorCode {
     MEDICAL_RECORD_NOT_FOUND("4001", "Medical record not found", HttpStatus.NOT_FOUND),
     ACTIVE_MEDICAL_RECORD_REQUIRED("4002", "Active medical record required", HttpStatus.BAD_REQUEST),
     MEDICAL_RECORD_ALREADY_COMPLETED("4003", "Medical record already completed", HttpStatus.BAD_REQUEST),
+    PATIENT_ALREADY_HAS_ACTIVE_RECORD("4006", "Patient already has active medical record", HttpStatus.CONFLICT),
+    MEDICAL_RECORD_HAS_CHILD_DATA("4007", "Medical record has child data", HttpStatus.CONFLICT),
+    RECORD_TYPE_MISMATCH("4008", "Record/Exam type mismatch", HttpStatus.CONFLICT),
+    EXAM_SEQUENCE_DUPLICATE("4009", "Duplicate exam sequence", HttpStatus.CONFLICT),
     TEMPLATE_NOT_FOUND("4101", "Template not found", HttpStatus.NOT_FOUND),
 
     // 5xxx - Lỗi Thang điểm UAS7
     UAS7_RECORD_ALREADY_EXISTS_TODAY("5002", "UAS7 score record already exists for today", HttpStatus.CONFLICT),
     UAS7_SCORE_OUT_OF_RANGE("5003", "ISS7 or HSS7 score out of range (0-3)", HttpStatus.BAD_REQUEST),
     UAS7_NO_ACTIVE_RECORD("5004", "Patient has no active medical record for UAS7", HttpStatus.BAD_REQUEST),
+    // 5008 theo đặc tả phiên khám, chưa có trong MÃ LỖI TỔNG HỢP.html (spec 0004)
+    EXAM_NOT_FOUND("5008", "Exam not found", HttpStatus.NOT_FOUND),
 
     // 9xxx - Lỗi hệ thống chung
     INTERNAL_SERVER_ERROR("9999", "Internal server error", HttpStatus.INTERNAL_SERVER_ERROR);

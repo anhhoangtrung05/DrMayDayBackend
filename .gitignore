@@ -73,3 +73,6 @@ AGENTS.md
 CLAUDE.md
 skills-lock.json
 test-preferences.json
+
+# --- Local Testing ---
+postman/

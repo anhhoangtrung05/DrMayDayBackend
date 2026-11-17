@@ -16,6 +16,9 @@ public interface ClinicRoomRepository extends JpaRepository<ClinicRoom, Long> {
     @Query("select r from ClinicRoom r join fetch r.branch where r.branchId = :branchId order by r.clinicRoomId")
     List<ClinicRoom> findAllByBranchIdWithBranch(@Param("branchId") Long branchId);
 
+    @Query("select r from ClinicRoom r join fetch r.branch where r.clinicRoomId = :id")
+    Optional<ClinicRoom> findByIdWithBranch(@Param("id") Long id);
+
     boolean existsByBranchId(Long branchId);
 
     boolean existsByBranchIdAndName(Long branchId, String name);

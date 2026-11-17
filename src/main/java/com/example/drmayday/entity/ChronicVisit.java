@@ -25,6 +25,8 @@ public class ChronicVisit {
     @Column(name = "so_lan_phu_mach_dot_nay") private Integer angioedemaEpisodesInCurrentPeriod;
     @Column(name = "hoan_canh_xuat_hien_phu_mach") private String angioedemaOnsetContext;
     @Column(name = "so_lan_phu_mach_nang_phai_nhap_vien") private Integer angioedemaHospitalizations;
+    @Column(name = "thoi_gian_ton_tai_phu_mach_co_dung_thuoc") private String angioedemaDurationWithMedication;
+    @Column(name = "thoi_gian_ton_tai_phu_mach_khong_dung_thuoc") private String angioedemaDurationWithoutMedication;
     @Column(name = "diem_aas7") private Short aas7Score;
     @Column(name = "ben_phu_mach") private String angioedemaSide;
     @Column(name = "thoi_gian_ngau_nhien_tuan", precision = 12, scale = 2) private BigDecimal spontaneousDurationWeeks;
@@ -46,8 +48,6 @@ public class ChronicVisit {
     @Column(name = "phu_vi_tri_khac") private Boolean edemaAtOtherLocation;
     @Column(name = "phu_vi_tri_khac_ghi_ro") private String otherEdemaLocationDescription;
     @Column(name = "phu_ban_tay") private Boolean handEdema;
-    @Column(name = "bat_thuong_co_quan_khac") private Boolean otherOrganAbnormality;
-    @Column(name = "bat_thuong_co_quan_khac_ghi_ro") private String otherOrganAbnormalityDescription;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumns({

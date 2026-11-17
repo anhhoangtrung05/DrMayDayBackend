@@ -43,4 +43,9 @@ public class MedicalVisit {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "ma_bac_si", referencedColumnName = "ma_nhan_vien", insertable = false, updatable = false)
     private Employee employee;
+
+    // Chỉ để đọc tên phòng; ghi phòng qua clinicRoomId
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "ma_phong_kham", referencedColumnName = "ma_phong_kham", insertable = false, updatable = false)
+    private ClinicRoom clinicRoom;
 }
