@@ -26,8 +26,8 @@ public interface ClinicRoomRepository extends JpaRepository<ClinicRoom, Long> {
     @Query("SELECT COUNT(mv) > 0 FROM MedicalVisit mv WHERE mv.clinicRoomId = :clinicRoomId")
     boolean hasMedicalVisits(@Param("clinicRoomId") Long clinicRoomId);
 
-    boolean existsByBranchIdAndNameAndRoomIdNot(@Param("branchId") Long branchId, @Param("name") String name, @Param("clinicRoomId") Long clinicRoomId);
+    boolean existsByBranchIdAndNameAndClinicRoomIdNot(Long branchId, String name, Long clinicRoomId);
 
-    @Query("SELECT COUNT(es) > 0 FROM ExamSession es WHERE es.clinicRoomId = :clinicRoomId")
+    @Query("SELECT COUNT(mv) > 0 FROM MedicalVisit mv WHERE mv.clinicRoomId = :clinicRoomId")
     boolean hasExamSessions(@Param("clinicRoomId") Long clinicRoomId);
 }

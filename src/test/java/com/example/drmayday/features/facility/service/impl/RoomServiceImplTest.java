@@ -286,7 +286,7 @@ class RoomServiceImplTest {
         service.editRoom(ID, editRequest("7", "  " + ROOM_NAME + "  "));
 
         verify(clinicRoomRepository, never())
-                .existsByBranchIdAndNameAndRoomIdNot(anyLong(), anyString(), anyLong());
+                .existsByBranchIdAndNameAndClinicRoomIdNot(anyLong(), anyString(), anyLong());
         verify(clinicRoomRepository, never()).saveAndFlush(any());
     }
 
@@ -315,7 +315,7 @@ class RoomServiceImplTest {
     @Test
     @DisplayName("AC-20: moving a room checks for duplicate names in the target branch, excluding the room itself")
     void editChecksDuplicateInTargetBranch() {
-        when(clinicRoomRepository.existsByBranchIdAndNameAndRoomIdNot(
+        when(clinicRoomRepository.existsByBranchIdAndNameAndClinicRoomIdNot(
                 TARGET_BRANCH_ID, ROOM_NAME, ROOM_ID)).thenReturn(true);
 
         assertFailsWith(ErrorCode.ROOM_NAME_ALREADY_EXISTS, () -> service.editRoom(ID, editRequest("8", null)));
