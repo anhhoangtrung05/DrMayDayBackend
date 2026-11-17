@@ -29,6 +29,7 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
     private static final Set<String> TERMINAL_STATUSES = Set.of("completed", "cancelled");
     private static final Set<String> VALID_FAMILY_HISTORY = Set.of("Co", "Khong", "Khong ro");
     private static final Set<String> VALID_TREATMENT_OUTCOMES = Set.of("Khoi benh", "Do", "Khong do", "Nang hon", "Chet", "Bien chung");
+    private static final Set<String> VALID_TRI_STATE = Set.of("CO", "KHONG", "KHONG_RO");
     private final MedicalRecordRepository medicalRecordRepo;
     private final AcuteUrticariaRecordRepository acuteRepo;
     private final ChronicUrticariaRecordRepository chronicRepo;
@@ -263,10 +264,10 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
             throw new AppException(ErrorCode.MEDICAL_RECORD_NOT_FOUND);
         }
 
-        validateBooleanDetail(req.getTienSuCoDia(), req.getTienSuCoDiaGhiRo(), "tien_su_co_dia");
+        validateTriState(req.getTienSuCoDia(), "tien_su_co_dia");
+        validateTriState(req.getTienSuDiUng(), "tien_su_di_ung");
         validateBooleanDetail(req.getTienSuTuyenGiap(), req.getTienSuTuyenGiapGhiRo(), "tien_su_tuyen_giap");
         validateBooleanDetail(req.getTienSuTuMien(), req.getTienSuTuMienGhiRo(), "tien_su_tu_mien");
-        validateBooleanDetail(req.getTienSuDiUng(), req.getTienSuDiUngGhiRo(), "tien_su_di_ung");
         validateBooleanDetail(req.getTienSuPhanVe(), req.getTienSuPhanVeGhiRo(), "tien_su_phan_ve");
         validateBooleanDetail(req.getTienSuViemNhiemMan(), req.getTienSuViemNhiemManGhiRo(), "tien_su_viem_nhiem_man");
         validateBooleanDetail(req.getTienSuBenhKhac(), req.getTienSuBenhKhacGhiRo(), "tien_su_benh_khac");
@@ -280,13 +281,22 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
         }
 
         history.setAtopicHistory(req.getTienSuCoDia());
-        history.setAtopicHistoryDescription(req.getTienSuCoDiaGhiRo());
+        history.setAtopicDermatitis(req.getCoDiaViemDaCoDia());
+        history.setAsthma(req.getCoDiaHen());
+        history.setAllergicRhinitis(req.getCoDiaViemMuiDiUng());
+        history.setOtherAtopicConditions(req.getCoDiaKhac());
+        history.setOtherAtopicConditionsDescription(req.getCoDiaKhacGhiRo());
         history.setThyroidHistory(req.getTienSuTuyenGiap());
         history.setThyroidHistoryDescription(req.getTienSuTuyenGiapGhiRo());
         history.setAutoimmuneHistory(req.getTienSuTuMien());
         history.setAutoimmuneHistoryDescription(req.getTienSuTuMienGhiRo());
         history.setAllergyHistory(req.getTienSuDiUng());
-        history.setAllergyHistoryDescription(req.getTienSuDiUngGhiRo());
+        history.setMedicationAllergy(req.getDiUngThuoc());
+        history.setMedicationAllergyDescription(req.getDiUngThuocGhiRo());
+        history.setFoodAllergy(req.getDiUngThucAn());
+        history.setFoodAllergyDescription(req.getDiUngThucAnGhiRo());
+        history.setOtherAllergy(req.getDiUngDiNguyenKhac());
+        history.setOtherAllergyDescription(req.getDiUngDiNguyenKhacGhiRo());
         history.setAnaphylaxisHistory(req.getTienSuPhanVe());
         history.setAnaphylaxisHistoryDescription(req.getTienSuPhanVeGhiRo());
         history.setChronicInfectionHistory(req.getTienSuViemNhiemMan());
@@ -321,6 +331,13 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
         }
         if (!"Co".equals(familyHistory) && familyHistoryDesc != null) {
             throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "tien_su_gia_dinh_ghi_ro must be null when tien_su_gia_dinh != Co");
+        }
+    }
+
+    private void validateTriState(String value, String fieldName) {
+        if (value != null && !VALID_TRI_STATE.contains(value)) {
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE,
+                    fieldName + " must be one of CO, KHONG, KHONG_RO");
         }
     }
 
