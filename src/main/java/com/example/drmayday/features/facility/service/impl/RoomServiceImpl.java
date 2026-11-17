@@ -44,20 +44,21 @@ public class RoomServiceImpl implements RoomService {
             throw new AppException(ErrorCode.ROOM_NAME_ALREADY_EXISTS);
         }
 
-        ClinicRoom clinicRoom = ClinicRoom.builder().branch(branch).name(name).build();
-        return RoomResponse.from(saveRoom(clinicRoom));
+        // Cột ma_chi_nhanh được ghi qua branchId, còn branch chỉ để đọc (insertable = false)
+        ClinicRoom room = ClinicRoom.builder().branchId(branchId).branch(branch).name(name).build();
+        return RoomResponse.from(saveRoom(room));
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<RoomResponse> getListRooms(Long branchId) {
         if (branchId == null) {
-            return toResponses(clinicRoomRepository.findAll());
+            return toResponses(clinicRoomRepository.findAllWithBranch());
         }
         if (!branchRepository.existsById(branchId)) {
             throw new AppException(ErrorCode.BRANCH_NOT_FOUND);
         }
-        return toResponses(clinicRoomRepository.findAllByBranchId(branchId));
+        return toResponses(clinicRoomRepository.findAllByBranchIdWithBranch(branchId));
     }
 
     @Override
@@ -69,54 +70,57 @@ public class RoomServiceImpl implements RoomService {
     @Override
     @Transactional
     public RoomResponse editRoom(String id, EditRoomRequest req) {
-        log.info("Admin updating a clinic room: id={}", id);
-        ClinicRoom clinicRoom = clinicRoomRepository.findByIdForUpdate(parseRoomId(id))
+        log.info("Admin sửa phòng khám: id={}", id);
+        ClinicRoom room = clinicRoomRepository.findByIdForUpdate(parseRoomId(id))
                 .orElseThrow(() -> new AppException(ErrorCode.ROOM_NOT_FOUND));
 
         if (req.getName() != null && req.getName().isBlank()) {
             throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE);
         }
-        String name = req.getName() != null ? req.getName().trim() : clinicRoom.getName();
+        String name = req.getName() != null ? req.getName().trim() : room.getName();
 
-        Branch branch = clinicRoom.getBranch();
+        Branch targetBranch = null;
         if (req.getBranchId() != null) {
             Long targetBranchId = parseBodyBranchId(req.getBranchId());
-            // Specifying the current branch does not count as moving the room.
-            if (!targetBranchId.equals(branch.getBranchId())) {
-                branch = findActiveBranch(targetBranchId);
-                if (clinicRoomRepository.hasExamSessions(clinicRoom.getClinicRoomId())) {
+            // Gửi trùng chi nhánh hiện tại thì không tính là chuyển phòng
+            if (!targetBranchId.equals(room.getBranchId())) {
+                targetBranch = findActiveBranch(targetBranchId);
+                if (clinicRoomRepository.hasPhienKham(room.getClinicRoomId())) {
                     throw new AppException(ErrorCode.ROOM_HAS_EXAM_SESSIONS);
                 }
             }
         }
 
-        boolean branchChanged = branch != clinicRoom.getBranch();
-        if (!branchChanged && name.equals(clinicRoom.getName())) {
-            return RoomResponse.from(clinicRoom);
+        boolean branchChanged = targetBranch != null;
+        if (!branchChanged && name.equals(room.getName())) {
+            return RoomResponse.from(room);
         }
 
-        if (clinicRoomRepository.existsByBranchIdAndNameAndRoomIdNot(
-                branch.getBranchId(), name, clinicRoom.getClinicRoomId())) {
+        Long branchId = branchChanged ? targetBranch.getBranchId() : room.getBranchId();
+        if (clinicRoomRepository.existsByBranchIdAndNameAndClinicRoomIdNot(branchId, name, room.getClinicRoomId())) {
             throw new AppException(ErrorCode.ROOM_NAME_ALREADY_EXISTS);
         }
 
-        clinicRoom.setBranch(branch);
-        clinicRoom.setName(name);
-        return RoomResponse.from(saveRoom(clinicRoom));
+        if (branchChanged) {
+            room.setBranchId(branchId);
+            room.setBranch(targetBranch);
+        }
+        room.setName(name);
+        return RoomResponse.from(saveRoom(room));
     }
 
     @Override
     @Transactional
     public void deleteRoom(String id) {
-        log.info("Admin deleting a clinic room: id={}", id);
-        ClinicRoom clinicRoom = findRoom(id);
+        log.info("Admin xóa phòng khám: id={}", id);
+        ClinicRoom room = findRoom(id);
 
-        if (clinicRoomRepository.hasExamSessions(clinicRoom.getClinicRoomId())) {
+        if (clinicRoomRepository.hasPhienKham(room.getClinicRoomId())) {
             throw new AppException(ErrorCode.ROOM_HAS_EXAM_SESSIONS);
         }
 
         try {
-            clinicRoomRepository.delete(clinicRoom);
+            clinicRoomRepository.delete(room);
             clinicRoomRepository.flush();
         } catch (DataIntegrityViolationException ex) {
             if (FacilitySqlErrors.isForeignKeyViolation(ex)) {
@@ -129,10 +133,10 @@ public class RoomServiceImpl implements RoomService {
         }
     }
 
-    // saveAndFlush ensures database errors occur inside the try block instead of during commit.
-    private ClinicRoom saveRoom(ClinicRoom clinicRoom) {
+    // Phải saveAndFlush để lỗi database xảy ra trong khối try, không phải lúc commit
+    private ClinicRoom saveRoom(ClinicRoom room) {
         try {
-            return clinicRoomRepository.saveAndFlush(clinicRoom);
+            return clinicRoomRepository.saveAndFlush(room);
         } catch (DataIntegrityViolationException ex) {
             if (FacilitySqlErrors.isUniqueViolation(ex)) {
                 throw new AppException(ErrorCode.ROOM_NAME_ALREADY_EXISTS);
@@ -145,8 +149,12 @@ public class RoomServiceImpl implements RoomService {
     }
 
     private Branch findActiveBranch(Long branchId) {
-        return branchRepository.findById(branchId)
+        Branch branch = branchRepository.findById(branchId)
                 .orElseThrow(() -> new AppException(ErrorCode.BRANCH_NOT_FOUND));
+        if (!Boolean.TRUE.equals(branch.getActive())) {
+            throw new AppException(ErrorCode.BRANCH_INACTIVE);
+        }
+        return branch;
     }
 
     private ClinicRoom findRoom(String id) {
@@ -171,10 +179,6 @@ public class RoomServiceImpl implements RoomService {
     }
 
     private List<RoomResponse> toResponses(List<ClinicRoom> rooms) {
-        List<RoomResponse> responses = new java.util.ArrayList<>(rooms.size());
-        for (ClinicRoom room : rooms) {
-            responses.add(RoomResponse.from(room));
-        }
-        return responses;
+        return rooms.stream().map(RoomResponse::from).toList();
     }
 }
