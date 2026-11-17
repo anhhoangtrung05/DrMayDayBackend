@@ -100,7 +100,7 @@ class ExamFindingsServiceImplTest {
                 .build();
 
         AppException ex = assertThrows(AppException.class, () -> examFindingsService.upsertAcuteExamFindings(req));
-        assertEquals(ErrorCode.RECORD_EXAM_TYPE_MISMATCH, ex.getErrorCode());
+        assertEquals(ErrorCode.RECORD_TYPE_MISMATCH, ex.getErrorCode());
     }
 
     @Test

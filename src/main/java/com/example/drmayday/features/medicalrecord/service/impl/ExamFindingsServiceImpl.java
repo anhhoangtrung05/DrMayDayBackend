@@ -49,7 +49,7 @@ public class ExamFindingsServiceImpl implements ExamFindingsService {
                 .orElseThrow(() -> new AppException(ErrorCode.EXAM_NOT_FOUND, "Exam not found: " + examIdLong));
 
         if (!"CAP".equalsIgnoreCase(visit.getMedicalRecordType())) {
-            throw new AppException(ErrorCode.RECORD_EXAM_TYPE_MISMATCH, "Record/Exam type mismatch: exam is not CAP");
+            throw new AppException(ErrorCode.RECORD_TYPE_MISMATCH, "Record/Exam type mismatch: exam is not CAP");
         }
 
         if (req.getSoLanNon() != null && req.getSoLanNon() < 0) {
@@ -132,7 +132,7 @@ public class ExamFindingsServiceImpl implements ExamFindingsService {
                 .orElseThrow(() -> new AppException(ErrorCode.EXAM_NOT_FOUND, "Exam not found: " + examIdLong));
 
         if (!"MAN".equalsIgnoreCase(visit.getMedicalRecordType())) {
-            throw new AppException(ErrorCode.RECORD_EXAM_TYPE_MISMATCH, "Record/Exam type mismatch: exam is not MAN");
+            throw new AppException(ErrorCode.RECORD_TYPE_MISMATCH, "Record/Exam type mismatch: exam is not MAN");
         }
 
         if (req.getDiemAas7() != null && (req.getDiemAas7() < 0 || req.getDiemAas7() > 105)) {

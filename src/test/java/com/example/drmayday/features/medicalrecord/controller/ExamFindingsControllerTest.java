@@ -80,19 +80,19 @@ class ExamFindingsControllerTest {
     }
 
     @Test
-    @DisplayName("API 50: PUT /api/v1/acute-exam-findings - Type mismatch trả về 409 (Mã 4008)")
+    @DisplayName("API 50: PUT /api/v1/acute-exam-findings - Type mismatch trả về 400 (Mã 4008)")
     void upsertAcuteExamFindings_mismatch() throws Exception {
         UpsertAcuteExamFindingsRequest req = UpsertAcuteExamFindingsRequest.builder()
                 .examId("2")
                 .build();
 
         when(examFindingsService.upsertAcuteExamFindings(any(UpsertAcuteExamFindingsRequest.class)))
-                .thenThrow(new AppException(ErrorCode.RECORD_EXAM_TYPE_MISMATCH, "Record/Exam type mismatch"));
+                .thenThrow(new AppException(ErrorCode.RECORD_TYPE_MISMATCH, "Record/Exam type mismatch"));
 
         mockMvc.perform(put("/api/v1/acute-exam-findings")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
-                .andExpect(status().isConflict())
+                .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("4008"));
     }
 

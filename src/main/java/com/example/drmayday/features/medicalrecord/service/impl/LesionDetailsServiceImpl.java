@@ -123,7 +123,7 @@ public class LesionDetailsServiceImpl implements LesionDetailsService {
                 result.add(mapWhealToResponse(saved, feature.getName(), item.getGhiChu()));
             }
         } else {
-            throw new AppException(ErrorCode.RECORD_EXAM_TYPE_MISMATCH, "Unsupported record type: " + loaiBenhAn);
+            throw new AppException(ErrorCode.RECORD_TYPE_MISMATCH, "Unsupported record type: " + loaiBenhAn);
         }
 
         return result;

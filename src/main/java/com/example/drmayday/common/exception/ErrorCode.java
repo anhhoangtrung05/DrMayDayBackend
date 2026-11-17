@@ -50,8 +50,6 @@ public enum ErrorCode {
     PATIENT_ALREADY_HAS_ACTIVE_RECORD("4006", "Bệnh nhân đã có hồ sơ bệnh án đang hoạt động", HttpStatus.CONFLICT),
     MEDICAL_RECORD_HAS_CHILD_DATA("4007", "Hồ sơ bệnh án vẫn còn dữ liệu con", HttpStatus.CONFLICT),
     RECORD_TYPE_MISMATCH("4008", "Loại bệnh án không khớp", HttpStatus.BAD_REQUEST),
-    // TODO: cùng mã 4008 với RECORD_TYPE_MISMATCH nhưng trả 409 — hai nhánh đặt song song, cần thống nhất
-    RECORD_EXAM_TYPE_MISMATCH("4008", "Loại bệnh án và phiên khám không khớp", HttpStatus.CONFLICT),
     TEMPLATE_NOT_FOUND("4101", "Không tìm thấy biểu mẫu", HttpStatus.NOT_FOUND),
 
     // 5xxx - UAS7 score errors
