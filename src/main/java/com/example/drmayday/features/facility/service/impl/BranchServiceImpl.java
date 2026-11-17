@@ -117,7 +117,7 @@ public class BranchServiceImpl implements BranchService {
             }
             throw ex;
         } catch (ObjectOptimisticLockingFailureException ex) {
-            // Admin khác đã xóa chi nhánh trước, câu DELETE không còn dòng nào để xóa
+            // Another admin already deleted the branch, so the DELETE statement found no row.
             throw new AppException(ErrorCode.BRANCH_NOT_FOUND);
         }
     }
@@ -135,7 +135,7 @@ public class BranchServiceImpl implements BranchService {
         }
     }
 
-    // Cột so_dien_thoai cấm chuỗi rỗng nên giá trị rỗng được lưu thành NULL
+    // The so_dien_thoai column disallows empty strings, so empty values are stored as null.
     private String normalizePhone(String phone) {
         if (phone == null) {
             return null;

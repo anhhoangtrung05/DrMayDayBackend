@@ -27,6 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.text.Normalizer;
 import java.util.Set;
 
 @Service
@@ -44,7 +45,11 @@ public class MedicalHistoryServiceImpl implements MedicalHistoryService {
             "Lien tuc, hau nhu khong co giai doan het trieu chung",
             "Tung dot, giua cac dot het hoan toan",
             "Khong ro");
-    private static final Set<String> MANIFESTATIONS = Set.of("San phu", "Phu mach", "San phu + phu mach", "Khac");
+    // Giá trị của ck_benh_su_da_tung_nhap_vien trong sql/init.sql, có dấu
+    private static final String HOSPITALIZED_YES = "Có";
+    private static final String HOSPITALIZED_NO = "Không";
+    private static final String HOSPITALIZED_UNKNOWN = "Không rõ";
+    private static final Set<String> HOSPITALIZED_VALUES = Set.of(HOSPITALIZED_YES, HOSPITALIZED_NO, HOSPITALIZED_UNKNOWN);
 
     private static final BigDecimal DECIMAL_LIMIT = new BigDecimal("1000000000");
     private static final int MAX_ONSET_AGE = 150;
@@ -125,11 +130,10 @@ public class MedicalHistoryServiceImpl implements MedicalHistoryService {
         if (!Boolean.TRUE.equals(req.getHadSimilarEpisodes()) && episodeCount != null && episodeCount > 0) {
             throw invalidValue();
         }
-        if (!Boolean.TRUE.equals(req.getWasHospitalized()) && hospitalizationCount != null && hospitalizationCount > 0) {
-            throw invalidValue();
-        }
+        String hospitalized = oneOf(normalize(req.getHospitalized()), HOSPITALIZED_VALUES);
+        hospitalizationCount = hospitalizationCount(hospitalized, hospitalizationCount);
         String coursePattern = oneOf(req.getCoursePattern(), COURSE_PATTERNS);
-        String manifestation = oneOf(req.getPreviousManifestation(), MANIFESTATIONS);
+        String otherManifestation = text(req.getOtherManifestation());
         BigDecimal months = decimal(req.getMonthsSinceLastEpisode());
         String course = text(req.getPreviousEpisodeCourse());
 
@@ -140,8 +144,10 @@ public class MedicalHistoryServiceImpl implements MedicalHistoryService {
         row.setOnsetAge(onsetAge);
         row.setPreviousEpisodeCount(episodeCount);
         row.setDiseaseCoursePattern(coursePattern);
-        row.setPreviousEpisodeManifestation(manifestation);
-        row.setPreviouslyHospitalized(req.getWasHospitalized());
+        row.setWhealManifestation(req.getWhealManifestation());
+        row.setAngioedemaManifestation(req.getAngioedemaManifestation());
+        row.setOtherManifestationDescription(otherManifestation);
+        row.setPreviouslyHospitalized(hospitalized);
         row.setHospitalizationCount(hospitalizationCount);
         row.setTimeSinceLastEpisode(months);
         row.setPreviousEpisodeCourse(course);
@@ -290,6 +296,34 @@ public class MedicalHistoryServiceImpl implements MedicalHistoryService {
             throw invalidValue();
         }
         return value;
+    }
+
+    /**
+     * Luật của ck_benh_su_nhap_vien_so_lan_nhat_quan: 'Có' thì số lần trống hoặc lớn hơn 0;
+     * 'Không' thì số lần là 0 (không gửi thì tự điền 0); 'Không rõ' hoặc không gửi cờ thì số lần phải trống.
+     */
+    private static Integer hospitalizationCount(String hospitalized, Integer count) {
+        if (HOSPITALIZED_YES.equals(hospitalized)) {
+            if (count != null && count == 0) {
+                throw invalidValue();
+            }
+            return count;
+        }
+        if (HOSPITALIZED_NO.equals(hospitalized)) {
+            if (count != null && count != 0) {
+                throw invalidValue();
+            }
+            return 0;
+        }
+        if (count != null) {
+            throw invalidValue();
+        }
+        return null;
+    }
+
+    // Chuẩn hóa Unicode về NFC để 'Không' gõ dạng tổ hợp vẫn khớp danh mục
+    private static String normalize(String value) {
+        return value == null ? null : Normalizer.normalize(value, Normalizer.Form.NFC);
     }
 
     private static Integer count(Integer value) {

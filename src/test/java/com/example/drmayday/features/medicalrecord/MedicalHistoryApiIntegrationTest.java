@@ -27,7 +27,6 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -43,20 +42,20 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ExtendWith(OutputCaptureExtension.class)
 class MedicalHistoryApiIntegrationTest {
 
-    private static final long DOCTOR_ACCOUNT = 6L;
-
     @Autowired private MockMvc mockMvc;
     @Autowired private JwtTokenProvider jwtTokenProvider;
     @Autowired private JdbcTemplate jdbcTemplate;
     @PersistenceContext private EntityManager entityManager;
 
+    private long doctorAccount;
     private String doctorToken;
     private long chronicRecord;
     private long acuteRecord;
 
     @BeforeEach
     void setUp() throws Exception {
-        doctorToken = jwtTokenProvider.generateToken(DOCTOR_ACCOUNT, "0900000006", "bac_si");
+        doctorAccount = TestDoctor.ensureAccount(jdbcTemplate);
+        doctorToken = jwtTokenProvider.generateToken(doctorAccount, TestDoctor.PHONE, "bac_si");
         String phone = "09" + String.format("%08d", ThreadLocalRandom.current().nextInt(100_000_000));
         Long patient = jdbcTemplate.queryForObject(
                 "INSERT INTO nguoi (ho_ten, so_dien_thoai) VALUES ('Bệnh nhân Bệnh Sử', ?) RETURNING ma_nguoi",
@@ -66,10 +65,14 @@ class MedicalHistoryApiIntegrationTest {
         acuteRecord = createRecord(patient, "CAP");
     }
 
-    private long createRecord(long patient, String type) throws Exception {
-        String json = body(send(post("/api/v1/patients/" + patient + "/medical-records"), doctorToken,
-                "{\"loai_benh_an\":\"" + type + "\"}").andExpect(status().isCreated()));
-        return Long.parseLong(JsonPath.read(json, "$.data.record_id"));
+    // Ghi thẳng bằng JDBC: API tạo hồ sơ của main chỉ cho một hồ sơ mở trên mỗi bệnh nhân, mà test cần cả MAN lẫn CAP
+    private long createRecord(long patient, String type) {
+        Long record = jdbcTemplate.queryForObject(
+                "INSERT INTO hosobenhan (ma_benh_nhan, loai_benh_an, trang_thai) VALUES (?, ?, 'draft') RETURNING ma_ho_so",
+                Long.class, patient, type);
+        jdbcTemplate.update("INSERT INTO " + ("CAP".equals(type) ? "benhanmaydaycap" : "benhanmaydayman")
+                + " (ma_ho_so) VALUES (?)", record);
+        return record;
     }
 
     private ResultActions send(MockHttpServletRequestBuilder builder, String token, String json) throws Exception {
@@ -188,19 +191,23 @@ class MedicalHistoryApiIntegrationTest {
     void previousEpisodesOnChronicRecord() throws Exception {
         upsert("previous-episodes", chronicRecord, """
                 "tung_co_dot_tuong_tu":true,"tuoi_khoi_phat":25,"so_dot_truoc":3,
-                "kieu_dien_bien":"Tung dot, giua cac dot het hoan toan","bieu_hien_dot_truoc":"San phu + phu mach",
-                "da_tung_nhap_vien":true,"so_lan_nhap_vien":1,"thoi_gian_tu_dot_gan_nhat":6
+                "kieu_dien_bien":"Tung dot, giua cac dot het hoan toan","bieu_hien_san_phu":true,
+                "bieu_hien_phu_mach":true,"bieu_hien_khac_ghi_ro":"Ngứa da đầu",
+                "da_tung_nhap_vien":"Có","so_lan_nhap_vien":1,"thoi_gian_tu_dot_gan_nhat":6
                 """)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.ma_tien_su").isString())
                 .andExpect(jsonPath("$.data.so_dot_truoc").value(3))
                 .andExpect(jsonPath("$.data.kieu_dien_bien").value("Tung dot, giua cac dot het hoan toan"))
+                .andExpect(jsonPath("$.data.bieu_hien_san_phu").value(true))
+                .andExpect(jsonPath("$.data.bieu_hien_khac_ghi_ro").value("Ngứa da đầu"))
+                .andExpect(jsonPath("$.data.da_tung_nhap_vien").value("Có"))
                 .andExpect(jsonPath("$.data.thoi_gian_tu_dot_gan_nhat").value(6.0));
     }
 
     @ParameterizedTest(name = "AC-4: {0} trả 2003")
     @ValueSource(strings = {"\"tuoi_khoi_phat\":151", "\"so_dot_truoc\":2", "\"so_lan_nhap_vien\":1",
-            "\"kieu_dien_bien\":\"Tung dot\"", "\"bieu_hien_dot_truoc\":\"san phu\"", "\"tuoi_khoi_phat\":40000"})
+            "\"kieu_dien_bien\":\"Tung dot\"", "\"da_tung_nhap_vien\":\"Co\"", "\"tuoi_khoi_phat\":40000"})
     void episodeRuleViolationsReturn2003(String fields) throws Exception {
         upsert("previous-episodes", chronicRecord, fields).andExpect(jsonPath("$.code").value("2003"));
     }
@@ -209,7 +216,7 @@ class MedicalHistoryApiIntegrationTest {
     @DisplayName("AC-7: API 44 trên hồ sơ CAP trả 4008 và không ghi gì")
     void previousEpisodesOnAcuteRecordReturns4008() throws Exception {
         upsert("previous-episodes", acuteRecord, "\"tung_co_dot_tuong_tu\":true")
-                .andExpect(status().isConflict())
+                .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("4008"));
         assertThat(rows("benhsucacdotbenhtruoc", acuteRecord)).isZero();
     }
@@ -272,8 +279,7 @@ class MedicalHistoryApiIntegrationTest {
     @DisplayName("AC-9: hồ sơ completed trả 4003 với mọi body, dữ liệu cũ giữ nguyên")
     void completedRecordIsFrozen() throws Exception {
         upsert("infection-status", acuteRecord, "\"da_nhot\":true").andExpect(status().isOk());
-        send(put("/api/v1/medical-records/" + acuteRecord), doctorToken, "{\"trang_thai\":\"completed\"}")
-                .andExpect(status().isOk());
+        jdbcTemplate.update("UPDATE hosobenhan SET trang_thai = 'completed' WHERE ma_ho_so = ?", acuteRecord);
 
         upsert("infection-status", acuteRecord, "\"ho_hap_thoi_gian\":3")
                 .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("4003"));
@@ -346,8 +352,8 @@ class MedicalHistoryApiIntegrationTest {
         upsert("infection-status", acuteRecord, "").andExpect(status().isOk());
 
         assertThat(output.getOut())
-                .contains("Ghi hoàn cảnh khởi phát dị ứng: recordId=" + chronicRecord + ", taoMoi=true, taiKhoan=" + DOCTOR_ACCOUNT)
-                .contains("Ghi hoàn cảnh khởi phát dị ứng: recordId=" + chronicRecord + ", taoMoi=false, taiKhoan=" + DOCTOR_ACCOUNT)
+                .contains("Ghi hoàn cảnh khởi phát dị ứng: recordId=" + chronicRecord + ", taoMoi=true, taiKhoan=" + doctorAccount)
+                .contains("Ghi hoàn cảnh khởi phát dị ứng: recordId=" + chronicRecord + ", taoMoi=false, taiKhoan=" + doctorAccount)
                 .contains("Ghi bệnh sử các đợt trước: recordId=" + chronicRecord + ", taoMoi=true")
                 .contains("Ghi tình trạng nhiễm trùng: recordId=" + acuteRecord + ", taoMoi=true");
     }

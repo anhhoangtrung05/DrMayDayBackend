@@ -57,7 +57,6 @@ class ExamApiIntegrationTest {
 
     private static final String EXAMS = "/api/v1/exams";
     private static final String TODAY = "2026-11-16";
-    private static final long DOCTOR_ACCOUNT = 6L;
     private static final long ADMIN_ACCOUNT = 1L;
 
     @TestConfiguration
@@ -82,6 +81,7 @@ class ExamApiIntegrationTest {
     private EntityManager entityManager;
 
     private String adminToken;
+    private long doctorAccount;
     private String doctorToken;
     private long patient;
     private String patientToken;
@@ -90,7 +90,8 @@ class ExamApiIntegrationTest {
     @BeforeEach
     void setUp() {
         adminToken = jwtTokenProvider.generateToken(ADMIN_ACCOUNT, "0900000001", "admin");
-        doctorToken = jwtTokenProvider.generateToken(DOCTOR_ACCOUNT, "0900000006", "bac_si");
+        doctorAccount = TestDoctor.ensureAccount(jdbcTemplate);
+        doctorToken = jwtTokenProvider.generateToken(doctorAccount, TestDoctor.PHONE, "bac_si");
         patient = givenPatient("Nguyễn Văn Chủ Hồ Sơ");
         patientToken = tokenForPatientAccountOf(patient);
         otherPatient = givenPatient("Trần Thị Người Khác");
@@ -198,7 +199,7 @@ class ExamApiIntegrationTest {
                 .andExpect(jsonPath("$.code").value("1001"))
                 .andExpect(jsonPath("$.message").value("Khởi tạo phiên khám thành công"))
                 .andExpect(jsonPath("$.data.record_id").value(String.valueOf(record)))
-                .andExpect(jsonPath("$.data.ma_bac_si").value(String.valueOf(personOf(DOCTOR_ACCOUNT))))
+                .andExpect(jsonPath("$.data.ma_bac_si").value(String.valueOf(personOf(doctorAccount))))
                 .andExpect(jsonPath("$.data.ma_phong_kham").value(nullValue()))
                 .andExpect(jsonPath("$.data.loai_benh_an").value("CAP"))
                 .andExpect(jsonPath("$.data.ngay_kham").value(TODAY))
@@ -387,7 +388,7 @@ class ExamApiIntegrationTest {
         createdExam(record, "\"lan_kham_thu\":3,\"ma_phong_kham\":\"" + room + "\",\"sot\":true,\"sot_nhiet_do_c\":38.5");
         createdExam(record, "\"lan_kham_thu\":1,\"tom_tat_buoi_kham\":\"Lần đầu\"");
         String doctorName = jdbcTemplate.queryForObject("SELECT ho_ten FROM nguoi WHERE ma_nguoi = ?",
-                String.class, personOf(DOCTOR_ACCOUNT));
+                String.class, personOf(doctorAccount));
 
         String body = body(send(get(EXAMS).param("record_id", String.valueOf(record)), doctorToken, null)
                 .andExpect(status().isOk())
@@ -396,7 +397,7 @@ class ExamApiIntegrationTest {
                 .andExpect(jsonPath("$.data[0].lan_kham_thu").value(1))
                 .andExpect(jsonPath("$.data[0].phong_kham").value(nullValue()))
                 .andExpect(jsonPath("$.data[0].tom_tat_buoi_kham").value("Lần đầu"))
-                .andExpect(jsonPath("$.data[0].bac_si.ma_bac_si").value(String.valueOf(personOf(DOCTOR_ACCOUNT))))
+                .andExpect(jsonPath("$.data[0].bac_si.ma_bac_si").value(String.valueOf(personOf(doctorAccount))))
                 .andExpect(jsonPath("$.data[0].bac_si.ho_ten_bac_si").value(doctorName))
                 .andExpect(jsonPath("$.data[1].lan_kham_thu").value(3))
                 .andExpect(jsonPath("$.data[1].phong_kham.ma_phong_kham").value(String.valueOf(room)))
@@ -459,8 +460,8 @@ class ExamApiIntegrationTest {
         jdbcTemplate.update("UPDATE phienkhamcap SET trieu_chung_da = 'Mẩn đỏ', so_lan_non = 3, co_san_phu = true "
                 + "WHERE ma_phien_kham = ?", acute);
         jdbcTemplate.update("""
-                UPDATE phienkhamman SET thoi_gian_ton_tai_phu_mach_co_dung_thuoc = '2 ngày',
-                    thoi_gian_ton_tai_phu_mach_khong_dung_thuoc = '5 ngày', diem_aas7 = 42,
+                UPDATE phienkhamman SET thoi_gian_ton_tai_phu_mach_co_dung_thuoc = '24-48',
+                    thoi_gian_ton_tai_phu_mach_khong_dung_thuoc = 'khong ro', diem_aas7 = 42,
                     thoi_gian_ngau_nhien_tuan = 12.5, phu_vi_tri_khac = true, phu_vi_tri_khac_ghi_ro = 'Lưng'
                 WHERE ma_phien_kham = ?""", chronic);
 
@@ -471,8 +472,8 @@ class ExamApiIntegrationTest {
                 .andExpect(jsonPath("$.data.chi_tiet_lam_sang.co_san_phu").value(true));
         String body = body(send(get(EXAMS + "/" + chronic), doctorToken, null)
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.chi_tiet_lam_sang.thoi_gian_ton_tai_phu_mach_co_dung_thuoc").value("2 ngày"))
-                .andExpect(jsonPath("$.data.chi_tiet_lam_sang.thoi_gian_ton_tai_phu_mach_khong_dung_thuoc").value("5 ngày"))
+                .andExpect(jsonPath("$.data.chi_tiet_lam_sang.thoi_gian_ton_tai_phu_mach_co_dung_thuoc").value("24-48"))
+                .andExpect(jsonPath("$.data.chi_tiet_lam_sang.thoi_gian_ton_tai_phu_mach_khong_dung_thuoc").value("khong ro"))
                 .andExpect(jsonPath("$.data.chi_tiet_lam_sang.diem_aas7").value(42))
                 .andExpect(jsonPath("$.data.chi_tiet_lam_sang.phu_vi_tri_khac_ghi_ro").value("Lưng")));
         assertThat(body).contains("\"thoi_gian_ngau_nhien_tuan\":12.50");
@@ -550,7 +551,7 @@ class ExamApiIntegrationTest {
                 .andExpect(jsonPath("$.data.lan_kham_thu").value(1))
                 .andExpect(jsonPath("$.data.record_id").value(String.valueOf(record)))
                 .andExpect(jsonPath("$.data.loai_benh_an").value("CAP"))
-                .andExpect(jsonPath("$.data.ma_bac_si").value(String.valueOf(personOf(DOCTOR_ACCOUNT))));
+                .andExpect(jsonPath("$.data.ma_bac_si").value(String.valueOf(personOf(doctorAccount))));
 
         update(exam, "{\"tom_tat_buoi_kham\":\"  \"}").andExpect(jsonPath("$.data.tom_tat_buoi_kham").value(nullValue()));
 
@@ -582,7 +583,7 @@ class ExamApiIntegrationTest {
         jdbcTemplate.update("""
                 INSERT INTO phienkham (ma_ho_so, ma_bac_si, loai_benh_an, ngay_kham, lan_kham_thu, loai_phien_kham, sot)
                 VALUES (?, ?, 'CAP', '2026-12-31', 1, 'Cu', true)
-                """, record, personOf(DOCTOR_ACCOUNT));
+                """, record, personOf(doctorAccount));
         Long legacy = jdbcTemplate.queryForObject("SELECT ma_phien_kham FROM phienkham WHERE ma_ho_so = ?", Long.class, record);
         jdbcTemplate.update("INSERT INTO phienkhamcap (ma_phien_kham) VALUES (?)", legacy);
 
@@ -670,7 +671,7 @@ class ExamApiIntegrationTest {
 
         assertThat(output.getOut())
                 .contains("Tạo phiên khám: examId=" + exam + ", recordId=" + record)
-                .contains("Sửa phiên khám: examId=" + exam + ", recordId=" + record + ", taiKhoan=" + DOCTOR_ACCOUNT)
+                .contains("Sửa phiên khám: examId=" + exam + ", recordId=" + record + ", taiKhoan=" + doctorAccount)
                 .doesNotContain("Bí mật y tế")
                 .doesNotContain("Nội dung riêng");
     }

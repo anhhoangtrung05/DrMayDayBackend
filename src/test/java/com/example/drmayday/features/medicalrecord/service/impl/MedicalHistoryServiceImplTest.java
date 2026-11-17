@@ -69,7 +69,7 @@ class MedicalHistoryServiceImplTest {
     void setUp() {
         service = new MedicalHistoryServiceImpl(medicalRecordRepository, allergyContextRepository,
                 previousEpisodeRepository, infectionStatusRepository);
-        UserPrincipal principal = UserPrincipal.create(6L, "0900000006", "Bác sĩ", "bac_si");
+        UserPrincipal principal = UserPrincipal.create(6L, "0900000006", "bac_si");
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities()));
 
@@ -352,13 +352,16 @@ class MedicalHistoryServiceImplTest {
                 "\"so_dot_truoc\":2",
                 "\"tung_co_dot_tuong_tu\":false,\"so_dot_truoc\":1",
                 "\"so_lan_nhap_vien\":1",
-                "\"da_tung_nhap_vien\":false,\"so_lan_nhap_vien\":3",
+                "\"da_tung_nhap_vien\":\"Không\",\"so_lan_nhap_vien\":3",
+                "\"da_tung_nhap_vien\":\"Có\",\"so_lan_nhap_vien\":0",
+                "\"da_tung_nhap_vien\":\"Không rõ\",\"so_lan_nhap_vien\":0",
+                "\"da_tung_nhap_vien\":\"Khong\"",
+                "\"da_tung_nhap_vien\":true",
                 "\"tung_co_dot_tuong_tu\":true,\"so_dot_truoc\":10001",
                 "\"tung_co_dot_tuong_tu\":true,\"so_dot_truoc\":-1",
                 "\"kieu_dien_bien\":\"Tung dot\"",
                 "\"kieu_dien_bien\":\"khong ro\"",
-                "\"bieu_hien_dot_truoc\":\"san phu\"",
-                "\"bieu_hien_dot_truoc\":\"\"",
+                "\"bieu_hien_khac_ghi_ro\":\"  \"",
                 "\"thoi_gian_tu_dot_gan_nhat\":-0.5",
                 "\"thoi_gian_tu_dot_gan_nhat\":0.125",
                 "\"dien_bien_cac_dot_truoc\":\"  \""
@@ -371,10 +374,12 @@ class MedicalHistoryServiceImplTest {
         @ValueSource(strings = {
                 "\"tung_co_dot_tuong_tu\":true,\"so_dot_truoc\":3,\"tuoi_khoi_phat\":150",
                 "\"tung_co_dot_tuong_tu\":false,\"so_dot_truoc\":0",
-                "\"da_tung_nhap_vien\":true,\"so_lan_nhap_vien\":10000",
+                "\"da_tung_nhap_vien\":\"Có\",\"so_lan_nhap_vien\":10000",
+                "\"da_tung_nhap_vien\":\"Có\"",
+                "\"da_tung_nhap_vien\":\" Không rõ \"",
                 "\"kieu_dien_bien\":\"Lien tuc, hau nhu khong co giai doan het trieu chung\"",
                 "\"kieu_dien_bien\":\"  Khong ro \"",
-                "\"bieu_hien_dot_truoc\":\"San phu + phu mach\"",
+                "\"bieu_hien_san_phu\":true,\"bieu_hien_phu_mach\":false,\"bieu_hien_khac_ghi_ro\":\"Khác\"",
                 "\"thoi_gian_tu_dot_gan_nhat\":6"
         })
         void acceptsValidValues(String fields) {
@@ -389,6 +394,18 @@ class MedicalHistoryServiceImplTest {
             ArgumentCaptor<PreviousDiseaseEpisode> saved = ArgumentCaptor.forClass(PreviousDiseaseEpisode.class);
             verify(previousEpisodeRepository).saveAndFlush(saved.capture());
             assertThat(saved.getValue().getDiseaseCoursePattern()).isEqualTo("Khong ro");
+        }
+
+        @Test
+        @DisplayName("AC-4: 'Không' mà không gửi số lần thì lưu số lần 0, đúng ck_benh_su_nhap_vien_so_lan_nhat_quan")
+        void notHospitalizedStoresZeroCount() {
+            // 'Không' viết dạng tổ hợp (NFD) vẫn phải khớp danh mục
+            service.upsertPreviousEpisodes(episodes("\"da_tung_nhap_vien\":\"Không\""));
+
+            ArgumentCaptor<PreviousDiseaseEpisode> saved = ArgumentCaptor.forClass(PreviousDiseaseEpisode.class);
+            verify(previousEpisodeRepository).saveAndFlush(saved.capture());
+            assertThat(saved.getValue().getPreviouslyHospitalized()).isEqualTo("Không");
+            assertThat(saved.getValue().getHospitalizationCount()).isZero();
         }
     }
 

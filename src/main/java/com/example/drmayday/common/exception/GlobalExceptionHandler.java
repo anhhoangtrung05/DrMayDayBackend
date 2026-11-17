@@ -1,6 +1,6 @@
 package com.example.drmayday.common.exception;
-
 import com.example.drmayday.common.dto.BaseResponse;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -18,7 +18,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
- * Bộ xử lý ngoại lệ tập trung (Global Exception Handler) chuẩn hóa format lỗi toàn hệ thống.
+ * Centralized exception handler that standardizes error responses across the system.
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -28,7 +28,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AppException.class)
     public ResponseEntity<BaseResponse<Void>> handleAppException(AppException ex) {
         ErrorCode errorCode = ex.getErrorCode();
-        log.warn("Ngoại lệ nghiệp vụ AppException [code={}, message={}]", errorCode.getCode(), ex.getMessage());
+        log.warn("AppException [code={}, message={}]", errorCode.getCode(), ex.getMessage());
         return ResponseEntity
                 .status(errorCode.getHttpStatus())
                 .body(BaseResponse.error(errorCode.getCode(), ex.getMessage()));
@@ -36,7 +36,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<BaseResponse<Void>> handleValidationException(MethodArgumentNotValidException ex) {
-        log.warn("Lỗi kiểm tra tính hợp lệ tham số đầu vào: {}", ex.getMessage());
+        log.warn("Input validation failed: {}", ex.getMessage());
         FieldError fieldError = ex.getBindingResult().getFieldError();
 
         if (fieldError != null) {
@@ -60,7 +60,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<BaseResponse<Void>> handleTypeMismatchException(MethodArgumentTypeMismatchException ex) {
-        log.warn("Lỗi sai kiểu tham số đầu vào: {}", ex.getMessage());
+        log.warn("Input parameter type mismatch: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(BaseResponse.error(ErrorCode.INVALID_PARAMETER_TYPE.getCode(),
                         ErrorCode.INVALID_PARAMETER_TYPE.getMessage()));
@@ -98,7 +98,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<BaseResponse<Void>> handleAccessDeniedException(AccessDeniedException ex) {
-        log.warn("Từ chối truy cập do thiếu quyền hạn (AccessDenied): {}", ex.getMessage());
+        log.warn("Access denied due to insufficient permissions: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(BaseResponse.error(ErrorCode.ADMIN_ROLE_REQUIRED.getCode(),
                         ErrorCode.ADMIN_ROLE_REQUIRED.getMessage()));
@@ -106,7 +106,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<BaseResponse<Void>> handleAuthenticationException(AuthenticationException ex) {
-        log.warn("Lỗi xác thực AuthenticationException: {}", ex.getMessage());
+        log.warn("Authentication failed: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(BaseResponse.error(ErrorCode.TOKEN_INVALID.getCode(),
                         ErrorCode.TOKEN_INVALID.getMessage()));
@@ -114,7 +114,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
     public ResponseEntity<BaseResponse<Void>> handleHttpMessageNotReadableException(org.springframework.http.converter.HttpMessageNotReadableException ex) {
-        log.warn("Lỗi đọc định dạng request body: {}", ex.getMessage());
+        log.warn("Failed to read request body: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(BaseResponse.error(ErrorCode.INVALID_PARAMETER_VALUE.getCode(),
                         ErrorCode.INVALID_PARAMETER_VALUE.getMessage()));
@@ -122,7 +122,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
     public ResponseEntity<BaseResponse<Void>> handleDataIntegrityViolationException(org.springframework.dao.DataIntegrityViolationException ex) {
-        log.warn("Lỗi vi phạm toàn vẹn dữ liệu CSDL: {}", ex.getMessage(), ex);
+        log.warn("Database integrity constraint violation: {}", ex.getMessage(), ex);
         String msg = ex.getMessage() != null ? ex.getMessage().toLowerCase() : "";
         if (msg.contains("duplicate key") || msg.contains("unique constraint") || msg.contains("violates unique") || msg.contains("uq_") || (msg.contains("unique") && msg.contains("constraint"))) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
@@ -136,7 +136,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<BaseResponse<Void>> handleGeneralException(Exception ex) {
-        log.error("Lỗi hệ thống chưa được kiểm soát: ", ex);
+        log.error("Unhandled system exception: ", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(BaseResponse.error(ErrorCode.INTERNAL_SERVER_ERROR.getCode(),
                         ErrorCode.INTERNAL_SERVER_ERROR.getMessage()));

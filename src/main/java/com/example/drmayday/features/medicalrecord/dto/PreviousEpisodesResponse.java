@@ -6,7 +6,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.math.BigDecimal;
 
 /**
- * Phản hồi API 44: record_id, khóa chính của dòng, rồi mọi cột theo cùng thứ tự với previous_episodes của API 36.
+ * Phản hồi API 44: record_id, khóa chính của dòng, rồi mọi cột của benhsucacdotbenhtruoc theo thứ tự trong sql/init.sql.
  */
 public record PreviousEpisodesResponse(
         @JsonProperty("record_id") String recordId,
@@ -15,8 +15,10 @@ public record PreviousEpisodesResponse(
         @JsonProperty("tuoi_khoi_phat") Short onsetAge,
         @JsonProperty("so_dot_truoc") Integer previousEpisodeCount,
         @JsonProperty("kieu_dien_bien") String coursePattern,
-        @JsonProperty("bieu_hien_dot_truoc") String previousManifestation,
-        @JsonProperty("da_tung_nhap_vien") Boolean wasHospitalized,
+        @JsonProperty("bieu_hien_san_phu") Boolean whealManifestation,
+        @JsonProperty("bieu_hien_phu_mach") Boolean angioedemaManifestation,
+        @JsonProperty("bieu_hien_khac_ghi_ro") String otherManifestation,
+        @JsonProperty("da_tung_nhap_vien") String hospitalized,
         @JsonProperty("so_lan_nhap_vien") Integer hospitalizationCount,
         @JsonProperty("thoi_gian_tu_dot_gan_nhat") BigDecimal monthsSinceLastEpisode,
         @JsonProperty("dien_bien_cac_dot_truoc") String previousEpisodeCourse) {
@@ -29,7 +31,9 @@ public record PreviousEpisodesResponse(
                 e.getOnsetAge(),
                 e.getPreviousEpisodeCount(),
                 e.getDiseaseCoursePattern(),
-                e.getPreviousEpisodeManifestation(),
+                e.getWhealManifestation(),
+                e.getAngioedemaManifestation(),
+                e.getOtherManifestationDescription(),
                 e.getPreviouslyHospitalized(),
                 e.getHospitalizationCount(),
                 JsonValues.twoDecimals(e.getTimeSinceLastEpisode()),

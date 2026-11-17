@@ -20,9 +20,10 @@ public class PreviousDiseaseEpisode {
     @Column(name = "tuoi_khoi_phat") private Short onsetAge;
     @Column(name = "so_dot_truoc") private Integer previousEpisodeCount;
     @Column(name = "kieu_dien_bien") private String diseaseCoursePattern;
-    // Khớp đúng bảng benhsucacdotbenhtruoc trong sql/final_restructured.sql
-    @Column(name = "bieu_hien_dot_truoc") private String previousEpisodeManifestation;
-    @Column(name = "da_tung_nhap_vien") private Boolean previouslyHospitalized;
+    @Column(name = "bieu_hien_san_phu") private Boolean whealManifestation;
+    @Column(name = "bieu_hien_phu_mach") private Boolean angioedemaManifestation;
+    @Column(name = "bieu_hien_khac_ghi_ro") private String otherManifestationDescription;
+    @Column(name = "da_tung_nhap_vien", length = 10) private String previouslyHospitalized;
     @Column(name = "so_lan_nhap_vien") private Integer hospitalizationCount;
     @Column(name = "thoi_gian_tu_dot_gan_nhat") private BigDecimal timeSinceLastEpisode;
     @Column(name = "dien_bien_cac_dot_truoc") private String previousEpisodeCourse;

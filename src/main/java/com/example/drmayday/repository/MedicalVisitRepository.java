@@ -10,9 +10,11 @@ import java.util.Optional;
 
 public interface MedicalVisitRepository extends JpaRepository<MedicalVisit, Long> {
 
-    @Query("select v from MedicalVisit v join MedicalRecord r on r.medicalRecordId = v.medicalRecordId "
-            + "where r.patientId = :patientId order by v.visitDate desc, v.medicalVisitId desc")
-    List<MedicalVisit> findHistoryByPatientId(@Param("patientId") Long patientId);
+    boolean existsByMedicalRecordId(Long medicalRecordId);
+
+    @Query("SELECT v FROM MedicalVisit v JOIN v.medicalRecord r " +
+           "WHERE r.patientId = :patientId ORDER BY v.visitDate DESC")
+    List<MedicalVisit> findByPatientIdOrderByVisitDateDesc(@Param("patientId") Long patientId);
 
     // Gọi sau khi đã khóa dòng hồ sơ, để hai request tạo cùng lúc không tính ra cùng một số
     @Query("select coalesce(max(v.visitNumber), 0) from MedicalVisit v where v.medicalRecordId = :recordId")

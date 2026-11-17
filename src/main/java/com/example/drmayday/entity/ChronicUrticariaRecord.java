@@ -2,7 +2,6 @@ package com.example.drmayday.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.data.domain.Persistable;
 
 @Entity
 @Table(name = "benhanmaydayman")
@@ -11,7 +10,7 @@ import org.springframework.data.domain.Persistable;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ChronicUrticariaRecord implements Persistable<Long> {
+public class ChronicUrticariaRecord {
     @Id
     @Column(name = "ma_ho_so", nullable = false) private Long medicalRecordId;
     @Column(name = "loai_benh_an", insertable = false, updatable = false) private String medicalRecordType;
@@ -33,25 +32,4 @@ public class ChronicUrticariaRecord implements Persistable<Long> {
         @JoinColumn(name = "loai_benh_an", referencedColumnName = "loai_benh_an", insertable = false, updatable = false)
     })
     private MedicalRecord medicalRecord;
-
-    // Id gán tay theo ma_ho_so, nên cần cờ này để save() chèn mới thay vì merge
-    @Transient
-    @Builder.Default
-    private boolean newEntity = true;
-
-    @Override
-    public Long getId() {
-        return medicalRecordId;
-    }
-
-    @Override
-    public boolean isNew() {
-        return newEntity;
-    }
-
-    @PostLoad
-    @PostPersist
-    void markExisting() {
-        newEntity = false;
-    }
 }

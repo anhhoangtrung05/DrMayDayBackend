@@ -78,7 +78,7 @@ class ExamTransactionIntegrationTest {
         assumeTrue(url.contains("localhost") || url.contains("127.0.0.1"),
                 "Lớp test này commit dữ liệu thật nên chỉ chạy trên Postgres local");
 
-        doctorToken = jwtTokenProvider.generateToken(6L, "0900000006", "bac_si");
+        doctorToken = jwtTokenProvider.generateToken(TestDoctor.ensureAccount(jdbcTemplate), TestDoctor.PHONE, "bac_si");
         otherDoctor = dataSource.getConnection();
         otherDoctor.setAutoCommit(false);
     }

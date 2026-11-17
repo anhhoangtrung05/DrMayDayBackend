@@ -4,7 +4,8 @@ import com.example.drmayday.entity.Branch;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * DTO phản hồi chi nhánh (API 24 đến 27). branch_id luôn là chuỗi trong JSON.
+ * Branch response DTO for TOPOLOGY_SET_BRANCH, TOPOLOGY_GET_LIST_BRANCHES,
+ * TOPOLOGY_GET_BRANCH_DETAIL, and TOPOLOGY_EDIT_BRANCH. branch_id is always serialized as a JSON string.
  */
 public class BranchResponse {
 

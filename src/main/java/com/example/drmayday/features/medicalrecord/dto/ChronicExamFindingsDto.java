@@ -41,7 +41,9 @@ public record ChronicExamFindingsDto(
         @JsonProperty("phu_sinh_duc") Boolean genitalEdema,
         @JsonProperty("phu_vi_tri_khac") Boolean edemaAtOtherLocation,
         @JsonProperty("phu_vi_tri_khac_ghi_ro") String otherEdemaLocationDescription,
-        @JsonProperty("phu_ban_tay") Boolean handEdema) {
+        @JsonProperty("phu_ban_tay") Boolean handEdema,
+        @JsonProperty("bat_thuong_co_quan_khac") Boolean otherOrganAbnormality,
+        @JsonProperty("bat_thuong_co_quan_khac_ghi_ro") String otherOrganAbnormalityDescription) {
 
     public static ChronicExamFindingsDto from(ChronicVisit e) {
         if (e == null) {
@@ -80,6 +82,8 @@ public record ChronicExamFindingsDto(
                 e.getGenitalEdema(),
                 e.getEdemaAtOtherLocation(),
                 e.getOtherEdemaLocationDescription(),
-                e.getHandEdema());
+                e.getHandEdema(),
+                e.getOtherOrganAbnormality(),
+                e.getOtherOrganAbnormalityDescription());
     }
 }

@@ -2,6 +2,7 @@ package com.example.drmayday.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.ColumnTransformer;
 import java.math.BigDecimal;
 
 @Entity
@@ -25,7 +26,10 @@ public class ChronicVisit {
     @Column(name = "so_lan_phu_mach_dot_nay") private Integer angioedemaEpisodesInCurrentPeriod;
     @Column(name = "hoan_canh_xuat_hien_phu_mach") private String angioedemaOnsetContext;
     @Column(name = "so_lan_phu_mach_nang_phai_nhap_vien") private Integer angioedemaHospitalizations;
+    // Hai cột này là kiểu ENUM của Postgres: ép kiểu khi ghi, kể cả NULL, nếu không Postgres báo lệch kiểu varchar
+    @ColumnTransformer(write = "cast(? as public.thoi_gian_ton_tai_phu_mach_co_dung_thuoc_enum)")
     @Column(name = "thoi_gian_ton_tai_phu_mach_co_dung_thuoc") private String angioedemaDurationWithMedication;
+    @ColumnTransformer(write = "cast(? as public.thoi_gian_ton_tai_phu_mach_khong_dung_thuoc_enum)")
     @Column(name = "thoi_gian_ton_tai_phu_mach_khong_dung_thuoc") private String angioedemaDurationWithoutMedication;
     @Column(name = "diem_aas7") private Short aas7Score;
     @Column(name = "ben_phu_mach") private String angioedemaSide;
@@ -48,6 +52,8 @@ public class ChronicVisit {
     @Column(name = "phu_vi_tri_khac") private Boolean edemaAtOtherLocation;
     @Column(name = "phu_vi_tri_khac_ghi_ro") private String otherEdemaLocationDescription;
     @Column(name = "phu_ban_tay") private Boolean handEdema;
+    @Column(name = "bat_thuong_co_quan_khac") private Boolean otherOrganAbnormality;
+    @Column(name = "bat_thuong_co_quan_khac_ghi_ro") private String otherOrganAbnormalityDescription;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumns({

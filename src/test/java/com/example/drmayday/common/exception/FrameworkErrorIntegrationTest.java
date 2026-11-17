@@ -72,7 +72,7 @@ class FrameworkErrorIntegrationTest {
         ResultActions result = send(patch("/api/v1/branches/1"), adminToken)
                 .andExpect(status().isMethodNotAllowed())
                 .andExpect(jsonPath("$.code").value("2007"))
-                .andExpect(jsonPath("$.message").value("Method not allowed"));
+                .andExpect(jsonPath("$.message").value(ErrorCode.METHOD_NOT_ALLOWED.getMessage()));
         assertThat(allowOf(result)).contains("GET", "PUT", "DELETE").doesNotContain("PATCH");
         assertThat(result.andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8)).doesNotContain("PATCH");
     }
@@ -83,7 +83,7 @@ class FrameworkErrorIntegrationTest {
         ResultActions result = send(get("/api/v1/khong-ton-tai"), adminToken)
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("2006"))
-                .andExpect(jsonPath("$.message").value("Resource not found"));
+                .andExpect(jsonPath("$.message").value(ErrorCode.RESOURCE_NOT_FOUND.getMessage()));
         assertThat(result.andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8)).doesNotContain("khong-ton-tai");
     }
 
@@ -101,7 +101,7 @@ class FrameworkErrorIntegrationTest {
         send(post("/api/v1/exams").contentType(MediaType.TEXT_PLAIN).content("x"), adminToken)
                 .andExpect(status().isUnsupportedMediaType())
                 .andExpect(jsonPath("$.code").value("2008"))
-                .andExpect(jsonPath("$.message").value("Unsupported media type"));
+                .andExpect(jsonPath("$.message").value(ErrorCode.UNSUPPORTED_MEDIA_TYPE.getMessage()));
         send(post("/api/v1/exams").content("{\"record_id\":\"1\"}"), adminToken)
                 .andExpect(status().isUnsupportedMediaType())
                 .andExpect(jsonPath("$.code").value("2008"));
@@ -125,7 +125,8 @@ class FrameworkErrorIntegrationTest {
     @Test
     @DisplayName("Bảo mật trước: vai trò bị luật đường dẫn chặn nhận 403, không khớp luật nào thì nhận 405")
     void pathRulesDecideBeforeRouteErrors() throws Exception {
-        send(patch("/api/v1/medical-records/1"), patientToken)
+        // POST /exams/1 không có route, nhưng khớp luật POST /api/v1/exams/** chỉ cho ADMIN, BAC_SI
+        send(post("/api/v1/exams/1"), patientToken)
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("3102"));
         send(get("/api/v1/admin/khong-co"), patientToken)

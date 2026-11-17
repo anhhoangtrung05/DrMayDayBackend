@@ -51,11 +51,6 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/branches/**", "/api/v1/rooms/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/branches/**", "/api/v1/rooms/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/branches/**", "/api/v1/rooms/**").hasRole("ADMIN")
-                        // Hồ sơ bệnh án: phải chặn vai trò ở đây, vì @PreAuthorize chạy sau @Valid và sẽ lộ mã 2001, 2002
-                        .requestMatchers(HttpMethod.GET, "/api/v1/medical-records/*",
-                                "/api/v1/patients/*/medical-records/history").hasAnyRole("ADMIN", "BAC_SI", "BENH_NHAN")
-                        .requestMatchers("/api/v1/medical-records/**", "/api/v1/patients/*/medical-records/**")
-                        .hasAnyRole("ADMIN", "BAC_SI")
                         // Bệnh sử theo hồ sơ (API 43 đến 45): chỉ bác sĩ và admin ghi
                         .requestMatchers(HttpMethod.PUT, "/api/v1/allergy-context", "/api/v1/previous-episodes",
                                 "/api/v1/infection-status").hasAnyRole("ADMIN", "BAC_SI")

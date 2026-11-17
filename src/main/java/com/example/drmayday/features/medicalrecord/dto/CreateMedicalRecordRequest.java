@@ -2,24 +2,51 @@ package com.example.drmayday.features.medicalrecord.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import lombok.Data;
 
-/**
- * DTO tạo hồ sơ bệnh án (API 34). Giống DTO sửa, thêm loai_benh_an bắt buộc.
- */
-public class CreateMedicalRecordRequest extends UpdateMedicalRecordRequest {
+import java.math.BigDecimal;
+
+@Data
+public class CreateMedicalRecordRequest {
+    @NotNull(message = "2001")
+    @JsonProperty("patient_id")
+    private Long patientId;
 
     @NotBlank(message = "2001")
     @JsonProperty("loai_benh_an")
-    private String medicalRecordType;
+    private String loaiBenhAn;
 
-    public CreateMedicalRecordRequest() {
-    }
+    @JsonProperty("trang_thai")
+    private String trangThai;
 
-    public String getMedicalRecordType() {
-        return medicalRecordType;
-    }
+    @JsonProperty("chan_doan_tuyen_truoc")
+    private String chanDoanTuyenTruoc;
 
-    public void setMedicalRecordType(String medicalRecordType) {
-        this.medicalRecordType = medicalRecordType;
-    }
+    @JsonProperty("chan_doan_ban_dau_phong_kham")
+    private String chanDoanBanDauPhongKham;
+
+    @JsonProperty("thoi_gian_khoi_phat_tuan")
+    private BigDecimal thoiGianKhoiPhatTuan;
+
+    @JsonProperty("thoi_diem_kham_lan_dau")
+    private String thoiDiemKhamLanDau;
+
+    @JsonProperty("ngay_bat_dau_dieu_tri_ngoai_tru")
+    private String ngayBatDauDieuTriNgoaiTru;
+
+    @JsonProperty("ngay_ket_thuc_dieu_tri_ngoai_tru")
+    private String ngayKetThucDieuTriNgoaiTru;
+
+    @JsonProperty("ket_qua_dieu_tri_bao_hiem")
+    private String ketQuaDieuTriBaoHiem;
+
+    @JsonProperty("tien_su_gia_dinh")
+    private String tienSuGiaDinh;
+
+    @JsonProperty("tien_su_gia_dinh_ghi_ro")
+    private String tienSuGiaDinhGhiRo;
+
+    @JsonProperty("da_dieu_tri_truoc_kham")
+    private Boolean daDieuTriTruocKham;
 }

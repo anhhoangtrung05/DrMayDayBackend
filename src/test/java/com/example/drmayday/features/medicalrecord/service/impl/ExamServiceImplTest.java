@@ -113,7 +113,7 @@ class ExamServiceImplTest {
     }
 
     private static void signInAs(String role, long accountId) {
-        UserPrincipal principal = UserPrincipal.create(accountId, "0900000000", "Người dùng", role);
+        UserPrincipal principal = UserPrincipal.create(accountId, "0900000000", role);
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities()));
     }

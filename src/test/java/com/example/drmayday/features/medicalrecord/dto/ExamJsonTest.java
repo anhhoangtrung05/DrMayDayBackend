@@ -147,8 +147,8 @@ class ExamJsonTest {
         chronic.setAngioedemaEpisodesInCurrentPeriod(2);
         chronic.setAngioedemaOnsetContext("hoàn cảnh phù");
         chronic.setAngioedemaHospitalizations(1);
-        chronic.setAngioedemaDurationWithMedication("có thuốc");
-        chronic.setAngioedemaDurationWithoutMedication("không thuốc");
+        chronic.setAngioedemaDurationWithMedication("24-48");
+        chronic.setAngioedemaDurationWithoutMedication("khong ro");
         chronic.setAas7Score((short) 42);
         chronic.setAngioedemaSide("trái");
         chronic.setSpontaneousDurationWeeks(new BigDecimal("12.5"));
@@ -170,6 +170,8 @@ class ExamJsonTest {
         chronic.setEdemaAtOtherLocation(true);
         chronic.setOtherEdemaLocationDescription("lưng");
         chronic.setHandEdema(false);
+        chronic.setOtherOrganAbnormality(true);
+        chronic.setOtherOrganAbnormalityDescription("gan");
         Map<String, String> expected = new LinkedHashMap<>();
         expected.put("hien_tai_co_san_phu", "true");
         expected.put("uu_the_ngau_nhien", "false");
@@ -181,8 +183,8 @@ class ExamJsonTest {
         expected.put("so_lan_phu_mach_dot_nay", "2");
         expected.put("hoan_canh_xuat_hien_phu_mach", "\"hoàn cảnh phù\"");
         expected.put("so_lan_phu_mach_nang_phai_nhap_vien", "1");
-        expected.put("thoi_gian_ton_tai_phu_mach_co_dung_thuoc", "\"có thuốc\"");
-        expected.put("thoi_gian_ton_tai_phu_mach_khong_dung_thuoc", "\"không thuốc\"");
+        expected.put("thoi_gian_ton_tai_phu_mach_co_dung_thuoc", "\"24-48\"");
+        expected.put("thoi_gian_ton_tai_phu_mach_khong_dung_thuoc", "\"khong ro\"");
         expected.put("diem_aas7", "42");
         expected.put("ben_phu_mach", "\"trái\"");
         expected.put("thoi_gian_ngau_nhien_tuan", "12.50");
@@ -204,6 +206,8 @@ class ExamJsonTest {
         expected.put("phu_vi_tri_khac", "true");
         expected.put("phu_vi_tri_khac_ghi_ro", "\"lưng\"");
         expected.put("phu_ban_tay", "false");
+        expected.put("bat_thuong_co_quan_khac", "true");
+        expected.put("bat_thuong_co_quan_khac_ghi_ro", "\"gan\"");
 
         JsonNode node = json(new ChronicExamDetailResponse(fullVisit("MAN"), ChronicExamFindingsDto.from(chronic)));
 

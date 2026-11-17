@@ -1,73 +1,55 @@
 package com.example.drmayday.features.medicalrecord.dto;
 
 import com.example.drmayday.entity.MedicalRecord;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.Getter;
+import lombok.Builder;
+import lombok.Data;
 
 import java.math.BigDecimal;
 
-/**
- * DTO phản hồi hồ sơ bệnh án (API 34, 37). Id là chuỗi, tên trường là tên cột.
- */
-@Getter
+@Data
+@Builder
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class MedicalRecordResponse {
+    @JsonProperty("record_id") private Long recordId;
+    @JsonProperty("patient_id") private Long patientId;
+    @JsonProperty("loai_benh_an") private String loaiBenhAn;
+    @JsonProperty("trang_thai") private String trangThai;
+    @JsonProperty("chan_doan_tuyen_truoc") private String chanDoanTuyenTruoc;
+    @JsonProperty("chan_doan_ban_dau_phong_kham") private String chanDoanBanDauPhongKham;
+    @JsonProperty("thoi_gian_khoi_phat_tuan") private BigDecimal thoiGianKhoiPhatTuan;
+    @JsonProperty("thoi_diem_kham_lan_dau") private String thoiDiemKhamLanDau;
+    @JsonProperty("ngay_bat_dau_dieu_tri_ngoai_tru") private String ngayBatDauDieuTriNgoaiTru;
+    @JsonProperty("ngay_ket_thuc_dieu_tri_ngoai_tru") private String ngayKetThucDieuTriNgoaiTru;
+    @JsonProperty("ket_qua_dieu_tri_bao_hiem") private String ketQuaDieuTriBaoHiem;
+    @JsonProperty("tien_su_gia_dinh") private String tienSuGiaDinh;
+    @JsonProperty("tien_su_gia_dinh_ghi_ro") private String tienSuGiaDinhGhiRo;
+    @JsonProperty("da_dieu_tri_truoc_kham") private Boolean daDieuTriTruocKham;
+    @JsonProperty("ho_ten") private String hoTen;
 
-    @JsonProperty("record_id")
-    private final String recordId;
+    public static MedicalRecordResponse from(MedicalRecord r) {
+        return MedicalRecordResponse.builder()
+                .recordId(r.getMedicalRecordId())
+                .patientId(r.getPatientId())
+                .loaiBenhAn(r.getMedicalRecordType())
+                .trangThai(r.getStatus())
+                .chanDoanTuyenTruoc(r.getReferringFacilityDiagnosis())
+                .chanDoanBanDauPhongKham(r.getInitialClinicDiagnosis())
+                .thoiGianKhoiPhatTuan(r.getOnsetDurationWeeks())
+                .thoiDiemKhamLanDau(r.getFirstVisitAt() != null ? r.getFirstVisitAt().toString() : null)
+                .ngayBatDauDieuTriNgoaiTru(r.getOutpatientTreatmentStartDate() != null ? r.getOutpatientTreatmentStartDate().toString() : null)
+                .ngayKetThucDieuTriNgoaiTru(r.getOutpatientTreatmentEndDate() != null ? r.getOutpatientTreatmentEndDate().toString() : null)
+                .ketQuaDieuTriBaoHiem(r.getInsuranceTreatmentOutcome())
+                .tienSuGiaDinh(r.getFamilyHistory())
+                .tienSuGiaDinhGhiRo(r.getFamilyHistoryDescription())
+                .daDieuTriTruocKham(r.getTreatedBeforeVisit())
+                .build();
+    }
 
-    @JsonProperty("patient_id")
-    private final String patientId;
-
-    @JsonProperty("loai_benh_an")
-    private final String medicalRecordType;
-
-    @JsonProperty("trang_thai")
-    private final String status;
-
-    @JsonProperty("chan_doan_tuyen_truoc")
-    private final String referringFacilityDiagnosis;
-
-    @JsonProperty("chan_doan_ban_dau_phong_kham")
-    private final String initialClinicDiagnosis;
-
-    @JsonProperty("thoi_gian_khoi_phat_tuan")
-    private final BigDecimal onsetDurationWeeks;
-
-    @JsonProperty("thoi_diem_kham_lan_dau")
-    private final String firstVisitAt;
-
-    @JsonProperty("ngay_bat_dau_dieu_tri_ngoai_tru")
-    private final String outpatientTreatmentStartDate;
-
-    @JsonProperty("ngay_ket_thuc_dieu_tri_ngoai_tru")
-    private final String outpatientTreatmentEndDate;
-
-    @JsonProperty("ket_qua_dieu_tri_bao_hiem")
-    private final String insuranceTreatmentOutcome;
-
-    @JsonProperty("tien_su_gia_dinh")
-    private final String familyHistory;
-
-    @JsonProperty("tien_su_gia_dinh_ghi_ro")
-    private final String familyHistoryDescription;
-
-    @JsonProperty("da_dieu_tri_truoc_kham")
-    private final Boolean treatedBeforeVisit;
-
-    public MedicalRecordResponse(MedicalRecord record) {
-        this.recordId = JsonValues.id(record.getMedicalRecordId());
-        this.patientId = JsonValues.id(record.getPatientId());
-        this.medicalRecordType = record.getMedicalRecordType();
-        this.status = record.getStatus();
-        this.referringFacilityDiagnosis = record.getReferringFacilityDiagnosis();
-        this.initialClinicDiagnosis = record.getInitialClinicDiagnosis();
-        this.onsetDurationWeeks = JsonValues.twoDecimals(record.getOnsetDurationWeeks());
-        this.firstVisitAt = JsonValues.timestamp(record.getFirstVisitAt());
-        this.outpatientTreatmentStartDate = JsonValues.date(record.getOutpatientTreatmentStartDate());
-        this.outpatientTreatmentEndDate = JsonValues.date(record.getOutpatientTreatmentEndDate());
-        this.insuranceTreatmentOutcome = record.getInsuranceTreatmentOutcome();
-        this.familyHistory = record.getFamilyHistory();
-        this.familyHistoryDescription = record.getFamilyHistoryDescription();
-        this.treatedBeforeVisit = record.getTreatedBeforeVisit();
+    public static MedicalRecordResponse fromWithName(MedicalRecord r, String hoTen) {
+        MedicalRecordResponse resp = from(r);
+        resp.setHoTen(hoTen);
+        return resp;
     }
 }
