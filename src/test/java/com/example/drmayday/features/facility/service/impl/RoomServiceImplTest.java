@@ -200,7 +200,8 @@ class RoomServiceImplTest {
 
         List<RoomResponse> rooms = service.getListRooms(null);
 
-        assertThat(rooms).extracting(RoomResponse::getRoomId).containsExactly(ID);
+        assertThat(rooms).hasSize(1);
+        assertThat(rooms.get(0).getRoomId()).isEqualTo(ID);
         verifyNoInteractions(branchRepository);
     }
 

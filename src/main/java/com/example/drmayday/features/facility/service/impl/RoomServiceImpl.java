@@ -96,7 +96,7 @@ public class RoomServiceImpl implements RoomService {
             return RoomResponse.from(room);
         }
 
-        Long branchId = branchChanged ? targetBranch.getBranchId() : room.getBranchId();
+        Long branchId = targetBranch != null ? targetBranch.getBranchId() : room.getBranchId();
         if (clinicRoomRepository.existsByBranchIdAndNameAndClinicRoomIdNot(branchId, name, room.getClinicRoomId())) {
             throw new AppException(ErrorCode.ROOM_NAME_ALREADY_EXISTS);
         }

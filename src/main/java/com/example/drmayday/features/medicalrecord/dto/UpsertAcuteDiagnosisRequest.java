@@ -4,8 +4,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
-import java.time.Duration;
-
 @Data
 public class UpsertAcuteDiagnosisRequest {
     @NotNull(message = "2001")
