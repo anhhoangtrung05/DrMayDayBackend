@@ -6,12 +6,14 @@ import com.example.drmayday.entity.Person;
 import com.example.drmayday.entity.Employee;
 import com.example.drmayday.entity.UserAccount;
 import com.example.drmayday.entity.Role;
+import com.example.drmayday.entity.Permission;
 import com.example.drmayday.repository.PatientRepository;
 import com.example.drmayday.repository.BranchRepository;
 import com.example.drmayday.repository.PersonRepository;
 import com.example.drmayday.repository.EmployeeRepository;
 import com.example.drmayday.repository.UserAccountRepository;
 import com.example.drmayday.repository.RoleRepository;
+import com.example.drmayday.repository.PermissionRepository;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,6 +24,8 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Component
 public class DatabaseSeeder implements CommandLineRunner {
@@ -35,6 +39,7 @@ public class DatabaseSeeder implements CommandLineRunner {
     private final PatientRepository patientRepository;
     private final EmployeeRepository employeeRepository;
     private final UserAccountRepository userAccountRepository;
+    private final PermissionRepository permissionRepository;
     private final PasswordEncoder passwordEncoder;
 
     public DatabaseSeeder(JdbcTemplate jdbcTemplate,
@@ -44,6 +49,7 @@ public class DatabaseSeeder implements CommandLineRunner {
                           PatientRepository patientRepository,
                           EmployeeRepository employeeRepository,
                           UserAccountRepository userAccountRepository,
+                          PermissionRepository permissionRepository,
                           PasswordEncoder passwordEncoder) {
         this.jdbcTemplate = jdbcTemplate;
         this.branchRepository = branchRepository;
@@ -52,6 +58,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         this.patientRepository = patientRepository;
         this.employeeRepository = employeeRepository;
         this.userAccountRepository = userAccountRepository;
+        this.permissionRepository = permissionRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -61,8 +68,10 @@ public class DatabaseSeeder implements CommandLineRunner {
             initUserTokenVersionsTable();
             Branch defaultBranch = ensureDefaultBranch();
             ensureRoles();
+            ensurePermissions();
             ensureAdminAccount(defaultBranch);
             ensurePatientAccount();
+            ensureSampleClinicalData();
             log.info("DatabaseSeeder completed sample data initialization successfully.");
         } catch (Exception ex) {
             log.warn("DatabaseSeeder failed during initialization: {}", ex.getMessage());
@@ -187,6 +196,74 @@ public class DatabaseSeeder implements CommandLineRunner {
                     .build();
             userAccountRepository.save(taiKhoan);
             log.info("Initialized the default patient account: {}", patientPhone);
+        }
+    }
+
+    private void ensurePermissions() {
+        Set<String> existingNames = permissionRepository.findAll().stream()
+                .map(Permission::getName)
+                .collect(Collectors.toSet());
+
+        if (!existingNames.contains("manage_users_v1")) {
+            permissionRepository.save(Permission.builder()
+                    .name("manage_users_v1")
+                    .permissionGroup("USER_MANAGEMENT")
+                    .description("Quản lý người dùng hệ thống")
+                    .createdAt(OffsetDateTime.now())
+                    .updatedAt(OffsetDateTime.now())
+                    .build());
+        }
+        if (!existingNames.contains("manage_clinical")) {
+            permissionRepository.save(Permission.builder()
+                    .name("manage_clinical")
+                    .permissionGroup("CLINICAL")
+                    .description("Quản lý hồ sơ bệnh án")
+                    .createdAt(OffsetDateTime.now())
+                    .updatedAt(OffsetDateTime.now())
+                    .build());
+        }
+    }
+
+    private void ensureSampleClinicalData() {
+        try {
+            Integer featureCount = jdbcTemplate.queryForObject("SELECT count(*) FROM dacdiemsanphu", Integer.class);
+            if (featureCount == null || featureCount == 0) {
+                jdbcTemplate.execute("INSERT INTO dacdiemsanphu (ten_dac_diem, mo_ta) VALUES " +
+                        "('Hinh dang tron / bau duc', 'San phu tron hoac bau duc'), " +
+                        "('Hinh dang dia ly', 'San phu da cung, vien nham nho'), " +
+                        "('Mau do hong', 'San phu mau do hong')");
+                log.info("Initialized the sample wheal feature catalogue.");
+            }
+
+            Integer visitCount = jdbcTemplate.queryForObject("SELECT count(*) FROM phienkham", Integer.class);
+            if (visitCount == null || visitCount == 0) {
+                Long patientId = jdbcTemplate.queryForObject("SELECT ma_benh_nhan FROM benhnhan LIMIT 1", Long.class);
+                Long doctorId = jdbcTemplate.queryForObject("SELECT ma_nhan_vien FROM nhanvien LIMIT 1", Long.class);
+
+                if (patientId != null && doctorId != null) {
+                    Long capRecordId = jdbcTemplate.queryForObject(
+                            "INSERT INTO hosobenhan (ma_benh_nhan, loai_benh_an, trang_thai) VALUES (?, 'CAP', 'in_progress') RETURNING ma_ho_so",
+                            Long.class, patientId);
+                    jdbcTemplate.update("INSERT INTO benhanmaydaycap (ma_ho_so, nhap_vien) VALUES (?, false)", capRecordId);
+                    Long capVisitId = jdbcTemplate.queryForObject(
+                            "INSERT INTO phienkham (ma_ho_so, ma_bac_si, loai_benh_an, ngay_kham, lan_kham_thu) VALUES (?, ?, 'CAP', CURRENT_DATE, 1) RETURNING ma_phien_kham",
+                            Long.class, capRecordId, doctorId);
+                    jdbcTemplate.update("INSERT INTO phienkhamcap (ma_phien_kham, co_san_phu, so_lan_non) VALUES (?, true, 0)", capVisitId);
+
+                    Long manRecordId = jdbcTemplate.queryForObject(
+                            "INSERT INTO hosobenhan (ma_benh_nhan, loai_benh_an, trang_thai) VALUES (?, 'MAN', 'in_progress') RETURNING ma_ho_so",
+                            Long.class, patientId);
+                    jdbcTemplate.update("INSERT INTO benhanmaydayman (ma_ho_so) VALUES (?)", manRecordId);
+                    Long manVisitId = jdbcTemplate.queryForObject(
+                            "INSERT INTO phienkham (ma_ho_so, ma_bac_si, loai_benh_an, ngay_kham, lan_kham_thu) VALUES (?, ?, 'MAN', CURRENT_DATE, 1) RETURNING ma_phien_kham",
+                            Long.class, manRecordId, doctorId);
+                    jdbcTemplate.update("INSERT INTO phienkhamman (ma_phien_kham, hien_tai_co_san_phu) VALUES (?, true)", manVisitId);
+
+                    log.info("Initialized sample records and visits: CAP exam_id={}, MAN exam_id={}", capVisitId, manVisitId);
+                }
+            }
+        } catch (Exception ex) {
+            log.debug("Skipped sample clinical data initialization: {}", ex.getMessage());
         }
     }
 }

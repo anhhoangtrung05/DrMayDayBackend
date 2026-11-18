@@ -69,7 +69,17 @@ docs/
 
 # --- Local AI Tooling ---
 .claude/
+.agents/
 AGENTS.md
 CLAUDE.md
+SKILL.md
 skills-lock.json
 test-preferences.json
+
+# --- Prohibited Scratch / Postman Files ---
+api_conversion_plan-1.md
+BaiTapTuan1.drawio
+final_restructured.sql
+*.postman_collection.json
+postman/
+.postman/

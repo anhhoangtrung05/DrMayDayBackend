@@ -56,6 +56,10 @@ public enum ErrorCode {
     UAS7_RECORD_ALREADY_EXISTS_TODAY("5002", "Đã tồn tại bản ghi điểm UAS7 trong ngày hôm nay", HttpStatus.CONFLICT),
     UAS7_SCORE_OUT_OF_RANGE("5003", "Điểm ISS7 hoặc HSS7 nằm ngoài khoảng cho phép (0-3)", HttpStatus.BAD_REQUEST),
     UAS7_NO_ACTIVE_RECORD("5004", "Bệnh nhân không có hồ sơ bệnh án đang hoạt động để ghi điểm UAS7", HttpStatus.BAD_REQUEST),
+    EXAM_NOT_FOUND("5008", "Không tìm thấy phiên khám", HttpStatus.NOT_FOUND),
+
+    // 7xxx - Lỗi Chi tiết tổn thương
+    LESION_DETAIL_NOT_FOUND("7010", "Không tìm thấy chi tiết tổn thương", HttpStatus.NOT_FOUND),
 
     // 9xxx - General system errors
     INTERNAL_SERVER_ERROR("9999", "Lỗi hệ thống nội bộ", HttpStatus.INTERNAL_SERVER_ERROR);
