@@ -5,6 +5,8 @@ import com.example.drmayday.features.admin.dto.EditUserRequest;
 import com.example.drmayday.features.admin.dto.UserDetailsResponse;
 import com.example.drmayday.features.admin.dto.UserResponse;
 import org.springframework.data.domain.Page;
+import com.example.drmayday.features.admin.dto.AssignUserRequest;
+import com.example.drmayday.features.admin.dto.StaffAssignResponse;
 
 public interface AdminUserService {
 
@@ -41,4 +43,8 @@ public interface AdminUserService {
      * @return The updated user's details
      */
     UserResponse editUser(String id, EditUserRequest request);
+
+    void deleteUser(String id);
+
+    StaffAssignResponse assignUser(AssignUserRequest request);
 }

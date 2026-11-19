@@ -2,12 +2,16 @@ package com.example.drmayday.features.admin.controller;
 
 import com.example.drmayday.features.admin.dto.EditPermissionRequest;
 import com.example.drmayday.features.admin.dto.PermissionResponse;
+import com.example.drmayday.features.admin.dto.CreatePermissionRequest;
 import com.example.drmayday.features.admin.service.PermissionService;
 import com.example.drmayday.common.dto.BaseResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/permissions")
@@ -15,6 +19,19 @@ import org.springframework.web.bind.annotation.*;
 public class PermissionController {
 
     private final PermissionService permissionService;
+
+    @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<BaseResponse<PermissionResponse>> createPermission(
+            @Valid @RequestBody CreatePermissionRequest req) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(BaseResponse.created(permissionService.createPermission(req)));
+    }
+
+    @GetMapping
+    public ResponseEntity<BaseResponse<List<PermissionResponse>>> getPermissions() {
+        return ResponseEntity.ok(BaseResponse.ok(permissionService.getPermissions()));
+    }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")

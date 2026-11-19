@@ -2,10 +2,13 @@ package com.example.drmayday.features.admin.service;
 
 import com.example.drmayday.features.admin.dto.EditPermissionRequest;
 import com.example.drmayday.features.admin.dto.PermissionResponse;
+import com.example.drmayday.features.admin.dto.CreatePermissionRequest;
 import com.example.drmayday.entity.Permission;
 import com.example.drmayday.repository.PermissionRepository;
 import com.example.drmayday.common.exception.ResourceNotFoundException;
 import com.example.drmayday.common.exception.BadRequestException;
+import com.example.drmayday.common.exception.AppException;
+import com.example.drmayday.common.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -20,6 +24,30 @@ public class PermissionService {
 
     private static final Logger log = LoggerFactory.getLogger(PermissionService.class);
     private final PermissionRepository permissionRepository;
+
+    @Transactional
+    public PermissionResponse createPermission(CreatePermissionRequest req) {
+        String name = req.getPermissionName().trim();
+        if (permissionRepository.existsByName(name)) {
+            throw new AppException(ErrorCode.PERMISSION_NAME_ALREADY_EXISTS);
+        }
+        OffsetDateTime now = OffsetDateTime.now();
+        Permission permission = Permission.builder()
+                .name(name)
+                .description(req.getDescription())
+                .permissionGroup(req.getGroupName())
+                .createdAt(now)
+                .updatedAt(now)
+                .build();
+        return PermissionResponse.fromEntity(permissionRepository.save(permission));
+    }
+
+    @Transactional(readOnly = true)
+    public List<PermissionResponse> getPermissions() {
+        return permissionRepository.findAll().stream()
+                .map(PermissionResponse::fromEntity)
+                .toList();
+    }
 
     @Transactional
     public PermissionResponse editPermission(String idStr, EditPermissionRequest req) {

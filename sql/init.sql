@@ -32,6 +32,13 @@ CREATE TABLE public.phongkham (
     UNIQUE (ma_chi_nhanh, ten_phong_kham)
 );
 
+CREATE TABLE public.khoa (
+    ma_khoa      BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    ma_chi_nhanh BIGINT NOT NULL REFERENCES public.chinhanh (ma_chi_nhanh) ON DELETE RESTRICT,
+    ten_khoa     VARCHAR(150) NOT NULL CHECK (btrim(ten_khoa) <> ''),
+    UNIQUE (ma_chi_nhanh, ten_khoa)
+);
+
 CREATE TABLE public.dacdiemsanphu (
     ma_dac_diem_san_phu BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     ten_dac_diem VARCHAR(150) NOT NULL UNIQUE CHECK (btrim(ten_dac_diem) <> ''),
@@ -69,10 +76,13 @@ CREATE TABLE public.vaitro (
     ten_vai_tro        VARCHAR(50) NOT NULL,
     ten_hien_thi       VARCHAR(100) NOT NULL,
     mo_ta_vai_tro      TEXT,
+    ma_vai_tro_cha     BIGINT,
     thoi_diem_tao      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     thoi_diem_cap_nhat TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT pk_vai_tro PRIMARY KEY (ma_vai_tro),
+    CONSTRAINT fk_vai_tro_cha FOREIGN KEY (ma_vai_tro_cha)
+        REFERENCES public.vaitro (ma_vai_tro) ON DELETE SET NULL,
     CONSTRAINT uq_vai_tro_ten UNIQUE (ten_vai_tro),
     CONSTRAINT ck_vai_tro_ten CHECK (btrim(ten_vai_tro) <> ''),
     CONSTRAINT ck_vai_tro_hien_thi CHECK (btrim(ten_hien_thi) <> ''),
@@ -191,12 +201,18 @@ CREATE TABLE public.sanglocbaodongdo (
 CREATE TABLE public.nhanvien (
     ma_nhan_vien BIGINT,
     ma_chi_nhanh BIGINT NOT NULL,
+    ma_khoa BIGINT,
+    ma_phong_kham BIGINT,
 
     CONSTRAINT pk_nhan_vien PRIMARY KEY (ma_nhan_vien),
     CONSTRAINT fk_nhan_vien_nguoi FOREIGN KEY (ma_nhan_vien)
         REFERENCES public.nguoi (ma_nguoi) ON DELETE RESTRICT,
     CONSTRAINT fk_nhan_vien_chi_nhanh FOREIGN KEY (ma_chi_nhanh)
-        REFERENCES public.chinhanh (ma_chi_nhanh) ON DELETE RESTRICT
+        REFERENCES public.chinhanh (ma_chi_nhanh) ON DELETE RESTRICT,
+    CONSTRAINT fk_nhan_vien_khoa FOREIGN KEY (ma_khoa)
+        REFERENCES public.khoa (ma_khoa) ON DELETE RESTRICT,
+    CONSTRAINT fk_nhan_vien_phong FOREIGN KEY (ma_phong_kham)
+        REFERENCES public.phongkham (ma_phong_kham) ON DELETE RESTRICT
 );
 
 CREATE TABLE public.taikhoan (

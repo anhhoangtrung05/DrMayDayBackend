@@ -4,6 +4,8 @@ import com.example.drmayday.features.admin.dto.CreateUserRequest;
 import com.example.drmayday.features.admin.dto.EditUserRequest;
 import com.example.drmayday.features.admin.dto.UserDetailsResponse;
 import com.example.drmayday.features.admin.dto.UserResponse;
+import com.example.drmayday.features.admin.dto.AssignUserRequest;
+import com.example.drmayday.features.admin.dto.StaffAssignResponse;
 import com.example.drmayday.entity.Patient;
 import com.example.drmayday.entity.Person;
 import com.example.drmayday.entity.Employee;
@@ -12,6 +14,8 @@ import com.example.drmayday.entity.Role;
 import com.example.drmayday.features.admin.service.AdminUserService;
 import com.example.drmayday.repository.PatientRepository;
 import com.example.drmayday.repository.BranchRepository;
+import com.example.drmayday.repository.DepartmentRepository;
+import com.example.drmayday.repository.ClinicRoomRepository;
 import com.example.drmayday.repository.PersonRepository;
 import com.example.drmayday.repository.EmployeeRepository;
 import com.example.drmayday.repository.UserAccountRepository;
@@ -44,6 +48,8 @@ public class AdminUserServiceImpl implements AdminUserService {
     private final EmployeeRepository employeeRepository;
     private final RoleRepository roleRepository;
     private final BranchRepository branchRepository;
+    private final DepartmentRepository departmentRepository;
+    private final ClinicRoomRepository clinicRoomRepository;
     private final PasswordEncoder passwordEncoder;
 
     public AdminUserServiceImpl(UserAccountRepository userAccountRepository,
@@ -52,6 +58,8 @@ public class AdminUserServiceImpl implements AdminUserService {
                                 EmployeeRepository employeeRepository,
                                 RoleRepository roleRepository,
                                 BranchRepository branchRepository,
+                                DepartmentRepository departmentRepository,
+                                ClinicRoomRepository clinicRoomRepository,
                                 PasswordEncoder passwordEncoder) {
         this.userAccountRepository = userAccountRepository;
         this.personRepository = personRepository;
@@ -59,6 +67,8 @@ public class AdminUserServiceImpl implements AdminUserService {
         this.employeeRepository = employeeRepository;
         this.roleRepository = roleRepository;
         this.branchRepository = branchRepository;
+        this.departmentRepository = departmentRepository;
+        this.clinicRoomRepository = clinicRoomRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -208,6 +218,54 @@ public class AdminUserServiceImpl implements AdminUserService {
         userAccount = userAccountRepository.save(userAccount);
 
         return mapToUserResponse(userAccount);
+    }
+
+    @Override
+    @Transactional
+    public void deleteUser(String id) {
+        Long userId = parseUserId(id);
+        UserAccount userAccount = userAccountRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_ACCOUNT_NOT_FOUND));
+        userAccountRepository.delete(userAccount);
+    }
+
+    @Override
+    @Transactional
+    public StaffAssignResponse assignUser(AssignUserRequest request) {
+        Long userId = parseUserId(request.getUserId());
+        Long branchId = parseUserId(request.getBranchId());
+        Long departmentId = parseUserId(request.getDepartmentId());
+        Long roomId = parseUserId(request.getRoomId());
+
+        UserAccount account = userAccountRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_ACCOUNT_NOT_FOUND));
+        if (account.getPerson() == null) {
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Tài khoản chưa có thông tin nhân viên");
+        }
+        branchRepository.findById(branchId)
+                .orElseThrow(() -> new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Chi nhánh không tồn tại"));
+        if (!departmentRepository.existsByDepartmentIdAndBranchId(departmentId, branchId)) {
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Khoa không thuộc chi nhánh đã chọn");
+        }
+        clinicRoomRepository.findById(roomId)
+                .filter(room -> branchId.equals(room.getBranchId()))
+                .orElseThrow(() -> new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Phòng không thuộc chi nhánh đã chọn"));
+
+        Long personId = account.getPerson().getPersonId();
+        Employee employee = employeeRepository.findById(personId)
+                .orElseThrow(() -> new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Người dùng không phải nhân viên y tế"));
+        employee.setBranchId(branchId);
+        employee.setDepartmentId(departmentId);
+        employee.setRoomId(roomId);
+        employeeRepository.save(employee);
+
+        return StaffAssignResponse.builder()
+                .staffId(String.valueOf(employee.getEmployeeId()))
+                .userId(String.valueOf(userId))
+                .branchId(String.valueOf(branchId))
+                .departmentId(String.valueOf(departmentId))
+                .roomId(String.valueOf(roomId))
+                .build();
     }
 
     private UserResponse mapToUserResponse(UserAccount userAccount) {
