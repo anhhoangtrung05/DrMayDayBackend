@@ -11,6 +11,13 @@ import org.springframework.data.repository.query.Param;
 import java.util.Optional;
 
 public interface UserAccountRepository extends JpaRepository<UserAccount, Long> {
+    /**
+     * Load the account's person and role together with the account. Callers of
+     * this lookup use both associations after the repository transaction has
+     * ended (for example, profile/admin flows), so leaving them lazy here can
+     * cause LazyInitializationException.
+     */
+    @EntityGraph(attributePaths = {"person", "role"})
     Optional<UserAccount> findByUsername(String username);
 
     @EntityGraph(attributePaths = {"person", "role"})
