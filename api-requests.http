@@ -238,3 +238,86 @@ Authorization: Bearer {{adminToken}}
 ### API 23: roleperm03 / delete_role_permissions - Thu hồi một quyền hạn khỏi vai trò (200 OK - Mã 1000)
 DELETE {{baseUrl}}/api/v1/roles/1/permissions/2
 Authorization: Bearer {{adminToken}}
+
+### =====================================================================
+### PART 5: ADMIN USER, ROLE AND PERMISSION MANAGEMENT (APIs 13 - 18)
+### =====================================================================
+
+### API 13: ADMIN_DELETE_USER - Delete an existing user (200 OK)
+DELETE {{baseUrl}}/api/v1/admin/users/9
+Authorization: Bearer {{adminToken}}
+
+### API 13: ADMIN_DELETE_USER - User does not exist (404 Not Found)
+DELETE {{baseUrl}}/api/v1/admin/users/999999
+Authorization: Bearer {{adminToken}}
+
+### API 14: ADMIN_ASSIGN_USER - Assign staff to branch, department and room (200 OK)
+POST {{baseUrl}}/api/v1/admin/users/assign
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "user_id": "1",
+  "branch_id": "1",
+  "department_id": "1",
+  "room_id": "1"
+}
+
+### API 14: ADMIN_ASSIGN_USER - Required field is missing (400 Bad Request)
+POST {{baseUrl}}/api/v1/admin/users/assign
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "user_id": "1",
+  "branch_id": "1",
+  "department_id": "1"
+}
+
+### API 15: RBAC_SET_ROLE - Create a role (201 Created)
+POST {{baseUrl}}/api/v1/roles
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "role_name": "branch_manager",
+  "description": "Branch manager",
+  "parent_role_id": null
+}
+
+### API 15: RBAC_SET_ROLE - Role name is required (400 Bad Request)
+POST {{baseUrl}}/api/v1/roles
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "description": "Missing role name"
+}
+
+### API 16: RBAC_GET_ROLE - Get roles (200 OK)
+GET {{baseUrl}}/api/v1/roles
+Authorization: Bearer {{adminToken}}
+
+### API 17: RBAC_SET_PERMISSION - Create a permission (201 Created)
+POST {{baseUrl}}/api/v1/permissions
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "permission_name": "USER_VIEW",
+  "description": "View users",
+  "group_name": "USER_MANAGEMENT"
+}
+
+### API 17: RBAC_SET_PERMISSION - Permission name is required (400 Bad Request)
+POST {{baseUrl}}/api/v1/permissions
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "description": "Missing permission name"
+}
+
+### API 18: RBAC_GET_LIST_PERMISSION - Get permissions (200 OK)
+GET {{baseUrl}}/api/v1/permissions
+Authorization: Bearer {{adminToken}}
