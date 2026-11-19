@@ -39,6 +39,8 @@ public enum ErrorCode {
     USER_ACCOUNT_NOT_FOUND("3007", "Không tìm thấy tài khoản người dùng", HttpStatus.NOT_FOUND),
     PASSWORD_INCORRECT("3008", "Mật khẩu không chính xác", HttpStatus.UNAUTHORIZED),
     ADMIN_ROLE_REQUIRED("3102", "Yêu cầu quyền quản trị viên", HttpStatus.FORBIDDEN),
+    ROLE_NAME_ALREADY_EXISTS("3201", "Tên vai trò đã tồn tại", HttpStatus.CONFLICT),
+    PERMISSION_NAME_ALREADY_EXISTS("3202", "Tên quyền hạn đã tồn tại", HttpStatus.CONFLICT),
     DOCTOR_ROLE_REQUIRED("3103", "Yêu cầu quyền bác sĩ", HttpStatus.FORBIDDEN),
     DOCTOR_NOT_ASSIGNED("3105", "Bác sĩ chưa được phân công vào hồ sơ", HttpStatus.BAD_REQUEST),
     CANNOT_ACCESS_ANOTHER_USER_DATA("3106", "Không thể truy cập dữ liệu của người dùng khác", HttpStatus.FORBIDDEN),

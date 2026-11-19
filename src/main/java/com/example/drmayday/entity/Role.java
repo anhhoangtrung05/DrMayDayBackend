@@ -27,11 +27,19 @@ public class Role {
     @Column(name = "mo_ta_vai_tro")
     private String description;
 
+    @Column(name = "ma_vai_tro_cha")
+    private Long parentRoleId;
+
     @Column(name = "thoi_diem_tao", nullable = false)
     private OffsetDateTime createdAt;
 
     @Column(name = "thoi_diem_cap_nhat", nullable = false)
     private OffsetDateTime updatedAt;
+
+    public Role(Long roleId, String name, String displayName, String description,
+                OffsetDateTime createdAt, OffsetDateTime updatedAt) {
+        this(roleId, name, displayName, description, null, createdAt, updatedAt);
+    }
 
     @PrePersist
     void beforeInsert() {
