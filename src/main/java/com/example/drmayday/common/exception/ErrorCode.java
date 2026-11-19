@@ -63,6 +63,10 @@ public enum ErrorCode {
     // 7xxx - Lỗi Chi tiết tổn thương
     LESION_DETAIL_NOT_FOUND("7010", "Không tìm thấy chi tiết tổn thương", HttpStatus.NOT_FOUND),
 
+    UAS7_CYCLE_NOT_FOUND("5005", "UAS7 cycle not found", HttpStatus.NOT_FOUND),
+    UAS7_OVERLAPPING_CYCLE("5006", "Overlapping active UAS7 cycle exists", HttpStatus.CONFLICT),
+    UAS7_INVALID_CYCLE_STATUS_TRANSITION("5007", "Invalid UAS7 cycle status transition", HttpStatus.BAD_REQUEST),
+
     // 9xxx - General system errors
     INTERNAL_SERVER_ERROR("9999", "Lỗi hệ thống nội bộ", HttpStatus.INTERNAL_SERVER_ERROR);
 
