@@ -6,6 +6,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import java.util.Optional;
 
 public interface MedicalRecordRepository extends JpaRepository<MedicalRecord, Long> {
 
@@ -20,4 +21,6 @@ public interface MedicalRecordRepository extends JpaRepository<MedicalRecord, Lo
                                      @Param("type") String type,
                                      @Param("status") String status,
                                      Pageable pageable);
+    Optional<MedicalRecord> findFirstByPatientIdAndMedicalRecordTypeAndStatusNotInOrderByMedicalRecordIdDesc(
+            Long patientId, String medicalRecordType, java.util.Collection<String> statuses);
 }

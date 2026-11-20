@@ -39,6 +39,8 @@ public enum ErrorCode {
     USER_ACCOUNT_NOT_FOUND("3007", "Không tìm thấy tài khoản người dùng", HttpStatus.NOT_FOUND),
     PASSWORD_INCORRECT("3008", "Mật khẩu không chính xác", HttpStatus.UNAUTHORIZED),
     ADMIN_ROLE_REQUIRED("3102", "Yêu cầu quyền quản trị viên", HttpStatus.FORBIDDEN),
+    ROLE_NAME_ALREADY_EXISTS("3201", "Tên vai trò đã tồn tại", HttpStatus.CONFLICT),
+    PERMISSION_NAME_ALREADY_EXISTS("3202", "Tên quyền hạn đã tồn tại", HttpStatus.CONFLICT),
     DOCTOR_ROLE_REQUIRED("3103", "Yêu cầu quyền bác sĩ", HttpStatus.FORBIDDEN),
     DOCTOR_NOT_ASSIGNED("3105", "Bác sĩ chưa được phân công vào hồ sơ", HttpStatus.BAD_REQUEST),
     CANNOT_ACCESS_ANOTHER_USER_DATA("3106", "Không thể truy cập dữ liệu của người dùng khác", HttpStatus.FORBIDDEN),
@@ -60,6 +62,10 @@ public enum ErrorCode {
 
     // 7xxx - Lỗi Chi tiết tổn thương
     LESION_DETAIL_NOT_FOUND("7010", "Không tìm thấy chi tiết tổn thương", HttpStatus.NOT_FOUND),
+
+    UAS7_CYCLE_NOT_FOUND("5005", "UAS7 cycle not found", HttpStatus.NOT_FOUND),
+    UAS7_OVERLAPPING_CYCLE("5006", "Overlapping active UAS7 cycle exists", HttpStatus.CONFLICT),
+    UAS7_INVALID_CYCLE_STATUS_TRANSITION("5007", "Invalid UAS7 cycle status transition", HttpStatus.BAD_REQUEST),
 
     // 9xxx - General system errors
     INTERNAL_SERVER_ERROR("9999", "Lỗi hệ thống nội bộ", HttpStatus.INTERNAL_SERVER_ERROR);

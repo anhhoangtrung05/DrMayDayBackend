@@ -4,6 +4,8 @@ import com.example.drmayday.features.admin.dto.CreateUserRequest;
 import com.example.drmayday.features.admin.dto.EditUserRequest;
 import com.example.drmayday.features.admin.dto.UserDetailsResponse;
 import com.example.drmayday.features.admin.dto.UserResponse;
+import com.example.drmayday.features.admin.dto.AssignUserRequest;
+import com.example.drmayday.features.admin.dto.StaffAssignResponse;
 import com.example.drmayday.features.admin.service.AdminUserService;
 import com.example.drmayday.common.dto.BaseResponse;
 import jakarta.validation.Valid;
@@ -88,5 +90,19 @@ public class AdminUserController {
             @RequestBody EditUserRequest req) {
         UserResponse response = adminUserService.editUser(id, req);
         return ResponseEntity.ok(BaseResponse.success(response));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<BaseResponse<Void>> deleteUser(@PathVariable String id) {
+        adminUserService.deleteUser(id);
+        return ResponseEntity.ok(BaseResponse.ok());
+    }
+
+    @PostMapping("/assign")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<BaseResponse<StaffAssignResponse>> assignUser(
+            @Valid @RequestBody AssignUserRequest request) {
+        return ResponseEntity.ok(BaseResponse.ok(adminUserService.assignUser(request)));
     }
 }

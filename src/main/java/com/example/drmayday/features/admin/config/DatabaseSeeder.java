@@ -7,6 +7,7 @@ import com.example.drmayday.entity.Employee;
 import com.example.drmayday.entity.UserAccount;
 import com.example.drmayday.entity.Role;
 import com.example.drmayday.entity.Permission;
+import com.example.drmayday.entity.Department;
 import com.example.drmayday.repository.PatientRepository;
 import com.example.drmayday.repository.BranchRepository;
 import com.example.drmayday.repository.PersonRepository;
@@ -14,6 +15,7 @@ import com.example.drmayday.repository.EmployeeRepository;
 import com.example.drmayday.repository.UserAccountRepository;
 import com.example.drmayday.repository.RoleRepository;
 import com.example.drmayday.repository.PermissionRepository;
+import com.example.drmayday.repository.DepartmentRepository;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,6 +42,7 @@ public class DatabaseSeeder implements CommandLineRunner {
     private final EmployeeRepository employeeRepository;
     private final UserAccountRepository userAccountRepository;
     private final PermissionRepository permissionRepository;
+    private final DepartmentRepository departmentRepository;
     private final PasswordEncoder passwordEncoder;
 
     public DatabaseSeeder(JdbcTemplate jdbcTemplate,
@@ -50,6 +53,7 @@ public class DatabaseSeeder implements CommandLineRunner {
                           EmployeeRepository employeeRepository,
                           UserAccountRepository userAccountRepository,
                           PermissionRepository permissionRepository,
+                          DepartmentRepository departmentRepository,
                           PasswordEncoder passwordEncoder) {
         this.jdbcTemplate = jdbcTemplate;
         this.branchRepository = branchRepository;
@@ -59,6 +63,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         this.employeeRepository = employeeRepository;
         this.userAccountRepository = userAccountRepository;
         this.permissionRepository = permissionRepository;
+        this.departmentRepository = departmentRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -67,6 +72,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         try {
             initUserTokenVersionsTable();
             Branch defaultBranch = ensureDefaultBranch();
+            ensureDefaultDepartment(defaultBranch);
             ensureRoles();
             ensurePermissions();
             ensureAdminAccount(defaultBranch);
@@ -76,6 +82,14 @@ public class DatabaseSeeder implements CommandLineRunner {
         } catch (Exception ex) {
             log.warn("DatabaseSeeder failed during initialization: {}", ex.getMessage());
         }
+    }
+
+    private Department ensureDefaultDepartment(Branch branch) {
+        return departmentRepository.findFirstByBranchIdOrderByDepartmentIdAsc(branch.getBranchId())
+                .orElseGet(() -> departmentRepository.save(Department.builder()
+                        .branchId(branch.getBranchId())
+                        .name("Khoa Da lieu")
+                        .build()));
     }
 
     private void initUserTokenVersionsTable() {

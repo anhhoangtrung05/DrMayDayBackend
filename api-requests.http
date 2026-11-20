@@ -108,6 +108,93 @@ Content-Type: application/json
 GET {{baseUrl}}/api/v1/admin/users?page=1&limit=10
 Authorization: Bearer {{adminToken}}
 
+### =====================================================================
+### PART 6: UAS7 SCORE AND TRACKING CYCLE MANAGEMENT (APIs 58 - 64)
+### =====================================================================
+
+### API 58: Check whether the current patient can score UAS7 (200 OK)
+GET {{baseUrl}}/api/v1/uas7-scores/eligibility
+Authorization: Bearer {{patientToken}}
+
+### API 59: Create today's UAS7 score (201 Created)
+POST {{baseUrl}}/api/v1/uas7-scores
+Authorization: Bearer {{patientToken}}
+Content-Type: application/json
+
+{
+  "record_id": "170",
+  "hss_score": 2,
+  "iss_score": 3,
+  "trang_thai_dung_thuoc": "DUNG_DEU"
+}
+
+### API 59: Duplicate score on the same day (409 / code 5002)
+POST {{baseUrl}}/api/v1/uas7-scores
+Authorization: Bearer {{patientToken}}
+Content-Type: application/json
+
+{
+  "record_id": "170",
+  "hss_score": 2,
+  "iss_score": 3
+}
+
+### API 60: Get a patient's UAS7 score history (200 OK)
+GET {{baseUrl}}/api/v1/uas7-scores/patient/2
+Authorization: Bearer {{adminToken}}
+
+### API 60: Filter score history by date and cycle
+GET {{baseUrl}}/api/v1/uas7-scores/patient/2?from_date=2026-01-01&to_date=2026-12-31&cycle_id=1
+Authorization: Bearer {{adminToken}}
+
+### API 61: Create a seven-day UAS7 tracking cycle (201 Created)
+POST {{baseUrl}}/api/v1/patients/2/uas7-cycles
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "ngay_bat_dau": "2026-10-20"
+}
+
+### API 61: Overlapping active cycle (409 / code 5006)
+POST {{baseUrl}}/api/v1/patients/2/uas7-cycles
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "ngay_bat_dau": "2026-11-20"
+}
+
+### API 62: Get a patient's UAS7 cycles (200 OK)
+GET {{baseUrl}}/api/v1/patients/2/uas7-cycles
+Authorization: Bearer {{adminToken}}
+
+### API 63: Get UAS7 cycle details and daily logs (200 OK)
+GET {{baseUrl}}/api/v1/uas7-cycles/1
+Authorization: Bearer {{adminToken}}
+
+### API 63: Cycle does not exist (404 / code 5005)
+GET {{baseUrl}}/api/v1/uas7-cycles/999999
+Authorization: Bearer {{adminToken}}
+
+### API 64: Complete an active UAS7 cycle (200 OK)
+PUT {{baseUrl}}/api/v1/uas7-cycles/2
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "trang_thai_chu_ky": "HOAN_THANH"
+}
+
+### API 64: Invalid transition from an active cycle to itself (400 / code 5007)
+PUT {{baseUrl}}/api/v1/uas7-cycles/2
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "trang_thai_chu_ky": "DANG_THEO_DOI"
+}
+
 ### ADMIN_GET_LIST_USERS - Non-admin user is denied (403 Forbidden - Code 3102)
 GET {{baseUrl}}/api/v1/admin/users?page=1&limit=10
 Authorization: Bearer {{patientToken}}
@@ -237,4 +324,87 @@ Authorization: Bearer {{adminToken}}
 
 ### API 23: roleperm03 / delete_role_permissions - Thu hồi một quyền hạn khỏi vai trò (200 OK - Mã 1000)
 DELETE {{baseUrl}}/api/v1/roles/1/permissions/2
+Authorization: Bearer {{adminToken}}
+
+### =====================================================================
+### PART 5: ADMIN USER, ROLE AND PERMISSION MANAGEMENT (APIs 13 - 18)
+### =====================================================================
+
+### API 13: ADMIN_DELETE_USER - Delete an existing user (200 OK)
+DELETE {{baseUrl}}/api/v1/admin/users/9
+Authorization: Bearer {{adminToken}}
+
+### API 13: ADMIN_DELETE_USER - User does not exist (404 Not Found)
+DELETE {{baseUrl}}/api/v1/admin/users/999999
+Authorization: Bearer {{adminToken}}
+
+### API 14: ADMIN_ASSIGN_USER - Assign staff to branch, department and room (200 OK)
+POST {{baseUrl}}/api/v1/admin/users/assign
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "user_id": "1",
+  "branch_id": "1",
+  "department_id": "1",
+  "room_id": "1"
+}
+
+### API 14: ADMIN_ASSIGN_USER - Required field is missing (400 Bad Request)
+POST {{baseUrl}}/api/v1/admin/users/assign
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "user_id": "1",
+  "branch_id": "1",
+  "department_id": "1"
+}
+
+### API 15: RBAC_SET_ROLE - Create a role (201 Created)
+POST {{baseUrl}}/api/v1/roles
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "role_name": "branch_manager",
+  "description": "Branch manager",
+  "parent_role_id": null
+}
+
+### API 15: RBAC_SET_ROLE - Role name is required (400 Bad Request)
+POST {{baseUrl}}/api/v1/roles
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "description": "Missing role name"
+}
+
+### API 16: RBAC_GET_ROLE - Get roles (200 OK)
+GET {{baseUrl}}/api/v1/roles
+Authorization: Bearer {{adminToken}}
+
+### API 17: RBAC_SET_PERMISSION - Create a permission (201 Created)
+POST {{baseUrl}}/api/v1/permissions
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "permission_name": "USER_VIEW",
+  "description": "View users",
+  "group_name": "USER_MANAGEMENT"
+}
+
+### API 17: RBAC_SET_PERMISSION - Permission name is required (400 Bad Request)
+POST {{baseUrl}}/api/v1/permissions
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "description": "Missing permission name"
+}
+
+### API 18: RBAC_GET_LIST_PERMISSION - Get permissions (200 OK)
+GET {{baseUrl}}/api/v1/permissions
 Authorization: Bearer {{adminToken}}
