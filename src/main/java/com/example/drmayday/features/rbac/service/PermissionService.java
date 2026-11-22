@@ -1,7 +1,7 @@
-package com.example.drmayday.features.admin.service;
+package com.example.drmayday.features.rbac.service;
 
-import com.example.drmayday.features.admin.dto.EditPermissionRequest;
-import com.example.drmayday.features.admin.dto.PermissionResponse;
+import com.example.drmayday.features.rbac.dto.EditPermissionRequest;
+import com.example.drmayday.features.rbac.dto.PermissionResponse;
 import com.example.drmayday.entity.Permission;
 import com.example.drmayday.repository.PermissionRepository;
 import com.example.drmayday.common.exception.ResourceNotFoundException;

@@ -1,7 +1,7 @@
-package com.example.drmayday.features.admin.service;
+package com.example.drmayday.features.rbac.service;
 
-import com.example.drmayday.features.admin.dto.SetRolePermissionsRequest;
-import com.example.drmayday.features.admin.dto.PermissionResponse;
+import com.example.drmayday.features.rbac.dto.SetRolePermissionsRequest;
+import com.example.drmayday.features.rbac.dto.PermissionResponse;
 import com.example.drmayday.entity.Permission;
 import com.example.drmayday.entity.Role;
 import com.example.drmayday.entity.RolePermission;

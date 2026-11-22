@@ -1,4 +1,4 @@
-package com.example.drmayday.features.admin.dto;
+package com.example.drmayday.features.rbac.dto;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonProperty;

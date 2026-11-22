@@ -1,8 +1,8 @@
-package com.example.drmayday.features.admin.controller;
+package com.example.drmayday.features.rbac.controller;
 
-import com.example.drmayday.features.admin.dto.EditPermissionRequest;
-import com.example.drmayday.features.admin.dto.PermissionResponse;
-import com.example.drmayday.features.admin.service.PermissionService;
+import com.example.drmayday.features.rbac.dto.EditPermissionRequest;
+import com.example.drmayday.features.rbac.dto.PermissionResponse;
+import com.example.drmayday.features.rbac.service.PermissionService;
 import com.example.drmayday.common.dto.BaseResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
