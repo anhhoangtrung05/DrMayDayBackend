@@ -169,8 +169,12 @@ public class LesionDetailsServiceImpl implements LesionDetailsService {
             return list.stream().map(this::mapAcuteToResponse).collect(Collectors.toList());
         } else {
             List<WhealLesionDetail> list = whealLesionDetailRepository.findByMedicalVisitId(examIdLong);
-            Map<Long, String> featureNames = whealFeatureRepository.findAll().stream()
-                    .collect(Collectors.toMap(WhealFeature::getWhealFeatureId, WhealFeature::getName, (a, b) -> a));
+            Map<Long, String> featureNames = new java.util.HashMap<>();
+            for (WhealFeature feature : whealFeatureRepository.findAll()) {
+                if (feature != null && feature.getWhealFeatureId() != null) {
+                    featureNames.put(feature.getWhealFeatureId(), feature.getName());
+                }
+            }
 
             return list.stream().map(w -> {
                 String featureName = w.getWhealFeatureId() != null ? featureNames.get(w.getWhealFeatureId()) : null;
@@ -240,7 +244,7 @@ public class LesionDetailsServiceImpl implements LesionDetailsService {
                 featureName = feature.getName();
             } else if (entity.getWhealFeatureId() != null) {
                 featureName = whealFeatureRepository.findById(entity.getWhealFeatureId())
-                        .map(WhealFeature::getName).orElse(null);
+                        .map(feature -> feature != null ? feature.getName() : null).orElse(null);
             }
 
             if (req.getGiaTriGhiNhan() != null) entity.setLesionType(req.getGiaTriGhiNhan());
