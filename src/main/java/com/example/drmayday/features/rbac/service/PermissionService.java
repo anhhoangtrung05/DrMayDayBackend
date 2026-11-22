@@ -48,7 +48,7 @@ public class PermissionService {
         }
 
         Permission updated = permissionRepository.save(permission);
-        log.info("Chỉnh sửa quyền hạn id={} thành công", id);
+        log.info("Successfully updated permission id={}", id);
         return PermissionResponse.fromEntity(updated);
     }
 
@@ -60,7 +60,7 @@ public class PermissionService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy quyền hạn với id: " + idStr));
 
         permissionRepository.delete(permission);
-        log.info("Xóa quyền hạn id={} ({}) thành công", id, permission.getName());
+        log.info("Successfully deleted permission id={} ({})", id, permission.getName());
     }
 
     private Long parseId(String idStr) {

@@ -1,10 +1,11 @@
-package com.example.drmayday.features.facility.controller;
+package com.example.drmayday.features.topology.controller;
 
 import com.example.drmayday.common.dto.BaseResponse;
-import com.example.drmayday.features.facility.dto.CreateRoomRequest;
-import com.example.drmayday.features.facility.dto.EditRoomRequest;
-import com.example.drmayday.features.facility.dto.RoomResponse;
-import com.example.drmayday.features.facility.service.RoomService;
+import com.example.drmayday.features.topology.dto.CreateRoomRequest;
+import com.example.drmayday.features.topology.dto.EditRoomRequest;
+import com.example.drmayday.features.topology.dto.RoomResponse;
+import com.example.drmayday.features.topology.service.RoomService;
+
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * Controller for clinic room management (Facility module).
+ * Controller for clinic room management (Topology module).
  * Handles TOPOLOGY_SET_ROOM, TOPOLOGY_GET_LIST_ROOMS, TOPOLOGY_GET_ROOM_DETAIL,
  * TOPOLOGY_EDIT_ROOM, and TOPOLOGY_DELETE_ROOM.
  */

@@ -63,7 +63,7 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
 
         String type = req.getLoaiBenhAn();
         if (!VALID_TYPES.contains(type)) {
-            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "loai_benh_an must be CAP or MAN");
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Loại bệnh án phải là cấp tính hoặc mạn tính");
         }
 
         if (medicalRecordRepo.existsByPatientIdAndStatusNotIn(patientId, TERMINAL_STATUSES)) {
@@ -72,7 +72,7 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
 
         validateFamilyHistory(req.getTienSuGiaDinh(), req.getTienSuGiaDinhGhiRo());
         if (req.getKetQuaDieuTriBaoHiem() != null && !VALID_TREATMENT_OUTCOMES.contains(req.getKetQuaDieuTriBaoHiem())) {
-            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "ket_qua_dieu_tri_bao_hiem invalid");
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Kết quả điều trị bảo hiểm không hợp lệ");
         }
 
         MedicalRecord record = MedicalRecord.builder()
@@ -118,10 +118,10 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
         Long patientId = patientIdStr != null ? parseLong(patientIdStr, ErrorCode.INVALID_PARAMETER_VALUE) : null;
 
         if (loaiBenhAn != null && !VALID_TYPES.contains(loaiBenhAn)) {
-            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "loai_benh_an must be CAP or MAN");
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Loại bệnh án phải là cấp tính hoặc mạn tính");
         }
         if (trangThai != null && !VALID_STATUSES.contains(trangThai)) {
-            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "trang_thai invalid");
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Trạng thái không hợp lệ");
         }
 
         return medicalRecordRepo.findFiltered(patientId, loaiBenhAn, trangThai, PageRequest.of(page - 1, size))
@@ -181,7 +181,7 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
 
         if (req.getTrangThai() != null) {
             if (!VALID_STATUSES.contains(req.getTrangThai())) {
-                throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "trang_thai invalid");
+                throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Trạng thái không hợp lệ");
             }
             record.setStatus(req.getTrangThai());
         }
@@ -193,7 +193,7 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
         if (req.getNgayKetThucDieuTriNgoaiTru() != null) record.setOutpatientTreatmentEndDate(parseLocalDate(req.getNgayKetThucDieuTriNgoaiTru()));
         if (req.getKetQuaDieuTriBaoHiem() != null) {
             if (!VALID_TREATMENT_OUTCOMES.contains(req.getKetQuaDieuTriBaoHiem())) {
-                throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "ket_qua_dieu_tri_bao_hiem invalid");
+                throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Kết quả điều trị bảo hiểm không hợp lệ");
             }
             record.setInsuranceTreatmentOutcome(req.getKetQuaDieuTriBaoHiem());
         }
@@ -324,29 +324,29 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
 
     private void validateFamilyHistory(String familyHistory, String familyHistoryDesc) {
         if (familyHistory != null && !VALID_FAMILY_HISTORY.contains(familyHistory)) {
-            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "tien_su_gia_dinh invalid");
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Tiền sử gia đình không hợp lệ");
         }
         if ("Co".equals(familyHistory) && (familyHistoryDesc == null || familyHistoryDesc.isBlank())) {
-            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "tien_su_gia_dinh_ghi_ro required when tien_su_gia_dinh=Co");
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Tiền sử gia đình ghi rõ bắt buộc khi tiền sử gia đình = Có");
         }
         if (!"Co".equals(familyHistory) && familyHistoryDesc != null) {
-            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "tien_su_gia_dinh_ghi_ro must be null when tien_su_gia_dinh != Co");
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Mô tả tiền sử gia đình phải để trống khi tiền sử gia đình không phải là Co");
         }
     }
 
     private void validateTriState(String value, String fieldName) {
         if (value != null && !VALID_TRI_STATE.contains(value)) {
             throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE,
-                    fieldName + " must be one of CO, KHONG, KHONG_RO");
+                    fieldName + " phải là một trong các giá trị: " + String.join(", ", VALID_TRI_STATE));
         }
     }
 
     private void validateBooleanDetail(Boolean flag, String detail, String fieldName) {
         if (Boolean.TRUE.equals(flag) && (detail == null || detail.isBlank())) {
-            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, fieldName + "_ghi_ro required when " + fieldName + "=true");
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, fieldName + "_ghi_ro là bắt buộc khi " + fieldName + "=true");
         }
         if (!Boolean.TRUE.equals(flag) && detail != null) {
-            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, fieldName + "_ghi_ro must be null when " + fieldName + " is not true");
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, fieldName + "_ghi_ro phải để trống khi " + fieldName + " không phải true");
         }
     }
 
@@ -363,7 +363,7 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
         try {
             return OffsetDateTime.parse(value);
         } catch (Exception ex) {
-            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Invalid datetime format");
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Định dạng thời gian không hợp lệ, phải là ISO 8601");
         }
     }
 
@@ -372,7 +372,7 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
         try {
             return LocalDate.parse(value);
         } catch (Exception ex) {
-            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Invalid date format");
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Định dạng ngày tháng không hợp lệ");
         }
     }
 

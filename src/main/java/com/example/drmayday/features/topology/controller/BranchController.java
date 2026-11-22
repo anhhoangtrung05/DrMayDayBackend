@@ -1,10 +1,11 @@
-package com.example.drmayday.features.facility.controller;
+package com.example.drmayday.features.topology.controller;
 
 import com.example.drmayday.common.dto.BaseResponse;
-import com.example.drmayday.features.facility.dto.BranchResponse;
-import com.example.drmayday.features.facility.dto.CreateBranchRequest;
-import com.example.drmayday.features.facility.dto.EditBranchRequest;
-import com.example.drmayday.features.facility.service.BranchService;
+import com.example.drmayday.features.topology.dto.BranchResponse;
+import com.example.drmayday.features.topology.dto.CreateBranchRequest;
+import com.example.drmayday.features.topology.dto.EditBranchRequest;
+import com.example.drmayday.features.topology.service.BranchService;
+
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * Controller for branch management (Facility module).
+ * Controller for branch management (Topology module).
  * Handles TOPOLOGY_SET_BRANCH, TOPOLOGY_GET_LIST_BRANCHES, TOPOLOGY_GET_BRANCH_DETAIL,
  * TOPOLOGY_EDIT_BRANCH, and TOPOLOGY_DELETE_BRANCH.
  */

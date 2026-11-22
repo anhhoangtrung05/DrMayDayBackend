@@ -1,4 +1,4 @@
-package com.example.drmayday.features.facility.dto;
+package com.example.drmayday.features.topology.dto;
 
 import com.example.drmayday.entity.Branch;
 import com.fasterxml.jackson.annotation.JsonProperty;

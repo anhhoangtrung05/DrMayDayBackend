@@ -22,12 +22,13 @@ public interface ClinicRoomRepository extends JpaRepository<ClinicRoom, Long> {
 
     boolean existsByBranchIdAndNameAndClinicRoomIdNot(Long branchId, String name, Long clinicRoomId);
 
-    // Bảng phienkham chưa có entity, Phần 4 sẽ thiết kế entity đầy đủ
+    // The phienkham table does not have an entity yet; it will be added in Part 4.
     @Query(value = "select exists(select 1 from phienkham where ma_phong_kham = :roomId)", nativeQuery = true)
     boolean hasPhienKham(@Param("roomId") Long roomId);
 
-    // Phải viết tay FOR UPDATE: @Lock sinh FOR NO KEY UPDATE, không xung đột với FOR KEY SHARE của khóa ngoại phienkham,
-    // nên phiên khám mới sẽ lọt vào đúng lúc đang chuyển phòng. Hàm này phải là lệnh đầu tiên đọc phòng trong giao dịch
+    // Implement FOR UPDATE manually: @Lock generates FOR NO KEY UPDATE, which does not conflict with FOR KEY SHARE
+    // from phienkham's foreign key. Otherwise, a new exam session could be inserted while the room is being moved.
+    // This must be the first room read in the transaction.
     @Query(value = "select * from phongkham where ma_phong_kham = :roomId for update", nativeQuery = true)
     Optional<ClinicRoom> findByIdForUpdate(@Param("roomId") Long roomId);
 }

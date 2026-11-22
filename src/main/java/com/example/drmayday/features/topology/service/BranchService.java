@@ -1,10 +1,10 @@
-package com.example.drmayday.features.facility.service;
-
-import com.example.drmayday.features.facility.dto.BranchResponse;
-import com.example.drmayday.features.facility.dto.CreateBranchRequest;
-import com.example.drmayday.features.facility.dto.EditBranchRequest;
+package com.example.drmayday.features.topology.service;
 
 import java.util.List;
+
+import com.example.drmayday.features.topology.dto.BranchResponse;
+import com.example.drmayday.features.topology.dto.CreateBranchRequest;
+import com.example.drmayday.features.topology.dto.EditBranchRequest;
 
 /**
  * Branch management operations for TOPOLOGY_SET_BRANCH, TOPOLOGY_GET_LIST_BRANCHES,

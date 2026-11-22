@@ -1,12 +1,12 @@
-package com.example.drmayday.features.facility.service.impl;
+package com.example.drmayday.features.topology.service.impl;
 
 import com.example.drmayday.common.exception.AppException;
 import com.example.drmayday.common.exception.ErrorCode;
 import com.example.drmayday.entity.Branch;
-import com.example.drmayday.features.facility.dto.BranchResponse;
-import com.example.drmayday.features.facility.dto.CreateBranchRequest;
-import com.example.drmayday.features.facility.dto.EditBranchRequest;
-import com.example.drmayday.features.facility.service.BranchService;
+import com.example.drmayday.features.topology.dto.BranchResponse;
+import com.example.drmayday.features.topology.dto.CreateBranchRequest;
+import com.example.drmayday.features.topology.dto.EditBranchRequest;
+import com.example.drmayday.features.topology.service.BranchService;
 import com.example.drmayday.repository.BranchRepository;
 import com.example.drmayday.repository.ClinicRoomRepository;
 import com.example.drmayday.repository.EmployeeRepository;
@@ -40,7 +40,7 @@ public class BranchServiceImpl implements BranchService {
     @Override
     @Transactional
     public BranchResponse createBranch(CreateBranchRequest req) {
-        log.info("Admin tạo chi nhánh mới");
+        log.info("Admin creates a new branch");
         Branch branch = Branch.builder()
                 .name(req.getName().trim())
                 .address(req.getAddress().trim())
@@ -67,7 +67,7 @@ public class BranchServiceImpl implements BranchService {
     @Override
     @Transactional
     public BranchResponse editBranch(String id, EditBranchRequest req) {
-        log.info("Admin sửa chi nhánh: id={}", id);
+        log.info("Admin edits branch: id={}", id);
         Branch branch = findBranch(id);
 
         if (req.getName() != null) {
@@ -95,11 +95,11 @@ public class BranchServiceImpl implements BranchService {
     @Override
     @Transactional
     public void deleteBranch(String id) {
-        log.info("Admin xóa chi nhánh: id={}", id);
+        log.info("Admin deletes branch: id={}", id);
         Branch branch = findBranch(id);
         Long branchId = branch.getBranchId();
 
-        // Kiểm tra chi nhánh cuối trước phụ thuộc: chi nhánh cuối luôn trả 2107 dù còn phòng hay nhân viên
+        // Check the last branch before dependencies: the last branch always returns 2107 even if rooms or employees remain.
         if (branchRepository.count() <= 1) {
             throw new AppException(ErrorCode.LAST_BRANCH_CANNOT_BE_DELETED);
         }

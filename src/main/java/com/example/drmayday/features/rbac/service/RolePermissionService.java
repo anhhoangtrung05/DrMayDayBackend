@@ -61,10 +61,10 @@ public class RolePermissionService {
             }
         }
 
-        // Xóa liên kết cũ của role này
+        // Remove the role's existing permission assignments.
         rolePermissionRepository.deleteByRoleId(roleId);
 
-        // Lưu danh sách liên kết mới
+        // Save the new permission assignments.
         if (!distinctPermIds.isEmpty()) {
             OffsetDateTime now = OffsetDateTime.now();
             List<RolePermission> rolePermissions = distinctPermIds.stream()
@@ -76,7 +76,7 @@ public class RolePermissionService {
             rolePermissionRepository.saveAll(rolePermissions);
         }
 
-        log.info("Gán danh sách {} quyền hạn cho vai trò id={} ({}) thành công",
+        log.info("Successfully assigned {} permissions to role id={} ({})",
                 distinctPermIds.size(), roleId, role.getName());
     }
 
@@ -109,7 +109,7 @@ public class RolePermissionService {
         }
 
         rolePermissionRepository.deleteByRoleIdAndPermissionId(roleId, permissionId);
-        log.info("Thu hồi quyền hạn id={} khỏi vai trò id={} thành công", permissionId, roleId);
+        log.info("Successfully revoked permission id={} from role id={}", permissionId, roleId);
     }
 
     private Long parseId(String idStr, String entityName) {

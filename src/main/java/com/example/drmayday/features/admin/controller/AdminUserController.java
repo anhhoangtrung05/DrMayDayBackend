@@ -14,7 +14,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * Admin controller for user management (Administration and Authorization).
+ * Admin controller for user management (Administration).
  * Handles ADMIN_GET_LIST_USERS, ADMIN_GET_USER_DETAILS, ADMIN_CREATE_USER, and ADMIN_EDIT_USER.
  */
 @RestController

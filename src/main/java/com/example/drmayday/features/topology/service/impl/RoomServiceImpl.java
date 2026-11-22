@@ -1,13 +1,13 @@
-package com.example.drmayday.features.facility.service.impl;
+package com.example.drmayday.features.topology.service.impl;
 
 import com.example.drmayday.common.exception.AppException;
 import com.example.drmayday.common.exception.ErrorCode;
 import com.example.drmayday.entity.Branch;
 import com.example.drmayday.entity.ClinicRoom;
-import com.example.drmayday.features.facility.dto.CreateRoomRequest;
-import com.example.drmayday.features.facility.dto.EditRoomRequest;
-import com.example.drmayday.features.facility.dto.RoomResponse;
-import com.example.drmayday.features.facility.service.RoomService;
+import com.example.drmayday.features.topology.dto.CreateRoomRequest;
+import com.example.drmayday.features.topology.dto.EditRoomRequest;
+import com.example.drmayday.features.topology.dto.RoomResponse;
+import com.example.drmayday.features.topology.service.RoomService;
 import com.example.drmayday.repository.BranchRepository;
 import com.example.drmayday.repository.ClinicRoomRepository;
 import org.slf4j.Logger;
@@ -44,7 +44,7 @@ public class RoomServiceImpl implements RoomService {
             throw new AppException(ErrorCode.ROOM_NAME_ALREADY_EXISTS);
         }
 
-        // Cột ma_chi_nhanh được ghi qua branchId, còn branch chỉ để đọc (insertable = false)
+        // The ma_chi_nhanh column is written through branchId; branch is read-only (insertable = false).
         ClinicRoom room = ClinicRoom.builder().branchId(branchId).branch(branch).name(name).build();
         return RoomResponse.from(saveRoom(room));
     }
@@ -70,7 +70,7 @@ public class RoomServiceImpl implements RoomService {
     @Override
     @Transactional
     public RoomResponse editRoom(String id, EditRoomRequest req) {
-        log.info("Admin sửa phòng khám: id={}", id);
+        log.info("Admin updating clinic room: id={}", id);
         ClinicRoom room = clinicRoomRepository.findByIdForUpdate(parseRoomId(id))
                 .orElseThrow(() -> new AppException(ErrorCode.ROOM_NOT_FOUND));
 
@@ -82,7 +82,7 @@ public class RoomServiceImpl implements RoomService {
         Branch targetBranch = null;
         if (req.getBranchId() != null) {
             Long targetBranchId = parseBodyBranchId(req.getBranchId());
-            // Gửi trùng chi nhánh hiện tại thì không tính là chuyển phòng
+            // Selecting the current branch does not count as moving the room.
             if (!targetBranchId.equals(room.getBranchId())) {
                 targetBranch = findActiveBranch(targetBranchId);
                 if (clinicRoomRepository.hasPhienKham(room.getClinicRoomId())) {
@@ -112,7 +112,7 @@ public class RoomServiceImpl implements RoomService {
     @Override
     @Transactional
     public void deleteRoom(String id) {
-        log.info("Admin xóa phòng khám: id={}", id);
+        log.info("Admin deleting clinic room: id={}", id);
         ClinicRoom room = findRoom(id);
 
         if (clinicRoomRepository.hasPhienKham(room.getClinicRoomId())) {
@@ -133,7 +133,7 @@ public class RoomServiceImpl implements RoomService {
         }
     }
 
-    // Phải saveAndFlush để lỗi database xảy ra trong khối try, không phải lúc commit
+    // Use saveAndFlush so database errors occur inside the try block rather than at commit.
     private ClinicRoom saveRoom(ClinicRoom room) {
         try {
             return clinicRoomRepository.saveAndFlush(room);

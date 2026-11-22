@@ -259,33 +259,33 @@ public class AdminUserServiceImpl implements AdminUserService {
 
     private Role resolveRole(String roleIdentifier) {
         if (roleIdentifier == null || roleIdentifier.trim().isEmpty()) {
-            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Vai trò (Role) không tồn tại");
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Vai trò không tồn tại");
         }
         String trimmed = roleIdentifier.trim();
         try {
             long roleId = Long.parseLong(trimmed);
             return roleRepository.findById(roleId)
-                    .orElseThrow(() -> new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Vai trò (Role) không tồn tại"));
+                    .orElseThrow(() -> new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Vai trò không tồn tại"));
         } catch (NumberFormatException e) {
             String roleName = trimmed.toLowerCase();
             if ("admin".equals(roleName)) {
                 return roleRepository.findByName("admin")
-                        .orElseThrow(() -> new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Vai trò (Role) không tồn tại"));
+                        .orElseThrow(() -> new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Vai trò không tồn tại"));
             }
             if ("doctor".equals(roleName) || "bac_si".equals(roleName)) {
                 return roleRepository.findByName("bac_si")
-                        .orElseThrow(() -> new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Vai trò (Role) không tồn tại"));
+                        .orElseThrow(() -> new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Vai trò không tồn tại"));
             }
             if ("nurse".equals(roleName) || "dieu_duong".equals(roleName)) {
                 return roleRepository.findByName("dieu_duong")
-                        .orElseThrow(() -> new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Vai trò (Role) không tồn tại"));
+                        .orElseThrow(() -> new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Vai trò không tồn tại"));
             }
             if ("patient".equals(roleName) || "benh_nhan".equals(roleName)) {
                 return roleRepository.findByName("benh_nhan")
-                        .orElseThrow(() -> new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Vai trò (Role) không tồn tại"));
+                        .orElseThrow(() -> new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Vai trò không tồn tại"));
             }
             return roleRepository.findByName(roleName)
-                    .orElseThrow(() -> new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Vai trò (Role) không tồn tại"));
+                    .orElseThrow(() -> new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Vai trò không tồn tại"));
         }
     }
 

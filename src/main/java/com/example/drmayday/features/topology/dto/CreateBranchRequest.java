@@ -1,31 +1,31 @@
-package com.example.drmayday.features.facility.dto;
+package com.example.drmayday.features.topology.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 /**
- * Request DTO for TOPOLOGY_EDIT_BRANCH. Omitted fields remain unchanged.
+ * Request DTO for TOPOLOGY_SET_BRANCH.
  */
-public class EditBranchRequest {
+public class CreateBranchRequest {
 
+    @NotBlank(message = "2001")
     @Size(max = 150, message = "2003")
     @JsonProperty("name")
     private String name;
 
+    @NotBlank(message = "2001")
     @Size(max = 500, message = "2003")
     @JsonProperty("address")
     private String address;
 
-    // An empty phone value means the phone number should be removed.
+    // Allows empty or whitespace-only strings; the service trims them and converts empty values to null.
     @Pattern(regexp = "^\\s*(\\+?[0-9]{8,15})?\\s*$", message = "2004")
     @JsonProperty("phone")
     private String phone;
 
-    @JsonProperty("status")
-    private Boolean status;
-
-    public EditBranchRequest() {
+    public CreateBranchRequest() {
     }
 
     public String getName() {
@@ -50,13 +50,5 @@ public class EditBranchRequest {
 
     public void setPhone(String phone) {
         this.phone = phone;
-    }
-
-    public Boolean getStatus() {
-        return status;
-    }
-
-    public void setStatus(Boolean status) {
-        this.status = status;
     }
 }

@@ -10,7 +10,7 @@ import lombok.*;
 @AllArgsConstructor
 public class UpsertChronicExamFindingsRequest {
 
-    @NotBlank(message = "exam_id is required")
+    @NotBlank(message = "Thiếu tham số bắt buộc: exam_id")
     @JsonProperty("exam_id")
     private String examId;
 

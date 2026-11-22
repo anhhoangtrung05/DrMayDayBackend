@@ -1,10 +1,10 @@
-package com.example.drmayday.features.facility.service;
-
-import com.example.drmayday.features.facility.dto.CreateRoomRequest;
-import com.example.drmayday.features.facility.dto.EditRoomRequest;
-import com.example.drmayday.features.facility.dto.RoomResponse;
+package com.example.drmayday.features.topology.service;
 
 import java.util.List;
+
+import com.example.drmayday.features.topology.dto.CreateRoomRequest;
+import com.example.drmayday.features.topology.dto.EditRoomRequest;
+import com.example.drmayday.features.topology.dto.RoomResponse;
 
 /**
  * Clinic room management operations for TOPOLOGY_SET_ROOM, TOPOLOGY_GET_LIST_ROOMS,

@@ -47,21 +47,21 @@ public class LesionDetailsServiceImpl implements LesionDetailsService {
     @Transactional
     public List<LesionDetailResponse> addLesionDetailsBulk(AddLesionDetailsBulkRequest req) {
         if (req == null || req.getExamId() == null || req.getExamId().isBlank()) {
-            throw new AppException(ErrorCode.MISSING_REQUIRED_PARAMETER, "Missing required parameter: exam_id");
+            throw new AppException(ErrorCode.MISSING_REQUIRED_PARAMETER, "Thiếu tham số bắt buộc: exam_id");
         }
         if (req.getItems() == null || req.getItems().isEmpty()) {
-            throw new AppException(ErrorCode.MISSING_REQUIRED_PARAMETER, "Missing required parameter: items cannot be empty");
+            throw new AppException(ErrorCode.MISSING_REQUIRED_PARAMETER, "Thiếu tham số bắt buộc: items không thể để trống");
         }
 
         Long examIdLong;
         try {
             examIdLong = Long.parseLong(req.getExamId().trim());
         } catch (NumberFormatException e) {
-            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "exam_id must be a numeric value");
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Tham số exam_id phải là giá trị số");
         }
 
         MedicalVisit visit = medicalVisitRepository.findById(examIdLong)
-                .orElseThrow(() -> new AppException(ErrorCode.EXAM_NOT_FOUND, "Exam not found: " + examIdLong));
+                .orElseThrow(() -> new AppException(ErrorCode.EXAM_NOT_FOUND, "Không tìm thấy phiên khám: " + examIdLong));
 
         String loaiBenhAn = visit.getMedicalRecordType() != null ? visit.getMedicalRecordType().toUpperCase() : "CAP";
         List<LesionDetailResponse> result = new ArrayList<>();
@@ -70,13 +70,13 @@ public class LesionDetailsServiceImpl implements LesionDetailsService {
             for (LesionDetailItemRequest item : req.getItems()) {
                 String viTri = item.getViTriTonThuong() != null ? item.getViTriTonThuong() : item.getViTri();
                 if (viTri == null || viTri.isBlank()) {
-                    throw new AppException(ErrorCode.MISSING_REQUIRED_PARAMETER, "vi_tri_ton_thuong is required for CAP lesion detail");
+                    throw new AppException(ErrorCode.MISSING_REQUIRED_PARAMETER, "Vị trí tổn thương là bắt buộc cho chi tiết tổn thương cấp tính");
                 }
                 if (item.getKichThuocMm() != null && item.getKichThuocMm().compareTo(BigDecimal.ZERO) <= 0) {
-                    throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "kich_thuoc_mm must be > 0");
+                    throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Kích thước mm phải lớn hơn 0");
                 }
                 if (item.getThoiGianTonTaiGio() != null && item.getThoiGianTonTaiGio().compareTo(BigDecimal.ZERO) < 0) {
-                    throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "thoi_gian_ton_tai_gio must be >= 0");
+                    throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Thời gian tồn tại giờ phải lớn hơn hoặc bằng 0");
                 }
 
                 AcuteLesionDetail entity = AcuteLesionDetail.builder()
@@ -96,21 +96,21 @@ public class LesionDetailsServiceImpl implements LesionDetailsService {
         } else if ("MAN".equals(loaiBenhAn)) {
             for (LesionDetailItemRequest item : req.getItems()) {
                 if (item.getMaDacDiemSanPhu() == null || item.getMaDacDiemSanPhu().isBlank()) {
-                    throw new AppException(ErrorCode.MISSING_REQUIRED_PARAMETER, "ma_dac_diem_san_phu is required for MAN lesion detail");
+                    throw new AppException(ErrorCode.MISSING_REQUIRED_PARAMETER, "Mã đặc điểm sẩn phù là bắt buộc cho chi tiết tổn thương mạn tính");
                 }
                 if (item.getGiaTriGhiNhan() == null || item.getGiaTriGhiNhan().isBlank()) {
-                    throw new AppException(ErrorCode.MISSING_REQUIRED_PARAMETER, "gia_tri_ghi_nhan is required for MAN lesion detail");
+                    throw new AppException(ErrorCode.MISSING_REQUIRED_PARAMETER, "Giá trị ghi nhận là bắt buộc cho chi tiết tổn thương mạn tính");
                 }
 
                 Long featureId;
                 try {
                     featureId = Long.parseLong(item.getMaDacDiemSanPhu().trim());
                 } catch (NumberFormatException e) {
-                    throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "ma_dac_diem_san_phu must be a numeric value");
+                    throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Mã đặc điểm sẩn phù phải là giá trị số");
                 }
 
                 WhealFeature feature = whealFeatureRepository.findById(featureId)
-                        .orElseThrow(() -> new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "ma_dac_diem_san_phu not found: " + featureId));
+                        .orElseThrow(() -> new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Không tìm thấy mã đặc điểm sẩn phù: " + featureId));
 
                 WhealLesionDetail entity = WhealLesionDetail.builder()
                         .medicalVisitId(examIdLong)
@@ -123,7 +123,7 @@ public class LesionDetailsServiceImpl implements LesionDetailsService {
                 result.add(mapWhealToResponse(saved, feature.getName(), item.getGhiChu()));
             }
         } else {
-            throw new AppException(ErrorCode.RECORD_TYPE_MISMATCH, "Unsupported record type: " + loaiBenhAn);
+            throw new AppException(ErrorCode.RECORD_TYPE_MISMATCH, "Loại bệnh án không được hỗ trợ: " + loaiBenhAn);
         }
 
         return result;
@@ -133,23 +133,23 @@ public class LesionDetailsServiceImpl implements LesionDetailsService {
     @Transactional(readOnly = true)
     public List<LesionDetailResponse> getListLesionDetails(String examId) {
         if (examId == null || examId.isBlank()) {
-            throw new AppException(ErrorCode.MISSING_REQUIRED_PARAMETER, "Missing required parameter: exam_id");
+            throw new AppException(ErrorCode.MISSING_REQUIRED_PARAMETER, "Thiếu tham số bắt buộc: exam_id");
         }
 
         Long examIdLong;
         try {
             examIdLong = Long.parseLong(examId.trim());
         } catch (NumberFormatException e) {
-            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "exam_id must be a numeric value");
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Tham số exam_id phải là giá trị số");
         }
 
         MedicalVisit visit = medicalVisitRepository.findById(examIdLong)
-                .orElseThrow(() -> new AppException(ErrorCode.EXAM_NOT_FOUND, "Exam not found: " + examIdLong));
+                .orElseThrow(() -> new AppException(ErrorCode.EXAM_NOT_FOUND, "Không tìm thấy phiên khám: " + examIdLong));
 
-        // Check ownership if caller is PATIENT
+        // Verify ownership when the caller is a patient.
         if (SecurityUtils.hasRole("patient") && !SecurityUtils.hasRole("doctor") && !SecurityUtils.hasRole("admin")) {
             MedicalRecord record = medicalRecordRepository.findById(visit.getMedicalRecordId())
-                    .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "Medical record not found"));
+                    .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "Không tìm thấy hồ sơ bệnh án: " + visit.getMedicalRecordId()));
 
             Long currentUserId = SecurityUtils.getCurrentUserId();
             UserAccount account = userAccountRepository.findById(currentUserId).orElse(null);
@@ -158,7 +158,7 @@ public class LesionDetailsServiceImpl implements LesionDetailsService {
                     : currentUserId;
 
             if (!record.getPatientId().equals(callerPatientId)) {
-                throw new AppException(ErrorCode.CANNOT_ACCESS_ANOTHER_USER_DATA, "Cannot access another user data");
+                throw new AppException(ErrorCode.CANNOT_ACCESS_ANOTHER_USER_DATA, "Người dùng không có quyền truy cập dữ liệu của người khác");
             }
         }
 
@@ -187,30 +187,30 @@ public class LesionDetailsServiceImpl implements LesionDetailsService {
     @Transactional
     public LesionDetailResponse updateLesionDetail(String id, String loaiBenhAn, UpdateLesionDetailRequest req) {
         if (loaiBenhAn == null || loaiBenhAn.isBlank()) {
-            throw new AppException(ErrorCode.MISSING_REQUIRED_PARAMETER, "Missing required parameter: loai_benh_an");
+            throw new AppException(ErrorCode.MISSING_REQUIRED_PARAMETER, "Thiếu tham số bắt buộc: loại bệnh án");
         }
 
         String normalizedType = loaiBenhAn.trim().toUpperCase();
         if (!"CAP".equals(normalizedType) && !"MAN".equals(normalizedType)) {
-            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "loai_benh_an must be CAP or MAN");
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Loại bệnh án phải là CAP hoặc MAN");
         }
 
         Long idLong;
         try {
             idLong = Long.parseLong(id.trim());
         } catch (NumberFormatException e) {
-            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "id must be a numeric value");
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Tham số id phải là giá trị số");
         }
 
         if ("CAP".equals(normalizedType)) {
             AcuteLesionDetail entity = acuteLesionDetailRepository.findById(idLong)
-                    .orElseThrow(() -> new AppException(ErrorCode.LESION_DETAIL_NOT_FOUND, "Lesion detail not found with id: " + idLong));
+                    .orElseThrow(() -> new AppException(ErrorCode.LESION_DETAIL_NOT_FOUND, "Không tìm thấy chi tiết tổn thương với id: " + idLong));
 
             if (req.getKichThuocMm() != null && req.getKichThuocMm().compareTo(BigDecimal.ZERO) <= 0) {
-                throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "kich_thuoc_mm must be > 0");
+                throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Kích thước mm phải lớn hơn 0");
             }
             if (req.getThoiGianTonTaiGio() != null && req.getThoiGianTonTaiGio().compareTo(BigDecimal.ZERO) < 0) {
-                throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "thoi_gian_ton_tai_gio must be >= 0");
+                throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Thời gian tồn tại (giờ) phải lớn hơn hoặc bằng 0");
             }
 
             String viTri = req.getViTriTonThuong() != null ? req.getViTriTonThuong() : req.getViTri();
@@ -228,7 +228,7 @@ public class LesionDetailsServiceImpl implements LesionDetailsService {
             return mapAcuteToResponse(saved);
         } else {
             WhealLesionDetail entity = whealLesionDetailRepository.findById(idLong)
-                    .orElseThrow(() -> new AppException(ErrorCode.LESION_DETAIL_NOT_FOUND, "Lesion detail not found with id: " + idLong));
+                    .orElseThrow(() -> new AppException(ErrorCode.LESION_DETAIL_NOT_FOUND, "Không tìm thấy chi tiết tổn thương với id: " + idLong));
 
             String featureName = null;
             if (req.getMaDacDiemSanPhu() != null && !req.getMaDacDiemSanPhu().isBlank()) {
@@ -236,10 +236,10 @@ public class LesionDetailsServiceImpl implements LesionDetailsService {
                 try {
                     featureId = Long.parseLong(req.getMaDacDiemSanPhu().trim());
                 } catch (NumberFormatException e) {
-                    throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "ma_dac_diem_san_phu must be a numeric value");
+                    throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Mã đặc điểm sẩn phù phải là giá trị số");
                 }
                 WhealFeature feature = whealFeatureRepository.findById(featureId)
-                        .orElseThrow(() -> new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "ma_dac_diem_san_phu not found: " + featureId));
+                        .orElseThrow(() -> new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Không tìm thấy mã đặc điểm sẩn phù: " + featureId));
                 entity.setWhealFeatureId(featureId);
                 featureName = feature.getName();
             } else if (entity.getWhealFeatureId() != null) {
@@ -259,29 +259,29 @@ public class LesionDetailsServiceImpl implements LesionDetailsService {
     @Transactional
     public void deleteLesionDetail(String id, String loaiBenhAn) {
         if (loaiBenhAn == null || loaiBenhAn.isBlank()) {
-            throw new AppException(ErrorCode.MISSING_REQUIRED_PARAMETER, "Missing required parameter: loai_benh_an");
+            throw new AppException(ErrorCode.MISSING_REQUIRED_PARAMETER, "Thiếu tham số bắt buộc: loai_benh_an");
         }
 
         String normalizedType = loaiBenhAn.trim().toUpperCase();
         if (!"CAP".equals(normalizedType) && !"MAN".equals(normalizedType)) {
-            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "loai_benh_an must be CAP or MAN");
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Loại bệnh án phải là cấp tính hoặc mạn tính");
         }
 
         Long idLong;
         try {
             idLong = Long.parseLong(id.trim());
         } catch (NumberFormatException e) {
-            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "id must be a numeric value");
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "id phải là giá trị số");
         }
 
         if ("CAP".equals(normalizedType)) {
             if (!acuteLesionDetailRepository.existsById(idLong)) {
-                throw new AppException(ErrorCode.LESION_DETAIL_NOT_FOUND, "Lesion detail not found with id: " + idLong);
+                throw new AppException(ErrorCode.LESION_DETAIL_NOT_FOUND, "Không tìm thấy chi tiết tổn thương với id: " + idLong);
             }
             acuteLesionDetailRepository.deleteById(idLong);
         } else {
             if (!whealLesionDetailRepository.existsById(idLong)) {
-                throw new AppException(ErrorCode.LESION_DETAIL_NOT_FOUND, "Lesion detail not found with id: " + idLong);
+                throw new AppException(ErrorCode.LESION_DETAIL_NOT_FOUND, "Không tìm thấy chi tiết tổn thương với id: " + idLong);
             }
             whealLesionDetailRepository.deleteById(idLong);
         }

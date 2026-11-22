@@ -14,11 +14,11 @@ import java.util.List;
 @AllArgsConstructor
 public class AddLesionDetailsBulkRequest {
 
-    @NotBlank(message = "exam_id is required")
+    @NotBlank(message = "Thiếu tham số bắt buộc: exam_id")
     @JsonProperty("exam_id")
     private String examId;
 
-    @NotEmpty(message = "items cannot be empty")
+    @NotEmpty(message = "Trường items không được để trống")
     @Valid
     @JsonProperty("items")
     private List<LesionDetailItemRequest> items;
