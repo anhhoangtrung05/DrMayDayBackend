@@ -1,7 +1,11 @@
 package com.example.drmayday.features.profile.controller;
 
+import com.example.drmayday.features.profile.dto.EmployeeProfileResponse;
 import com.example.drmayday.features.profile.dto.PatientProfileResponse;
-import com.example.drmayday.features.profile.dto.UpdateProfileRequest;
+import com.example.drmayday.features.profile.dto.PersonProfileResponse;
+import com.example.drmayday.features.profile.dto.UpdateEmployeeProfileRequest;
+import com.example.drmayday.features.profile.dto.UpdatePatientProfileRequest;
+import com.example.drmayday.features.profile.dto.UpdatePersonProfileRequest;
 import com.example.drmayday.features.profile.service.ProfileService;
 import com.example.drmayday.common.dto.BaseResponse;
 import com.example.drmayday.common.security.SecurityUtils;
@@ -23,35 +27,45 @@ public class ProfileController {
         this.profileService = profileService;
     }
 
-    /**
-     * PROFILE_GET
-     * Retrieves the detailed profile of the authenticated patient.
-     *
-     * @param token Bearer token for the authenticated user
-     * @return The patient's profile
-     */
-    @GetMapping
-    public ResponseEntity<BaseResponse<PatientProfileResponse>> getProfile(
-            @RequestHeader(value = "Authorization", required = false) String token) {
-        Long currentUserId = SecurityUtils.getCurrentUserId();
-        PatientProfileResponse response = profileService.getProfile(currentUserId);
+    @GetMapping("/person")
+    public ResponseEntity<BaseResponse<PersonProfileResponse>> getPersonProfile() {
+        PersonProfileResponse response = profileService.getPersonProfile(SecurityUtils.getCurrentUserId());
         return ResponseEntity.ok(BaseResponse.success(response));
     }
 
-    /**
-     * PROFILE_PUT
-     * Updates the patient's demographic, contact, and health insurance information.
-     *
-     * @param token Bearer token for the authenticated user
-     * @param request Profile fields to update
-     * @return The updated patient profile
-     */
-    @PutMapping
-    public ResponseEntity<BaseResponse<PatientProfileResponse>> updateProfile(
-            @RequestHeader(value = "Authorization", required = false) String token,
-            @Valid @RequestBody UpdateProfileRequest request) {
-        Long currentUserId = SecurityUtils.getCurrentUserId();
-        PatientProfileResponse response = profileService.updateProfile(currentUserId, request);
+    @PutMapping("/person")
+    public ResponseEntity<BaseResponse<PersonProfileResponse>> updatePersonProfile(
+            @Valid @RequestBody UpdatePersonProfileRequest request) {
+        PersonProfileResponse response = profileService.updatePersonProfile(
+                SecurityUtils.getCurrentUserId(), request);
         return ResponseEntity.ok(BaseResponse.success("Cập nhật thông tin thành công", response));
+    }
+
+    @GetMapping("/patient")
+    public ResponseEntity<BaseResponse<PatientProfileResponse>> getPatientProfile() {
+        PatientProfileResponse response = profileService.getPatientProfile(SecurityUtils.getCurrentUserId());
+        return ResponseEntity.ok(BaseResponse.success(response));
+    }
+
+    @PutMapping("/patient")
+    public ResponseEntity<BaseResponse<PatientProfileResponse>> updatePatientProfile(
+            @Valid @RequestBody UpdatePatientProfileRequest request) {
+        PatientProfileResponse response = profileService.updatePatientProfile(
+                SecurityUtils.getCurrentUserId(), request);
+        return ResponseEntity.ok(BaseResponse.success("Cập nhật thông tin Bệnh nhân thành công", response));
+    }
+
+    @GetMapping("/employee")
+    public ResponseEntity<BaseResponse<EmployeeProfileResponse>> getEmployeeProfile() {
+        EmployeeProfileResponse response = profileService.getEmployeeProfile(SecurityUtils.getCurrentUserId());
+        return ResponseEntity.ok(BaseResponse.success(response));
+    }
+
+    @PutMapping("/employee")
+    public ResponseEntity<BaseResponse<EmployeeProfileResponse>> updateEmployeeProfile(
+            @Valid @RequestBody UpdateEmployeeProfileRequest request) {
+        EmployeeProfileResponse response = profileService.updateEmployeeProfile(
+                SecurityUtils.getCurrentUserId(), request);
+        return ResponseEntity.ok(BaseResponse.success("Cập nhật thông tin Nhân viên thành công", response));
     }
 }

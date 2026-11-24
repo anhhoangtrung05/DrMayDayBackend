@@ -1,229 +1,181 @@
 package com.example.drmayday.features.profile.service.impl;
 
-import com.example.drmayday.features.profile.dto.PatientProfileResponse;
-import com.example.drmayday.features.profile.dto.UpdateProfileRequest;
+import com.example.drmayday.common.exception.AppException;
+import com.example.drmayday.common.exception.ErrorCode;
+import com.example.drmayday.entity.Employee;
 import com.example.drmayday.entity.Patient;
 import com.example.drmayday.entity.Person;
 import com.example.drmayday.entity.UserAccount;
+import com.example.drmayday.features.profile.dto.EmployeeProfileResponse;
+import com.example.drmayday.features.profile.dto.PatientProfileResponse;
+import com.example.drmayday.features.profile.dto.PersonProfileResponse;
+import com.example.drmayday.features.profile.dto.UpdateEmployeeProfileRequest;
+import com.example.drmayday.features.profile.dto.UpdatePatientProfileRequest;
+import com.example.drmayday.features.profile.dto.UpdatePersonProfileRequest;
 import com.example.drmayday.features.profile.service.ProfileService;
+import com.example.drmayday.repository.BranchRepository;
+import com.example.drmayday.repository.EmployeeRepository;
 import com.example.drmayday.repository.PatientRepository;
 import com.example.drmayday.repository.PersonRepository;
 import com.example.drmayday.repository.UserAccountRepository;
-import com.example.drmayday.common.exception.AppException;
-import com.example.drmayday.common.exception.ErrorCode;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.time.OffsetDateTime;
-import java.time.Year;
-import java.util.List;
 
 @Service
 public class ProfileServiceImpl implements ProfileService {
 
-    private static final Logger log = LoggerFactory.getLogger(ProfileServiceImpl.class);
-
     private final UserAccountRepository userAccountRepository;
     private final PersonRepository personRepository;
     private final PatientRepository patientRepository;
+    private final EmployeeRepository employeeRepository;
+    private final BranchRepository branchRepository;
 
     public ProfileServiceImpl(UserAccountRepository userAccountRepository,
                               PersonRepository personRepository,
-                              PatientRepository patientRepository) {
+                              PatientRepository patientRepository,
+                              EmployeeRepository employeeRepository,
+                              BranchRepository branchRepository) {
         this.userAccountRepository = userAccountRepository;
         this.personRepository = personRepository;
         this.patientRepository = patientRepository;
+        this.employeeRepository = employeeRepository;
+        this.branchRepository = branchRepository;
     }
 
     @Override
     @Transactional(readOnly = true)
-    public PatientProfileResponse getProfile(Long userId) {
-        log.info("Retrieving patient profile for user_id={}", userId);
-        UserAccount userAccount = null;
-        Person person = null;
-
-        if (userId != null) {
-            userAccount = userAccountRepository.findById(userId).orElse(null);
-            if (userAccount != null) {
-                person = userAccount.getPerson();
-            } else {
-                person = personRepository.findById(userId).orElse(null);
-            }
-        }
-
-        if (userAccount == null && person == null) {
-            try {
-                String phone = com.example.drmayday.common.security.SecurityUtils.getCurrentUserPhone();
-                if (phone != null && !phone.isBlank()) {
-                    userAccount = userAccountRepository.findByUsername(phone).orElse(null);
-                    if (userAccount != null) {
-                        person = userAccount.getPerson();
-                    } else {
-                        person = personRepository.findByPhoneNumber(phone).orElse(null);
-                    }
-                }
-            } catch (Exception ignored) {
-            }
-        }
-
-        if (person == null && userAccount == null) {
-            throw new AppException(ErrorCode.USER_ACCOUNT_NOT_FOUND);
-        }
-
-        Long personId = person != null ? person.getPersonId() : (userAccount != null && userAccount.getPerson() != null ? userAccount.getPerson().getPersonId() : null);
-        Patient patient = personId != null ? patientRepository.findById(personId).orElse(null) : null;
-
-        return mapToProfileResponse(userAccount, person, patient);
+    public PersonProfileResponse getPersonProfile(Long accountId) {
+        return PersonProfileResponse.from(findAuthenticatedPerson(accountId));
     }
 
     @Override
     @Transactional
-    public PatientProfileResponse updateProfile(Long userId, UpdateProfileRequest request) {
-        log.info("Updating patient profile for user_id={}", userId);
-        UserAccount userAccount = null;
-        Person person = null;
-
-        if (userId != null) {
-            userAccount = userAccountRepository.findById(userId).orElse(null);
-            if (userAccount != null) {
-                person = userAccount.getPerson();
-            } else {
-                person = personRepository.findById(userId).orElse(null);
-            }
+    public PersonProfileResponse updatePersonProfile(Long accountId, UpdatePersonProfileRequest request) {
+        if (request == null || !request.hasUpdates()) {
+            throw new AppException(ErrorCode.MISSING_REQUIRED_PARAMETER);
         }
 
-        if (person == null) {
-            try {
-                String phone = com.example.drmayday.common.security.SecurityUtils.getCurrentUserPhone();
-                if (phone != null && !phone.isBlank()) {
-                    userAccount = userAccountRepository.findByUsername(phone).orElse(null);
-                    if (userAccount != null) {
-                        person = userAccount.getPerson();
-                    } else {
-                        person = personRepository.findByPhoneNumber(phone).orElse(null);
-                    }
-                }
-            } catch (Exception ignored) {
-            }
-        }
-
-        if (person == null) {
-            throw new AppException(ErrorCode.USER_ACCOUNT_NOT_FOUND);
-        }
-
-        // Update personal information.
-        if (request.getFullName() != null && !request.getFullName().trim().isEmpty()) {
+        Person person = findAuthenticatedPerson(accountId);
+        if (request.getFullName() != null) {
             person.setFullName(request.getFullName().trim());
         }
-
+        if (request.getDateOfBirth() != null) {
+            person.setBirthDate(request.getDateOfBirth());
+        }
         if (request.getGender() != null) {
-            String gender = request.getGender().trim();
-            person.setGender(normalizeGender(gender));
+            person.setGender(request.getGender());
+        }
+        if (request.getPhoneNumber() != null) {
+            person.setPhoneNumber(request.getPhoneNumber().trim());
+        }
+        if (request.getProvinceCity() != null) {
+            person.setProvinceCity(request.getProvinceCity().trim());
+        }
+        if (request.getWardCommune() != null) {
+            person.setCommuneWard(request.getWardCommune().trim());
+        }
+        if (request.getAddressLine() != null) {
+            person.setStreetAddress(request.getAddressLine().trim());
+        }
+        person.setUpdatedAt(OffsetDateTime.now());
+
+        return PersonProfileResponse.from(personRepository.save(person));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PatientProfileResponse getPatientProfile(Long accountId) {
+        Person person = findAuthenticatedPerson(accountId);
+        return PatientProfileResponse.from(findPatient(person.getPersonId()));
+    }
+
+    @Override
+    @Transactional
+    public PatientProfileResponse updatePatientProfile(Long accountId, UpdatePatientProfileRequest request) {
+        if (request == null || request.getPersonId() == null || !request.hasUpdates()) {
+            throw new AppException(ErrorCode.MISSING_REQUIRED_PARAMETER);
         }
 
-        if (request.getAddress() != null) {
-            person.setStreetAddress(request.getAddress().trim());
+        Person person = findAuthenticatedPerson(accountId);
+        if (!person.getPersonId().equals(request.getPersonId())) {
+            throw new AppException(ErrorCode.CANNOT_ACCESS_ANOTHER_USER_DATA);
         }
 
-        if (request.getYearOfBirth() != null) {
-            int currentYear = Year.now().getValue();
-            if (request.getYearOfBirth() < 1900 || request.getYearOfBirth() > currentYear) {
-                throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Năm sinh không hợp lệ");
-            }
-            if (person.getBirthDate() != null) {
-                person.setBirthDate(person.getBirthDate().withYear(request.getYearOfBirth()));
-            } else {
-                person.setBirthDate(LocalDate.of(request.getYearOfBirth(), 1, 1));
-            }
+        Patient patient = findPatient(person.getPersonId());
+        if (request.getHisCode() != null) {
+            patient.setHisCode(request.getHisCode().trim());
         }
-
-        OffsetDateTime nowPerson = OffsetDateTime.now();
-        if (person.getCreatedAt() != null && nowPerson.isBefore(person.getCreatedAt())) {
-            nowPerson = person.getCreatedAt();
-        }
-        person.setUpdatedAt(nowPerson);
-        person = personRepository.save(person);
-
-        // Update patient-specific information.
-        Patient benhNhan = patientRepository.findById(person.getPersonId()).orElse(null);
-        if (benhNhan == null) {
-            benhNhan = Patient.builder()
-                    .person(person)
-                    .build();
-        }
-
-        if (request.getEthnic() != null) {
-            benhNhan.setEthnicity(request.getEthnic().trim());
-        }
-
         if (request.getOccupation() != null) {
-            benhNhan.setOccupation(normalizeOccupation(request.getOccupation()));
+            patient.setOccupation(request.getOccupation());
+        }
+        if (request.getEthnicity() != null) {
+            patient.setEthnicity(request.getEthnicity().trim());
+        }
+        if (request.getHealthInsuranceNumber() != null) {
+            patient.setHealthInsuranceNumber(request.getHealthInsuranceNumber().trim());
+        }
+        if (request.getHealthInsuranceValidUntil() != null) {
+            patient.setHealthInsuranceValidUntil(request.getHealthInsuranceValidUntil());
+        }
+        if (request.getEmergencyContactNameAddress() != null) {
+            patient.setEmergencyContactNameAndAddress(request.getEmergencyContactNameAddress().trim());
+        }
+        if (request.getEmergencyContactPhone() != null) {
+            patient.setEmergencyContactPhone(request.getEmergencyContactPhone().trim());
         }
 
-        if (request.getBhytCode() != null) {
-            benhNhan.setHealthInsuranceNumber(request.getBhytCode().trim());
-        }
-
-        benhNhan = patientRepository.save(benhNhan);
-
-        return mapToProfileResponse(userAccount, person, benhNhan);
+        return PatientProfileResponse.from(patientRepository.save(patient));
     }
 
-    private PatientProfileResponse mapToProfileResponse(UserAccount userAccount, Person person, Patient benhNhan) {
-        Long userId = userAccount != null ? userAccount.getAccountId() : (person != null ? person.getPersonId() : null);
-        String fullName = person != null ? person.getFullName() : null;
-        String phone = person != null ? person.getPhoneNumber() : (userAccount != null ? userAccount.getUsername() : null);
-        String gender = person != null ? person.getGender() : null;
-        Integer yearOfBirth = (person != null && person.getBirthDate() != null) ? person.getBirthDate().getYear() : null;
-        String address = person != null ? person.getStreetAddress() : null;
-        String ethnic = benhNhan != null ? benhNhan.getEthnicity() : null;
-        String occupation = benhNhan != null ? benhNhan.getOccupation() : null;
-        String bhytCode = benhNhan != null ? benhNhan.getHealthInsuranceNumber() : null;
-
-        return PatientProfileResponse.builder()
-                .userId(userId)
-                .fullName(fullName)
-                .phone(phone)
-                .gender(gender)
-                .yearOfBirth(yearOfBirth)
-                .address(address)
-                .ethnic(ethnic)
-                .occupation(occupation)
-                .bhytCode(bhytCode)
-                .build();
+    @Override
+    @Transactional(readOnly = true)
+    public EmployeeProfileResponse getEmployeeProfile(Long accountId) {
+        Person person = findAuthenticatedPerson(accountId);
+        return EmployeeProfileResponse.from(findEmployee(person.getPersonId()));
     }
 
-    private String normalizeGender(String gender) {
-        if (gender == null || gender.trim().isEmpty()) {
-            return null;
+    @Override
+    @Transactional
+    public EmployeeProfileResponse updateEmployeeProfile(Long accountId, UpdateEmployeeProfileRequest request) {
+        if (request == null || request.getPersonId() == null || request.getBranchId() == null) {
+            throw new AppException(ErrorCode.MISSING_REQUIRED_PARAMETER);
         }
-        String trimmed = gender.trim();
-        if ("male".equalsIgnoreCase(trimmed) || "Nam".equalsIgnoreCase(trimmed)) {
-            return "Nam";
+
+        Person person = findAuthenticatedPerson(accountId);
+        if (!person.getPersonId().equals(request.getPersonId())) {
+            throw new AppException(ErrorCode.CANNOT_ACCESS_ANOTHER_USER_DATA);
         }
-        if ("female".equalsIgnoreCase(trimmed) || "Nu".equalsIgnoreCase(trimmed) || "Nữ".equalsIgnoreCase(trimmed)) {
-            return "Nu";
+
+        Employee employee = findEmployee(person.getPersonId());
+        if (!branchRepository.existsById(request.getBranchId())) {
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE);
         }
-        return "Nam";
+
+        employee.setBranchId(request.getBranchId());
+        return EmployeeProfileResponse.from(employeeRepository.save(employee));
     }
 
-    private String normalizeOccupation(String occupation) {
-        if (occupation == null || occupation.trim().isEmpty()) {
-            return null;
+    private Person findAuthenticatedPerson(Long accountId) {
+        if (accountId == null) {
+            throw new AppException(ErrorCode.USER_ACCOUNT_NOT_FOUND);
         }
-        String trimmed = occupation.trim();
-        for (String valid : List.of("Cong nhan", "Nong dan", "Hoc sinh - Sinh vien", "Can bo cong chuc", "Khac")) {
-            if (valid.equalsIgnoreCase(trimmed)) {
-                return valid;
-            }
+        UserAccount account = userAccountRepository.findById(accountId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_ACCOUNT_NOT_FOUND));
+        if (account.getPerson() == null) {
+            throw new AppException(ErrorCode.USER_ACCOUNT_NOT_FOUND);
         }
-        if ("Công nhân".equalsIgnoreCase(trimmed)) return "Cong nhan";
-        if ("Nông dân".equalsIgnoreCase(trimmed)) return "Nong dan";
-        if ("Học sinh - Sinh viên".equalsIgnoreCase(trimmed) || "Học sinh".equalsIgnoreCase(trimmed) || "Sinh viên".equalsIgnoreCase(trimmed)) return "Hoc sinh - Sinh vien";
-        if ("Cán bộ công chức".equalsIgnoreCase(trimmed) || "Công chức".equalsIgnoreCase(trimmed)) return "Can bo cong chuc";
-        return "Khac";
+        return account.getPerson();
+    }
+
+    private Patient findPatient(Long personId) {
+        return patientRepository.findById(personId)
+                .orElseThrow(() -> new AppException(ErrorCode.PATIENT_PROFILE_NOT_FOUND));
+    }
+
+    private Employee findEmployee(Long personId) {
+        return employeeRepository.findById(personId)
+                .orElseThrow(() -> new AppException(ErrorCode.EMPLOYEE_PROFILE_NOT_FOUND));
     }
 }

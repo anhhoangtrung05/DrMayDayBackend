@@ -2,40 +2,36 @@ package com.example.drmayday.features.profile.service.impl;
 
 import com.example.drmayday.common.exception.AppException;
 import com.example.drmayday.common.exception.ErrorCode;
-import com.example.drmayday.common.security.UserPrincipal;
+import com.example.drmayday.entity.Employee;
 import com.example.drmayday.entity.Patient;
 import com.example.drmayday.entity.Person;
 import com.example.drmayday.entity.UserAccount;
+import com.example.drmayday.features.profile.dto.EmployeeProfileResponse;
 import com.example.drmayday.features.profile.dto.PatientProfileResponse;
-import com.example.drmayday.features.profile.dto.UpdateProfileRequest;
+import com.example.drmayday.features.profile.dto.PersonProfileResponse;
+import com.example.drmayday.features.profile.dto.UpdateEmployeeProfileRequest;
+import com.example.drmayday.features.profile.dto.UpdatePatientProfileRequest;
+import com.example.drmayday.features.profile.dto.UpdatePersonProfileRequest;
+import com.example.drmayday.repository.BranchRepository;
+import com.example.drmayday.repository.EmployeeRepository;
 import com.example.drmayday.repository.PatientRepository;
 import com.example.drmayday.repository.PersonRepository;
 import com.example.drmayday.repository.UserAccountRepository;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.function.Executable;
-import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
-import java.time.Year;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -43,9 +39,11 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class ProfileServiceImplTest {
 
-    private static final Long ACCOUNT_ID = 42L;
-    private static final Long PERSON_ID = 9L;
-    private static final String PHONE = "0912345678";
+    private static final long ACCOUNT_ID = 42L;
+    private static final long PERSON_ID = 9L;
+    private static final long OTHER_PERSON_ID = 10L;
+    private static final long BRANCH_ID = 3L;
+    private static final long NEW_BRANCH_ID = 4L;
 
     @Mock
     private UserAccountRepository userAccountRepository;
@@ -56,649 +54,510 @@ class ProfileServiceImplTest {
     @Mock
     private PatientRepository patientRepository;
 
-    private ProfileServiceImpl profileService;
+    @Mock
+    private EmployeeRepository employeeRepository;
+
+    @Mock
+    private BranchRepository branchRepository;
+
+    private ProfileServiceImpl service;
 
     @BeforeEach
     void setUp() {
-        profileService = new ProfileServiceImpl(
+        service = new ProfileServiceImpl(
                 userAccountRepository,
                 personRepository,
-                patientRepository
-        );
+                patientRepository,
+                employeeRepository,
+                branchRepository);
     }
 
-    @AfterEach
-    void clearSecurityContext() {
-        SecurityContextHolder.clearContext();
+    private void givenAccount(Person person) {
+        when(userAccountRepository.findById(ACCOUNT_ID))
+                .thenReturn(Optional.of(UserAccount.builder().accountId(ACCOUNT_ID).person(person).build()));
     }
 
-    @Nested
-    @DisplayName("getProfile")
-    class GetProfileTests {
-
-        @Test
-        @DisplayName("[Happy Path] Account and patient exist — returns complete profile")
-        void getProfile_accountAndPatientExist_returnsCompleteProfile() {
-            Person person = person();
-            UserAccount account = account(person);
-            Patient patient = patient(person);
-            when(userAccountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
-            when(patientRepository.findById(PERSON_ID)).thenReturn(Optional.of(patient));
-
-            PatientProfileResponse response = profileService.getProfile(ACCOUNT_ID);
-
-            assertEquals(ACCOUNT_ID, response.getUserId());
-            assertEquals("Existing Name", response.getFullName());
-            assertEquals(PHONE, response.getPhone());
-            assertEquals("Nam", response.getGender());
-            assertEquals(1990, response.getYearOfBirth());
-            assertEquals("Old address", response.getAddress());
-            assertEquals("Kinh", response.getEthnic());
-            assertEquals("Nong dan", response.getOccupation());
-            assertEquals("BHYT-OLD", response.getBhytCode());
-            verify(patientRepository).findById(PERSON_ID);
-            verify(personRepository, never()).findById(any(Long.class));
-        }
-
-        @Test
-        @DisplayName("[Unhappy Path] Account and person do not exist — throws user account not found")
-        void getProfile_accountAndPersonDoNotExist_throwsUserAccountNotFound() {
-            when(userAccountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.empty());
-            when(personRepository.findById(ACCOUNT_ID)).thenReturn(Optional.empty());
-
-            assertAppException(
-                    ErrorCode.USER_ACCOUNT_NOT_FOUND,
-                    () -> profileService.getProfile(ACCOUNT_ID)
-            );
-
-            verify(patientRepository, never()).findById(any(Long.class));
-        }
-
-        @Test
-        @DisplayName("[Unhappy Path] Null user ID and no security context — throws user account not found")
-        void getProfile_nullUserIdAndNoSecurityContext_throwsUserAccountNotFound() {
-            assertAppException(
-                    ErrorCode.USER_ACCOUNT_NOT_FOUND,
-                    () -> profileService.getProfile((Long) null)
-            );
-
-            verify(userAccountRepository, never()).findById(any(Long.class));
-            verify(personRepository, never()).findById(any(Long.class));
-            verify(patientRepository, never()).findById(any(Long.class));
-        }
-
-        @Test
-        @DisplayName("[Alternate Path] Account missing but person exists — returns person profile")
-        void getProfile_accountMissingButPersonExists_returnsPersonProfile() {
-            Person person = personWithId(ACCOUNT_ID);
-            when(userAccountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.empty());
-            when(personRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(person));
-            when(patientRepository.findById(ACCOUNT_ID)).thenReturn(Optional.empty());
-
-            PatientProfileResponse response = profileService.getProfile(ACCOUNT_ID);
-
-            assertEquals(ACCOUNT_ID, response.getUserId());
-            assertEquals("Existing Name", response.getFullName());
-            assertEquals(PHONE, response.getPhone());
-            assertNull(response.getEthnic());
-            assertNull(response.getOccupation());
-            assertNull(response.getBhytCode());
-        }
-
-        @Test
-        @DisplayName("[Alternate Path] Account has no patient — returns profile with empty patient fields")
-        void getProfile_accountHasNoPatient_returnsProfileWithEmptyPatientFields() {
-            Person person = person();
-            when(userAccountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account(person)));
-            when(patientRepository.findById(PERSON_ID)).thenReturn(Optional.empty());
-
-            PatientProfileResponse response = profileService.getProfile(ACCOUNT_ID);
-
-            assertEquals(ACCOUNT_ID, response.getUserId());
-            assertEquals("Existing Name", response.getFullName());
-            assertNull(response.getEthnic());
-            assertNull(response.getOccupation());
-            assertNull(response.getBhytCode());
-        }
-
-        @Test
-        @DisplayName("[Alternate Path] Null user ID with account matching security phone — returns account profile")
-        void getProfile_nullUserIdWithAccountMatchingSecurityPhone_returnsAccountProfile() {
-            Person person = person();
-            authenticateWithPhone(PHONE);
-            when(userAccountRepository.findByUsername(PHONE)).thenReturn(Optional.of(account(person)));
-            when(patientRepository.findById(PERSON_ID)).thenReturn(Optional.of(patient(person)));
-
-            PatientProfileResponse response = profileService.getProfile((Long) null);
-
-            assertEquals(ACCOUNT_ID, response.getUserId());
-            assertEquals(PHONE, response.getPhone());
-            verify(personRepository, never()).findByPhoneNumber(PHONE);
-        }
-
-        @Test
-        @DisplayName("[Alternate Path] Security phone has no account but has person — returns person profile")
-        void getProfile_securityPhoneHasNoAccountButHasPerson_returnsPersonProfile() {
-            Person person = personWithId(PERSON_ID);
-            authenticateWithPhone(PHONE);
-            when(userAccountRepository.findByUsername(PHONE)).thenReturn(Optional.empty());
-            when(personRepository.findByPhoneNumber(PHONE)).thenReturn(Optional.of(person));
-            when(patientRepository.findById(PERSON_ID)).thenReturn(Optional.empty());
-
-            PatientProfileResponse response = profileService.getProfile((Long) null);
-
-            assertEquals(PERSON_ID, response.getUserId());
-            assertEquals(PHONE, response.getPhone());
-        }
-
-        @Test
-        @DisplayName("[Alternate Path] Missing ID falls back to security phone — finds profile")
-        void getProfile_missingIdFallsBackToSecurityPhone_findsProfile() {
-            Person person = personWithId(PERSON_ID);
-            authenticateWithPhone(PHONE);
-            when(userAccountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.empty());
-            when(personRepository.findById(ACCOUNT_ID)).thenReturn(Optional.empty());
-            when(userAccountRepository.findByUsername(PHONE)).thenReturn(Optional.empty());
-            when(personRepository.findByPhoneNumber(PHONE)).thenReturn(Optional.of(person));
-            when(patientRepository.findById(PERSON_ID)).thenReturn(Optional.empty());
-
-            PatientProfileResponse response = profileService.getProfile(ACCOUNT_ID);
-
-            assertEquals(PERSON_ID, response.getUserId());
-            assertEquals(PHONE, response.getPhone());
-        }
-
-        @Test
-        @DisplayName("[Exception Path] Account lookup throws — propagates exception")
-        void getProfile_accountLookupThrows_propagatesException() {
-            when(userAccountRepository.findById(ACCOUNT_ID))
-                    .thenThrow(new IllegalStateException("database unavailable"));
-
-            assertThrows(IllegalStateException.class, () -> profileService.getProfile(ACCOUNT_ID));
-            verify(personRepository, never()).findById(any(Long.class));
-        }
-
-        @Test
-        @DisplayName("[Exception Path] Direct person lookup throws — propagates exception")
-        void getProfile_directPersonLookupThrows_propagatesException() {
-            when(userAccountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.empty());
-            when(personRepository.findById(ACCOUNT_ID))
-                    .thenThrow(new IllegalStateException("database unavailable"));
-
-            assertThrows(IllegalStateException.class, () -> profileService.getProfile(ACCOUNT_ID));
-        }
-
-        @Test
-        @DisplayName("[Exception Path] Patient lookup throws — propagates exception")
-        void getProfile_patientLookupThrows_propagatesException() {
-            Person person = person();
-            when(userAccountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account(person)));
-            when(patientRepository.findById(PERSON_ID))
-                    .thenThrow(new IllegalStateException("database unavailable"));
-
-            assertThrows(IllegalStateException.class, () -> profileService.getProfile(ACCOUNT_ID));
-        }
-
-        @Test
-        @DisplayName("[Exception Path] Security fallback lookup throws — returns user account not found")
-        void getProfile_securityFallbackLookupThrows_returnsUserAccountNotFound() {
-            authenticateWithPhone(PHONE);
-            when(userAccountRepository.findByUsername(PHONE))
-                    .thenThrow(new IllegalStateException("database unavailable"));
-
-            assertAppException(
-                    ErrorCode.USER_ACCOUNT_NOT_FOUND,
-                    () -> profileService.getProfile((Long) null)
-            );
-        }
-    }
-
-    @Nested
-    @DisplayName("updateProfile")
-    class UpdateProfileTests {
-
-        @Test
-        @DisplayName("[Happy Path] Existing account and patient — updates and returns normalized profile")
-        void updateProfile_existingAccountAndPatient_updatesAndReturnsNormalizedProfile() {
-            Person person = person();
-            UserAccount account = account(person);
-            Patient patient = patient(person);
-            stubExistingProfile(account, person, patient);
-            UpdateProfileRequest request = request(
-                    "  New Name  ",
-                    " Nữ ",
-                    2001,
-                    "  New Address  ",
-                    "  Tày  ",
-                    " Nông dân ",
-                    " BHYT-NEW "
-            );
-
-            PatientProfileResponse response = profileService.updateProfile(ACCOUNT_ID, request);
-
-            assertEquals("New Name", person.getFullName());
-            assertEquals("Nu", person.getGender());
-            assertEquals(LocalDate.of(2001, 2, 28), person.getBirthDate());
-            assertEquals("New Address", person.getStreetAddress());
-            assertEquals("Tày", patient.getEthnicity());
-            assertEquals("Nong dan", patient.getOccupation());
-            assertEquals("BHYT-NEW", patient.getHealthInsuranceNumber());
-            assertEquals(ACCOUNT_ID, response.getUserId());
-            assertEquals("New Name", response.getFullName());
-            assertEquals("Nu", response.getGender());
-            assertEquals(2001, response.getYearOfBirth());
-            assertEquals("Tày", response.getEthnic());
-            assertEquals("Nong dan", response.getOccupation());
-            assertEquals("BHYT-NEW", response.getBhytCode());
-            assertFalse(person.getUpdatedAt().isBefore(person.getCreatedAt()));
-            InOrder order = inOrder(personRepository, patientRepository);
-            order.verify(personRepository).save(person);
-            order.verify(patientRepository).findById(PERSON_ID);
-            order.verify(patientRepository).save(patient);
-        }
-
-        @Test
-        @DisplayName("[Unhappy Path] No person found — throws user account not found without saving")
-        void updateProfile_noPersonFound_throwsUserAccountNotFoundWithoutSaving() {
-            when(userAccountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.empty());
-            when(personRepository.findById(ACCOUNT_ID)).thenReturn(Optional.empty());
-
-            assertAppException(
-                    ErrorCode.USER_ACCOUNT_NOT_FOUND,
-                    () -> profileService.updateProfile(ACCOUNT_ID, request(null, null, null, null, null, null, null))
-            );
-
-            verify(personRepository, never()).save(any(Person.class));
-            verify(patientRepository, never()).save(any(Patient.class));
-        }
-
-        @Test
-        @DisplayName("[Unhappy Path] Year below 1900 — throws invalid parameter without saving")
-        void updateProfile_yearBelow1900_throwsInvalidParameterWithoutSaving() {
-            stubAccountById(account(person()));
-
-            assertAppException(
-                    ErrorCode.INVALID_PARAMETER_VALUE,
-                    () -> profileService.updateProfile(
-                            ACCOUNT_ID, request(null, null, 1899, null, null, null, null))
-            );
-
-            verify(personRepository, never()).save(any(Person.class));
-            verify(patientRepository, never()).findById(any(Long.class));
-        }
-
-        @Test
-        @DisplayName("[Unhappy Path] Future year — throws invalid parameter without saving")
-        void updateProfile_futureYear_throwsInvalidParameterWithoutSaving() {
-            stubAccountById(account(person()));
-
-            assertAppException(
-                    ErrorCode.INVALID_PARAMETER_VALUE,
-                    () -> profileService.updateProfile(
-                            ACCOUNT_ID, request(null, null, Year.now().getValue() + 1, null, null, null, null))
-            );
-
-            verify(personRepository, never()).save(any(Person.class));
-            verify(patientRepository, never()).save(any(Patient.class));
-        }
-
-        @Test
-        @DisplayName("[Alternate Path] Blank and null fields — preserves or clears values as defined")
-        void updateProfile_blankAndNullFields_preservesOrClearsValuesAsDefined() {
-            Person person = person();
-            Patient patient = patient(person);
-            stubExistingProfile(account(person), person, patient);
-
-            PatientProfileResponse response = profileService.updateProfile(
-                    ACCOUNT_ID, request("   ", "   ", null, "   ", null, null, null));
-
-            assertEquals("Existing Name", person.getFullName());
-            assertNull(person.getGender());
-            assertEquals("", person.getStreetAddress());
-            assertEquals("Kinh", patient.getEthnicity());
-            assertEquals("Nong dan", patient.getOccupation());
-            assertEquals("BHYT-OLD", patient.getHealthInsuranceNumber());
-            assertNull(response.getGender());
-            assertEquals("", response.getAddress());
-        }
-
-        @Test
-        @DisplayName("[Alternate Path] Unknown gender and occupation — defaults to Nam and Khac")
-        void updateProfile_unknownGenderAndOccupation_defaultsToNamAndKhak() {
-            Person person = person();
-            Patient patient = patient(person);
-            stubExistingProfile(account(person), person, patient);
-
-            profileService.updateProfile(
-                    ACCOUNT_ID, request(null, "unspecified", null, null, null, "artist", null));
-
-            assertEquals("Nam", person.getGender());
-            assertEquals("Khac", patient.getOccupation());
-        }
-
-        @Test
-        @DisplayName("[Alternate Path] Blank gender and occupation — normalizes to null")
-        void updateProfile_blankGenderAndOccupation_normalizesToNull() {
-            Person person = person();
-            Patient patient = patient(person);
-            stubExistingProfile(account(person), person, patient);
-
-            profileService.updateProfile(
-                    ACCOUNT_ID, request(null, "  ", null, null, null, "  ", null));
-
-            assertNull(person.getGender());
-            assertNull(patient.getOccupation());
-        }
-
-        @Test
-        @DisplayName("[Alternate Path] Patient absent — creates patient linked to person")
-        void updateProfile_patientAbsent_createsPatientLinkedToPerson() {
-            Person person = person();
-            stubAccountById(account(person));
-            when(personRepository.save(person)).thenReturn(person);
-            when(patientRepository.findById(PERSON_ID)).thenReturn(Optional.empty());
-            when(patientRepository.save(any(Patient.class)))
-                    .thenAnswer(invocation -> invocation.getArgument(0, Patient.class));
-
-            PatientProfileResponse response = profileService.updateProfile(
-                    ACCOUNT_ID, request(null, null, null, null, "Kinh", "Học sinh", "BHYT-NEW"));
-
-            org.mockito.ArgumentCaptor<Patient> savedPatient =
-                    org.mockito.ArgumentCaptor.forClass(Patient.class);
-            verify(patientRepository).save(savedPatient.capture());
-            assertEquals(person, savedPatient.getValue().getPerson());
-            assertEquals("Kinh", response.getEthnic());
-            assertEquals("Hoc sinh - Sinh vien", response.getOccupation());
-            assertEquals("BHYT-NEW", response.getBhytCode());
-        }
-
-        @Test
-        @DisplayName("[Alternate Path] Account absent but person exists — updates person profile")
-        void updateProfile_accountAbsentButPersonExists_updatesPersonProfile() {
-            Person person = personWithId(ACCOUNT_ID);
-            when(userAccountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.empty());
-            when(personRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(person));
-            when(personRepository.save(person)).thenReturn(person);
-            when(patientRepository.findById(ACCOUNT_ID)).thenReturn(Optional.empty());
-            when(patientRepository.save(any(Patient.class)))
-                    .thenAnswer(invocation -> invocation.getArgument(0, Patient.class));
-
-            PatientProfileResponse response = profileService.updateProfile(
-                    ACCOUNT_ID, request(" Updated ", null, null, null, null, null, null));
-
-            assertEquals("Updated", person.getFullName());
-            assertEquals(ACCOUNT_ID, response.getUserId());
-        }
-
-        @Test
-        @DisplayName("[Alternate Path] User ID missing but security phone matches account — updates account profile")
-        void updateProfile_nullUserIdWithAccountMatchingSecurityPhone_updatesAccountProfile() {
-            Person person = person();
-            UserAccount account = account(person);
-            Patient patient = patient(person);
-            authenticateWithPhone(PHONE);
-            when(userAccountRepository.findByUsername(PHONE)).thenReturn(Optional.of(account));
-            when(personRepository.save(person)).thenReturn(person);
-            when(patientRepository.findById(PERSON_ID)).thenReturn(Optional.of(patient));
-            when(patientRepository.save(patient)).thenReturn(patient);
-
-            PatientProfileResponse response = profileService.updateProfile(
-                    (Long) null, request("Updated", null, null, null, null, null, null));
-
-            assertEquals("Updated", response.getFullName());
-            assertEquals(ACCOUNT_ID, response.getUserId());
-            verify(personRepository, never()).findByPhoneNumber(PHONE);
-        }
-
-        @Test
-        @DisplayName("[Alternate Path] Year 1900 — accepts lower boundary")
-        void updateProfile_year1900_acceptsLowerBoundary() {
-            Person person = person();
-            Patient patient = patient(person);
-            stubExistingProfile(account(person), person, patient);
-
-            PatientProfileResponse response = profileService.updateProfile(
-                    ACCOUNT_ID, request(null, null, 1900, null, null, null, null));
-
-            assertEquals(1900, response.getYearOfBirth());
-            assertEquals(LocalDate.of(1900, 2, 28), person.getBirthDate());
-        }
-
-        @Test
-        @DisplayName("[Alternate Path] Current year — accepts upper boundary")
-        void updateProfile_currentYear_acceptsUpperBoundary() {
-            Person person = person();
-            Patient patient = patient(person);
-            stubExistingProfile(account(person), person, patient);
-            int currentYear = Year.now().getValue();
-
-            PatientProfileResponse response = profileService.updateProfile(
-                    ACCOUNT_ID, request(null, null, currentYear, null, null, null, null));
-
-            assertEquals(currentYear, response.getYearOfBirth());
-        }
-
-        @Test
-        @DisplayName("[Alternate Path] Null birth date — initializes date to January first")
-        void updateProfile_nullBirthDate_initializesDateToJanuaryFirst() {
-            Person person = person();
-            person.setBirthDate(null);
-            Patient patient = patient(person);
-            stubExistingProfile(account(person), person, patient);
-
-            profileService.updateProfile(
-                    ACCOUNT_ID, request(null, null, 2000, null, null, null, null));
-
-            assertEquals(LocalDate.of(2000, 1, 1), person.getBirthDate());
-        }
-
-        @Test
-        @DisplayName("[Alternate Path] Future creation timestamp — does not move updated time earlier")
-        void updateProfile_createdAtAfterNow_clampsUpdatedAtToCreatedAt() {
-            Person person = person();
-            OffsetDateTime futureCreatedAt = OffsetDateTime.now().plusDays(1);
-            person.setCreatedAt(futureCreatedAt);
-            Patient patient = patient(person);
-            stubExistingProfile(account(person), person, patient);
-
-            profileService.updateProfile(
-                    ACCOUNT_ID, request(null, null, null, null, null, null, null));
-
-            assertEquals(futureCreatedAt, person.getUpdatedAt());
-        }
-
-        @Test
-        @DisplayName("[Alternate Path] Unknown security phone account — falls back to person by phone")
-        void updateProfile_securityPhoneHasNoAccountButHasPerson_updatesPerson() {
-            Person person = personWithId(PERSON_ID);
-            authenticateWithPhone(PHONE);
-            when(userAccountRepository.findByUsername(PHONE)).thenReturn(Optional.empty());
-            when(personRepository.findByPhoneNumber(PHONE)).thenReturn(Optional.of(person));
-            when(personRepository.save(person)).thenReturn(person);
-            when(patientRepository.findById(PERSON_ID)).thenReturn(Optional.empty());
-            when(patientRepository.save(any(Patient.class)))
-                    .thenAnswer(invocation -> invocation.getArgument(0, Patient.class));
-
-            PatientProfileResponse response = profileService.updateProfile(
-                    (Long) null, request("Updated", null, null, null, null, null, null));
-
-            assertEquals("Updated", response.getFullName());
-            assertEquals(PERSON_ID, response.getUserId());
-        }
-
-        @Test
-        @DisplayName("[Exception Path] Account lookup throws — propagates exception")
-        void updateProfile_accountLookupThrows_propagatesException() {
-            when(userAccountRepository.findById(ACCOUNT_ID))
-                    .thenThrow(new IllegalStateException("database unavailable"));
-
-            assertThrows(
-                    IllegalStateException.class,
-                    () -> profileService.updateProfile(
-                            ACCOUNT_ID, request(null, null, null, null, null, null, null))
-            );
-
-            verify(personRepository, never()).save(any(Person.class));
-        }
-
-        @Test
-        @DisplayName("[Exception Path] Person lookup throws — propagates exception")
-        void updateProfile_personLookupThrows_propagatesException() {
-            when(userAccountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.empty());
-            when(personRepository.findById(ACCOUNT_ID))
-                    .thenThrow(new IllegalStateException("database unavailable"));
-
-            assertThrows(
-                    IllegalStateException.class,
-                    () -> profileService.updateProfile(
-                            ACCOUNT_ID, request(null, null, null, null, null, null, null))
-            );
-        }
-
-        @Test
-        @DisplayName("[Exception Path] Person save throws — skips patient operations")
-        void updateProfile_personSaveThrows_skipsPatientOperations() {
-            Person person = person();
-            stubAccountById(account(person));
-            when(personRepository.save(person))
-                    .thenThrow(new IllegalStateException("database unavailable"));
-
-            assertThrows(
-                    IllegalStateException.class,
-                    () -> profileService.updateProfile(
-                            ACCOUNT_ID, request("Updated", null, null, null, null, null, null))
-            );
-
-            verify(patientRepository, never()).findById(any(Long.class));
-            verify(patientRepository, never()).save(any(Patient.class));
-        }
-
-        @Test
-        @DisplayName("[Exception Path] Patient lookup throws — propagates exception")
-        void updateProfile_patientLookupThrows_propagatesException() {
-            Person person = person();
-            stubAccountById(account(person));
-            when(personRepository.save(person)).thenReturn(person);
-            when(patientRepository.findById(PERSON_ID))
-                    .thenThrow(new IllegalStateException("database unavailable"));
-
-            assertThrows(
-                    IllegalStateException.class,
-                    () -> profileService.updateProfile(
-                            ACCOUNT_ID, request(null, null, null, null, null, null, null))
-            );
-
-            verify(patientRepository, never()).save(any(Patient.class));
-        }
-
-        @Test
-        @DisplayName("[Exception Path] Patient save throws — propagates exception")
-        void updateProfile_patientSaveThrows_propagatesException() {
-            Person person = person();
-            Patient patient = patient(person);
-            stubAccountById(account(person));
-            when(personRepository.save(person)).thenReturn(person);
-            when(patientRepository.findById(PERSON_ID)).thenReturn(Optional.of(patient));
-            when(patientRepository.save(patient))
-                    .thenThrow(new IllegalStateException("database unavailable"));
-
-            assertThrows(
-                    IllegalStateException.class,
-                    () -> profileService.updateProfile(
-                            ACCOUNT_ID, request(null, null, null, null, null, null, null))
-            );
-        }
-
-        @Test
-        @DisplayName("[Exception Path] Security fallback lookup throws — returns user account not found")
-        void updateProfile_securityFallbackLookupThrows_returnsUserAccountNotFound() {
-            authenticateWithPhone(PHONE);
-            when(userAccountRepository.findByUsername(PHONE))
-                    .thenThrow(new IllegalStateException("database unavailable"));
-
-            assertAppException(
-                    ErrorCode.USER_ACCOUNT_NOT_FOUND,
-                    () -> {
-                    profileService.updateProfile(
-                        (Long) null, request(null, null, null, null, null, null, null));
-                    }
-            );
-
-            verify(personRepository, never()).save(any(Person.class));
-        }
-    }
-
-    private void stubAccountById(UserAccount account) {
-        when(userAccountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
-    }
-
-    private void stubExistingProfile(UserAccount account, Person person, Patient patient) {
-        stubAccountById(account);
-        when(personRepository.save(person)).thenReturn(person);
-        when(patientRepository.findById(person.getPersonId())).thenReturn(Optional.of(patient));
-        when(patientRepository.save(patient)).thenReturn(patient);
-    }
-
-    private void authenticateWithPhone(String phone) {
-        UserPrincipal principal = UserPrincipal.create(ACCOUNT_ID, phone, "benh_nhan");
-        SecurityContextHolder.getContext().setAuthentication(
-                new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities())
-        );
-    }
-
-    private Person person() {
-        return personWithId(PERSON_ID);
-    }
-
-    private Person personWithId(Long personId) {
-        OffsetDateTime createdAt = OffsetDateTime.now().minusDays(1);
+    private static Person person() {
         return Person.builder()
-                .personId(personId)
-                .fullName("Existing Name")
-                .phoneNumber(PHONE)
-                .gender("Nam")
+                .personId(PERSON_ID)
+                .fullName("Existing Person")
                 .birthDate(LocalDate.of(1990, 2, 28))
-                .streetAddress("Old address")
-                .createdAt(createdAt)
-                .updatedAt(createdAt)
+                .gender("Nam")
+                .phoneNumber("0912345678")
+                .provinceCity("Hà Nội")
+                .communeWard("Phường A")
+                .streetAddress("Số 1")
+                .createdAt(OffsetDateTime.now().minusDays(1))
+                .updatedAt(OffsetDateTime.now().minusDays(1))
                 .build();
     }
 
-    private UserAccount account(Person person) {
-        return UserAccount.builder()
-                .accountId(ACCOUNT_ID)
-                .username(PHONE)
-                .person(person)
-                .build();
-    }
-
-    private Patient patient(Person person) {
+    private static Patient patient(Person person) {
         return Patient.builder()
                 .patientId(person.getPersonId())
                 .person(person)
-                .ethnicity("Kinh")
+                .hisCode("HIS-1")
                 .occupation("Nong dan")
-                .healthInsuranceNumber("BHYT-OLD")
+                .ethnicity("Kinh")
+                .healthInsuranceNumber("BHYT-1")
+                .healthInsuranceValidUntil(LocalDate.of(2030, 1, 1))
+                .emergencyContactNameAndAddress("Contact, Address")
+                .emergencyContactPhone("0987654321")
                 .build();
     }
 
-    private UpdateProfileRequest request(
-            String fullName,
-            String gender,
-            Integer yearOfBirth,
-            String address,
-            String ethnic,
-            String occupation,
-            String bhytCode
-    ) {
-        return new UpdateProfileRequest(
-                fullName, gender, yearOfBirth, address, ethnic, occupation, bhytCode);
+    private static Employee employee(Person person) {
+        return Employee.builder()
+                .employeeId(person.getPersonId())
+                .person(person)
+                .branchId(BRANCH_ID)
+                .build();
     }
 
-    private AppException assertAppException(ErrorCode expectedCode, Executable action) {
-        AppException exception = assertThrows(AppException.class, action);
-        assertEquals(expectedCode, exception.getErrorCode());
-        assertNotNull(exception.getMessage());
-        return exception;
+    private static void assertAppException(ErrorCode expected, org.assertj.core.api.ThrowableAssert.ThrowingCallable action) {
+        assertThatThrownBy(action)
+                .isInstanceOfSatisfying(AppException.class,
+                        exception -> assertThat(exception.getErrorCode()).isEqualTo(expected));
+    }
+
+    @Nested
+    @DisplayName("getPersonProfile")
+    class GetPersonProfileTests {
+
+        @Test
+        @DisplayName("[Happy Path] Account is linked to a person — returns person fields")
+        void getPersonProfile_linkedPerson_returnsProfile() {
+            Person person = person();
+            givenAccount(person);
+
+            PersonProfileResponse response = service.getPersonProfile(ACCOUNT_ID);
+
+            assertThat(response.personId()).isEqualTo(PERSON_ID);
+            assertThat(response.fullName()).isEqualTo("Existing Person");
+            assertThat(response.dateOfBirth()).isEqualTo(LocalDate.of(1990, 2, 28));
+            assertThat(response.gender()).isEqualTo("Nam");
+            assertThat(response.phoneNumber()).isEqualTo("0912345678");
+            assertThat(response.provinceCity()).isEqualTo("Hà Nội");
+            assertThat(response.wardCommune()).isEqualTo("Phường A");
+            assertThat(response.addressLine()).isEqualTo("Số 1");
+            assertThat(response.createdAt()).isNotNull();
+            assertThat(response.updatedAt()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("[Unhappy Path] Account does not exist — returns user account not found")
+        void getPersonProfile_missingAccount_returnsNotFound() {
+            when(userAccountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.empty());
+
+            assertAppException(ErrorCode.USER_ACCOUNT_NOT_FOUND, () -> service.getPersonProfile(ACCOUNT_ID));
+        }
+
+        @Test
+        @DisplayName("[Unhappy Path] Account has no linked person — returns user account not found")
+        void getPersonProfile_personMissing_returnsNotFound() {
+            givenAccount(null);
+
+            assertAppException(ErrorCode.USER_ACCOUNT_NOT_FOUND, () -> service.getPersonProfile(ACCOUNT_ID));
+        }
+
+        @Test
+        @DisplayName("[Exception Path] Account repository fails — propagates original exception")
+        void getPersonProfile_repositoryThrows_propagatesException() {
+            IllegalStateException failure = new IllegalStateException("database unavailable");
+            when(userAccountRepository.findById(ACCOUNT_ID)).thenThrow(failure);
+
+            assertThatThrownBy(() -> service.getPersonProfile(ACCOUNT_ID)).isSameAs(failure);
+        }
+    }
+
+    @Nested
+    @DisplayName("updatePersonProfile")
+    class UpdatePersonProfileTests {
+
+        @Test
+        @DisplayName("[Happy Path] Valid fields supplied — updates only supplied person fields")
+        void updatePersonProfile_validRequest_updatesPerson() {
+            Person person = person();
+            givenAccount(person);
+            when(personRepository.save(any(Person.class))).thenAnswer(call -> call.getArgument(0));
+            UpdatePersonProfileRequest request = new UpdatePersonProfileRequest();
+            request.setFullName("  Updated Name ");
+            request.setDateOfBirth(LocalDate.of(2000, 4, 5));
+            request.setGender("Nu");
+            request.setPhoneNumber("0999999999");
+            request.setProvinceCity("  Đà Nẵng ");
+            request.setWardCommune("Phường B");
+            request.setAddressLine("  Đường C ");
+
+            PersonProfileResponse response = service.updatePersonProfile(ACCOUNT_ID, request);
+
+            assertThat(response.fullName()).isEqualTo("Updated Name");
+            assertThat(response.dateOfBirth()).isEqualTo(LocalDate.of(2000, 4, 5));
+            assertThat(response.gender()).isEqualTo("Nu");
+            assertThat(response.phoneNumber()).isEqualTo("0999999999");
+            assertThat(response.provinceCity()).isEqualTo("Đà Nẵng");
+            assertThat(response.wardCommune()).isEqualTo("Phường B");
+            assertThat(response.addressLine()).isEqualTo("Đường C");
+            assertThat(person.getUpdatedAt()).isAfter(person.getCreatedAt());
+            verify(personRepository).save(person);
+        }
+
+        @Test
+        @DisplayName("[Alternate Path] One field supplied — preserves all omitted fields")
+        void updatePersonProfile_partialRequest_preservesOmittedFields() {
+            Person person = person();
+            givenAccount(person);
+            when(personRepository.save(any(Person.class))).thenAnswer(call -> call.getArgument(0));
+            UpdatePersonProfileRequest request = new UpdatePersonProfileRequest();
+            request.setProvinceCity("New City");
+
+            PersonProfileResponse response = service.updatePersonProfile(ACCOUNT_ID, request);
+
+            assertThat(response.provinceCity()).isEqualTo("New City");
+            assertThat(response.fullName()).isEqualTo("Existing Person");
+            assertThat(response.phoneNumber()).isEqualTo("0912345678");
+            assertThat(response.gender()).isEqualTo("Nam");
+        }
+
+        @Test
+        @DisplayName("[Unhappy Path] No update fields supplied — returns missing required parameter")
+        void updatePersonProfile_emptyRequest_returnsMissingParameter() {
+            assertAppException(ErrorCode.MISSING_REQUIRED_PARAMETER,
+                    () -> service.updatePersonProfile(ACCOUNT_ID, new UpdatePersonProfileRequest()));
+
+            verify(userAccountRepository, never()).findById(any());
+            verify(personRepository, never()).save(any(Person.class));
+        }
+
+        @Test
+        @DisplayName("[Unhappy Path] Account has no linked person — returns user account not found")
+        void updatePersonProfile_missingPerson_returnsNotFound() {
+            givenAccount(null);
+            UpdatePersonProfileRequest request = new UpdatePersonProfileRequest();
+            request.setFullName("New Name");
+
+            assertAppException(ErrorCode.USER_ACCOUNT_NOT_FOUND,
+                    () -> service.updatePersonProfile(ACCOUNT_ID, request));
+
+            verify(personRepository, never()).save(any(Person.class));
+        }
+
+        @Test
+        @DisplayName("[Exception Path] Person repository fails to save — propagates original exception")
+        void updatePersonProfile_repositoryThrows_propagatesException() {
+            givenAccount(person());
+            IllegalStateException failure = new IllegalStateException("database unavailable");
+            when(personRepository.save(any(Person.class))).thenThrow(failure);
+            UpdatePersonProfileRequest request = new UpdatePersonProfileRequest();
+            request.setFullName("New Name");
+
+            assertThatThrownBy(() -> service.updatePersonProfile(ACCOUNT_ID, request)).isSameAs(failure);
+        }
+    }
+
+    @Nested
+    @DisplayName("getPatientProfile")
+    class GetPatientProfileTests {
+
+        @Test
+        @DisplayName("[Happy Path] Linked patient exists — returns patient fields")
+        void getPatientProfile_patientExists_returnsProfile() {
+            Person person = person();
+            givenAccount(person);
+            when(patientRepository.findById(PERSON_ID)).thenReturn(Optional.of(patient(person)));
+
+            PatientProfileResponse response = service.getPatientProfile(ACCOUNT_ID);
+
+            assertThat(response.personId()).isEqualTo(PERSON_ID);
+            assertThat(response.hisCode()).isEqualTo("HIS-1");
+            assertThat(response.occupation()).isEqualTo("Nong dan");
+            assertThat(response.ethnicity()).isEqualTo("Kinh");
+            assertThat(response.healthInsuranceNumber()).isEqualTo("BHYT-1");
+            assertThat(response.healthInsuranceValidUntil()).isEqualTo(LocalDate.of(2030, 1, 1));
+            assertThat(response.emergencyContactNameAddress()).isEqualTo("Contact, Address");
+            assertThat(response.emergencyContactPhone()).isEqualTo("0987654321");
+        }
+
+        @Test
+        @DisplayName("[Unhappy Path] Linked patient does not exist — returns patient profile not found")
+        void getPatientProfile_missingPatient_returnsNotFound() {
+            givenAccount(person());
+            when(patientRepository.findById(PERSON_ID)).thenReturn(Optional.empty());
+
+            assertAppException(ErrorCode.PATIENT_PROFILE_NOT_FOUND, () -> service.getPatientProfile(ACCOUNT_ID));
+        }
+
+        @Test
+        @DisplayName("[Exception Path] Patient repository fails — propagates original exception")
+        void getPatientProfile_repositoryThrows_propagatesException() {
+            givenAccount(person());
+            IllegalStateException failure = new IllegalStateException("database unavailable");
+            when(patientRepository.findById(PERSON_ID)).thenThrow(failure);
+
+            assertThatThrownBy(() -> service.getPatientProfile(ACCOUNT_ID)).isSameAs(failure);
+        }
+    }
+
+    @Nested
+    @DisplayName("updatePatientProfile")
+    class UpdatePatientProfileTests {
+
+        @Test
+        @DisplayName("[Happy Path] Matching person ID and patient exists — updates supplied patient fields")
+        void updatePatientProfile_matchingPerson_updatesPatient() {
+            Person person = person();
+            Patient patient = patient(person);
+            givenAccount(person);
+            when(patientRepository.findById(PERSON_ID)).thenReturn(Optional.of(patient));
+            when(patientRepository.save(patient)).thenReturn(patient);
+            UpdatePatientProfileRequest request = new UpdatePatientProfileRequest();
+            request.setPersonId(PERSON_ID);
+            request.setHisCode(" HIS-NEW ");
+            request.setOccupation("Khac");
+            request.setEthnicity("  Tày ");
+            request.setHealthInsuranceNumber(" BHYT-NEW ");
+            request.setHealthInsuranceValidUntil(LocalDate.of(2032, 5, 6));
+            request.setEmergencyContactNameAddress(" New Contact ");
+            request.setEmergencyContactPhone("0900000000");
+
+            PatientProfileResponse response = service.updatePatientProfile(ACCOUNT_ID, request);
+
+            assertThat(response.hisCode()).isEqualTo("HIS-NEW");
+            assertThat(response.occupation()).isEqualTo("Khac");
+            assertThat(response.ethnicity()).isEqualTo("Tày");
+            assertThat(response.healthInsuranceNumber()).isEqualTo("BHYT-NEW");
+            assertThat(response.healthInsuranceValidUntil()).isEqualTo(LocalDate.of(2032, 5, 6));
+            assertThat(response.emergencyContactNameAddress()).isEqualTo("New Contact");
+            assertThat(response.emergencyContactPhone()).isEqualTo("0900000000");
+            verify(patientRepository).save(patient);
+        }
+
+        @Test
+        @DisplayName("[Alternate Path] Partial update — preserves omitted fields")
+        void updatePatientProfile_partialRequest_preservesOmittedFields() {
+            Person person = person();
+            Patient patient = patient(person);
+            givenAccount(person);
+            when(patientRepository.findById(PERSON_ID)).thenReturn(Optional.of(patient));
+            when(patientRepository.save(patient)).thenReturn(patient);
+            UpdatePatientProfileRequest request = new UpdatePatientProfileRequest();
+            request.setPersonId(PERSON_ID);
+            request.setEthnicity("Tày");
+
+            PatientProfileResponse response = service.updatePatientProfile(ACCOUNT_ID, request);
+
+            assertThat(response.ethnicity()).isEqualTo("Tày");
+            assertThat(response.hisCode()).isEqualTo("HIS-1");
+            assertThat(response.occupation()).isEqualTo("Nong dan");
+            assertThat(response.healthInsuranceNumber()).isEqualTo("BHYT-1");
+        }
+
+        @Test
+        @DisplayName("[Unhappy Path] Person ID missing — returns missing required parameter")
+        void updatePatientProfile_missingPersonId_returnsMissingParameter() {
+            UpdatePatientProfileRequest request = new UpdatePatientProfileRequest();
+            request.setEthnicity("Kinh");
+
+            assertAppException(ErrorCode.MISSING_REQUIRED_PARAMETER,
+                    () -> service.updatePatientProfile(ACCOUNT_ID, request));
+
+            verify(userAccountRepository, never()).findById(any());
+        }
+
+        @Test
+        @DisplayName("[Unhappy Path] No patient fields supplied — returns missing required parameter")
+        void updatePatientProfile_noUpdateFields_returnsMissingParameter() {
+            UpdatePatientProfileRequest request = new UpdatePatientProfileRequest();
+            request.setPersonId(PERSON_ID);
+
+            assertAppException(ErrorCode.MISSING_REQUIRED_PARAMETER,
+                    () -> service.updatePatientProfile(ACCOUNT_ID, request));
+
+            verify(userAccountRepository, never()).findById(any());
+        }
+
+        @Test
+        @DisplayName("[Unhappy Path] Request person ID differs from authenticated person — returns forbidden")
+        void updatePatientProfile_personMismatch_returnsForbidden() {
+            givenAccount(person());
+            UpdatePatientProfileRequest request = new UpdatePatientProfileRequest();
+            request.setPersonId(OTHER_PERSON_ID);
+            request.setEthnicity("Kinh");
+
+            assertAppException(ErrorCode.CANNOT_ACCESS_ANOTHER_USER_DATA,
+                    () -> service.updatePatientProfile(ACCOUNT_ID, request));
+
+            verify(patientRepository, never()).findById(any());
+            verify(patientRepository, never()).save(any(Patient.class));
+        }
+
+        @Test
+        @DisplayName("[Unhappy Path] Matching person has no patient record — returns patient profile not found")
+        void updatePatientProfile_missingPatient_returnsNotFound() {
+            givenAccount(person());
+            when(patientRepository.findById(PERSON_ID)).thenReturn(Optional.empty());
+            UpdatePatientProfileRequest request = new UpdatePatientProfileRequest();
+            request.setPersonId(PERSON_ID);
+            request.setEthnicity("Kinh");
+
+            assertAppException(ErrorCode.PATIENT_PROFILE_NOT_FOUND,
+                    () -> service.updatePatientProfile(ACCOUNT_ID, request));
+
+            verify(patientRepository, never()).save(any(Patient.class));
+        }
+
+        @Test
+        @DisplayName("[Exception Path] Patient save fails — propagates original exception")
+        void updatePatientProfile_repositoryThrows_propagatesException() {
+            Person person = person();
+            Patient patient = patient(person);
+            givenAccount(person);
+            when(patientRepository.findById(PERSON_ID)).thenReturn(Optional.of(patient));
+            IllegalStateException failure = new IllegalStateException("database unavailable");
+            when(patientRepository.save(patient)).thenThrow(failure);
+            UpdatePatientProfileRequest request = new UpdatePatientProfileRequest();
+            request.setPersonId(PERSON_ID);
+            request.setEthnicity("Kinh");
+
+            assertThatThrownBy(() -> service.updatePatientProfile(ACCOUNT_ID, request)).isSameAs(failure);
+        }
+    }
+
+    @Nested
+    @DisplayName("getEmployeeProfile")
+    class GetEmployeeProfileTests {
+
+        @Test
+        @DisplayName("[Happy Path] Linked employee exists — returns employee fields")
+        void getEmployeeProfile_employeeExists_returnsProfile() {
+            Person person = person();
+            givenAccount(person);
+            when(employeeRepository.findById(PERSON_ID)).thenReturn(Optional.of(employee(person)));
+
+            EmployeeProfileResponse response = service.getEmployeeProfile(ACCOUNT_ID);
+
+            assertThat(response.personId()).isEqualTo(PERSON_ID);
+            assertThat(response.branchId()).isEqualTo(BRANCH_ID);
+        }
+
+        @Test
+        @DisplayName("[Unhappy Path] Linked employee does not exist — returns employee profile not found")
+        void getEmployeeProfile_missingEmployee_returnsNotFound() {
+            givenAccount(person());
+            when(employeeRepository.findById(PERSON_ID)).thenReturn(Optional.empty());
+
+            assertAppException(ErrorCode.EMPLOYEE_PROFILE_NOT_FOUND,
+                    () -> service.getEmployeeProfile(ACCOUNT_ID));
+        }
+
+        @Test
+        @DisplayName("[Exception Path] Employee repository fails — propagates original exception")
+        void getEmployeeProfile_repositoryThrows_propagatesException() {
+            givenAccount(person());
+            IllegalStateException failure = new IllegalStateException("database unavailable");
+            when(employeeRepository.findById(PERSON_ID)).thenThrow(failure);
+
+            assertThatThrownBy(() -> service.getEmployeeProfile(ACCOUNT_ID)).isSameAs(failure);
+        }
+    }
+
+    @Nested
+    @DisplayName("updateEmployeeProfile")
+    class UpdateEmployeeProfileTests {
+
+        @Test
+        @DisplayName("[Happy Path] Matching person and existing branch — updates employee branch")
+        void updateEmployeeProfile_validRequest_updatesBranch() {
+            Person person = person();
+            Employee employee = employee(person);
+            givenAccount(person);
+            when(employeeRepository.findById(PERSON_ID)).thenReturn(Optional.of(employee));
+            when(branchRepository.existsById(NEW_BRANCH_ID)).thenReturn(true);
+            when(employeeRepository.save(employee)).thenReturn(employee);
+            UpdateEmployeeProfileRequest request = new UpdateEmployeeProfileRequest();
+            request.setPersonId(PERSON_ID);
+            request.setBranchId(NEW_BRANCH_ID);
+
+            EmployeeProfileResponse response = service.updateEmployeeProfile(ACCOUNT_ID, request);
+
+            assertThat(response.personId()).isEqualTo(PERSON_ID);
+            assertThat(response.branchId()).isEqualTo(NEW_BRANCH_ID);
+            verify(employeeRepository).save(employee);
+        }
+
+        @Test
+        @DisplayName("[Unhappy Path] person_id or branch_id missing — returns missing required parameter")
+        void updateEmployeeProfile_requiredFieldMissing_returnsMissingParameter() {
+            UpdateEmployeeProfileRequest request = new UpdateEmployeeProfileRequest();
+            request.setPersonId(PERSON_ID);
+
+            assertAppException(ErrorCode.MISSING_REQUIRED_PARAMETER,
+                    () -> service.updateEmployeeProfile(ACCOUNT_ID, request));
+
+            verify(userAccountRepository, never()).findById(any());
+        }
+
+        @Test
+        @DisplayName("[Unhappy Path] Request person ID differs from authenticated person — returns forbidden")
+        void updateEmployeeProfile_personMismatch_returnsForbidden() {
+            givenAccount(person());
+            UpdateEmployeeProfileRequest request = new UpdateEmployeeProfileRequest();
+            request.setPersonId(OTHER_PERSON_ID);
+            request.setBranchId(NEW_BRANCH_ID);
+
+            assertAppException(ErrorCode.CANNOT_ACCESS_ANOTHER_USER_DATA,
+                    () -> service.updateEmployeeProfile(ACCOUNT_ID, request));
+
+            verify(employeeRepository, never()).findById(any());
+        }
+
+        @Test
+        @DisplayName("[Unhappy Path] Matching person has no employee record — returns employee profile not found")
+        void updateEmployeeProfile_missingEmployee_returnsNotFound() {
+            givenAccount(person());
+            when(employeeRepository.findById(PERSON_ID)).thenReturn(Optional.empty());
+            UpdateEmployeeProfileRequest request = new UpdateEmployeeProfileRequest();
+            request.setPersonId(PERSON_ID);
+            request.setBranchId(NEW_BRANCH_ID);
+
+            assertAppException(ErrorCode.EMPLOYEE_PROFILE_NOT_FOUND,
+                    () -> service.updateEmployeeProfile(ACCOUNT_ID, request));
+
+            verify(branchRepository, never()).existsById(any());
+        }
+
+        @Test
+        @DisplayName("[Unhappy Path] Branch does not exist — returns invalid parameter value")
+        void updateEmployeeProfile_missingBranch_returnsBadRequest() {
+            Person person = person();
+            givenAccount(person);
+            when(employeeRepository.findById(PERSON_ID)).thenReturn(Optional.of(employee(person)));
+            when(branchRepository.existsById(NEW_BRANCH_ID)).thenReturn(false);
+            UpdateEmployeeProfileRequest request = new UpdateEmployeeProfileRequest();
+            request.setPersonId(PERSON_ID);
+            request.setBranchId(NEW_BRANCH_ID);
+
+            assertAppException(ErrorCode.INVALID_PARAMETER_VALUE,
+                    () -> service.updateEmployeeProfile(ACCOUNT_ID, request));
+
+            verify(employeeRepository, never()).save(any(Employee.class));
+        }
+
+        @Test
+        @DisplayName("[Exception Path] Employee save fails — propagates original exception")
+        void updateEmployeeProfile_repositoryThrows_propagatesException() {
+            Person person = person();
+            Employee employee = employee(person);
+            givenAccount(person);
+            when(employeeRepository.findById(PERSON_ID)).thenReturn(Optional.of(employee));
+            when(branchRepository.existsById(NEW_BRANCH_ID)).thenReturn(true);
+            IllegalStateException failure = new IllegalStateException("database unavailable");
+            when(employeeRepository.save(employee)).thenThrow(failure);
+            UpdateEmployeeProfileRequest request = new UpdateEmployeeProfileRequest();
+            request.setPersonId(PERSON_ID);
+            request.setBranchId(NEW_BRANCH_ID);
+
+            assertThatThrownBy(() -> service.updateEmployeeProfile(ACCOUNT_ID, request)).isSameAs(failure);
+        }
     }
 }

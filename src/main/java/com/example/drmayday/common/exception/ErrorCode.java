@@ -38,6 +38,8 @@ public enum ErrorCode {
     USER_PHONE_ALREADY_EXISTS("3006", "Số điện thoại người dùng đã tồn tại", HttpStatus.CONFLICT),
     USER_ACCOUNT_NOT_FOUND("3007", "Không tìm thấy tài khoản người dùng", HttpStatus.NOT_FOUND),
     PASSWORD_INCORRECT("3008", "Mật khẩu không chính xác", HttpStatus.UNAUTHORIZED),
+    PATIENT_PROFILE_NOT_FOUND("3009", "Không tìm thấy hồ sơ bệnh nhân", HttpStatus.NOT_FOUND),
+    EMPLOYEE_PROFILE_NOT_FOUND("3010", "Không tìm thấy hồ sơ nhân viên", HttpStatus.NOT_FOUND),
     ADMIN_ROLE_REQUIRED("3102", "Yêu cầu quyền quản trị viên", HttpStatus.FORBIDDEN),
     DOCTOR_ROLE_REQUIRED("3103", "Yêu cầu quyền bác sĩ", HttpStatus.FORBIDDEN),
     DOCTOR_NOT_ASSIGNED("3105", "Bác sĩ chưa được phân công vào hồ sơ", HttpStatus.BAD_REQUEST),
