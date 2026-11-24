@@ -61,10 +61,20 @@ public enum ErrorCode {
     // 7xxx - Lỗi Chi tiết tổn thương
     LESION_DETAIL_NOT_FOUND("7010", "Không tìm thấy chi tiết tổn thương", HttpStatus.NOT_FOUND),
 
+    // 80xx - Prescription errors
+    PRESCRIPTION_ITEMS_EMPTY("8001", "Đơn thuốc phải có ít nhất một thuốc", HttpStatus.BAD_REQUEST),
+    PRESCRIPTION_NOT_FOUND("8003", "Không tìm thấy đơn thuốc", HttpStatus.NOT_FOUND),
+    PRESCRIPTION_ITEM_MEDICATION_CONFLICT("8004", "Mỗi thuốc trong đơn phải có đúng một trong hai trường ma_thuoc hoặc ten_thuoc_bo_sung", HttpStatus.BAD_REQUEST),
+    MEDICATION_NOT_FOUND("8005", "Mã thuốc không tồn tại trong danh mục thuốc", HttpStatus.NOT_FOUND),
+
     // 81xx - Lab result errors
     LAB_RESULT_FIELD_TYPE_MISMATCH("8103", "Trường kết quả cận lâm sàng không khớp loại phiên khám", HttpStatus.BAD_REQUEST),
     LAB_RESULT_NOT_FOUND("8104", "Không tìm thấy kết quả cận lâm sàng", HttpStatus.NOT_FOUND),
     ASST_REQUIRES_POSITIVE_SERUM_TEST("8105", "Chỉ được nhập asst_duong_kinh_mm khi test_huyet_thanh_tu_than = Duong tinh", HttpStatus.BAD_REQUEST),
+
+    // 82xx - Stop-medication instruction errors
+    STOP_PURPOSE_OTHER_DESCRIPTION_REQUIRED("8201", "Mục đích ngừng thuốc là Khac thì bắt buộc nhập muc_dich_khac_ghi_ro", HttpStatus.BAD_REQUEST),
+    STOP_PURPOSE_INVALID("8202", "Mục đích ngừng thuốc không hợp lệ, chỉ chấp nhận: Test huyet thanh tu than, Test kich thich, Khac", HttpStatus.BAD_REQUEST),
 
     // 9xxx - General system errors
     INTERNAL_SERVER_ERROR("9999", "Lỗi hệ thống nội bộ", HttpStatus.INTERNAL_SERVER_ERROR);

@@ -21,7 +21,8 @@ public class PrescriptionItem {
     @Column(name = "lieu_dung", nullable = false, length = 100) private String dosage;
     @Column(name = "thoi_gian_dung", nullable = false, length = 100) private String usageDuration;
     @Column(name = "ma_ke_hoach_dieu_tri", length = 50) private String treatmentPlanId;
-    @Column(name = "thoi_diem_tao", nullable = false) private OffsetDateTime createdAt;
+    // Filled by the column default.
+    @Column(name = "thoi_diem_tao", nullable = false, insertable = false, updatable = false) private OffsetDateTime createdAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "ma_don_thuoc", referencedColumnName = "ma_don_thuoc", insertable = false, updatable = false)
