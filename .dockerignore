@@ -39,3 +39,6 @@ Dockerfile*
 # OS Files
 .DS_Store
 Thumbs.db
+
+# Coding agents
+.claude

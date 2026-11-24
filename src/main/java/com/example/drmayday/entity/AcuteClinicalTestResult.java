@@ -2,6 +2,8 @@ package com.example.drmayday.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Generated;
+import org.hibernate.generator.EventType;
 import java.math.BigDecimal;
 
 @Entity
@@ -20,7 +22,10 @@ public class AcuteClinicalTestResult {
     @Column(name = "plt", precision = 12, scale = 4) private BigDecimal platelets;
     @Column(name = "tryptase_cap", precision = 12, scale = 4) private BigDecimal acuteTryptase;
     @Column(name = "tryptase_nen", precision = 12, scale = 4) private BigDecimal baselineTryptase;
+    // Generated columns: re-read after every write so the response carries the computed ratios.
+    @Generated(event = {EventType.INSERT, EventType.UPDATE})
     @Column(name = "nlr", insertable = false, updatable = false) private BigDecimal neutrophilToLymphocyteRatio;
+    @Generated(event = {EventType.INSERT, EventType.UPDATE})
     @Column(name = "plr", insertable = false, updatable = false) private BigDecimal plateletToLymphocyteRatio;
 
     @ManyToOne(fetch = FetchType.LAZY)

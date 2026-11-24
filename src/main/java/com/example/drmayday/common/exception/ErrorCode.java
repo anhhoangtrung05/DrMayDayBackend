@@ -61,6 +61,11 @@ public enum ErrorCode {
     // 7xxx - Lỗi Chi tiết tổn thương
     LESION_DETAIL_NOT_FOUND("7010", "Không tìm thấy chi tiết tổn thương", HttpStatus.NOT_FOUND),
 
+    // 81xx - Lab result errors
+    LAB_RESULT_FIELD_TYPE_MISMATCH("8103", "Trường kết quả cận lâm sàng không khớp loại phiên khám", HttpStatus.BAD_REQUEST),
+    LAB_RESULT_NOT_FOUND("8104", "Không tìm thấy kết quả cận lâm sàng", HttpStatus.NOT_FOUND),
+    ASST_REQUIRES_POSITIVE_SERUM_TEST("8105", "Chỉ được nhập asst_duong_kinh_mm khi test_huyet_thanh_tu_than = Duong tinh", HttpStatus.BAD_REQUEST),
+
     // 9xxx - General system errors
     INTERNAL_SERVER_ERROR("9999", "Lỗi hệ thống nội bộ", HttpStatus.INTERNAL_SERVER_ERROR);
 
