@@ -18,6 +18,10 @@ public interface UserAccountRepository extends JpaRepository<UserAccount, Long> 
 
     boolean existsByUsername(String username);
 
+    boolean existsByUsernameIgnoreCase(String username);
+
+    boolean existsByPerson_PersonId(Long personId);
+
     @Override
     @EntityGraph(attributePaths = {"person"})
     Optional<UserAccount> findById(Long accountId);

@@ -1,11 +1,18 @@
 package com.example.drmayday.features.admin.controller;
 
+import com.example.drmayday.features.admin.dto.CreatePatientRequest;
+import com.example.drmayday.features.admin.dto.CreatePersonRequest;
+import com.example.drmayday.features.admin.dto.CreateStaffRequest;
 import com.example.drmayday.features.admin.dto.CreateUserRequest;
+import com.example.drmayday.features.admin.dto.CreatedUserResponse;
 import com.example.drmayday.features.admin.dto.EditUserRequest;
 import com.example.drmayday.features.admin.dto.UserDetailsResponse;
 import com.example.drmayday.features.admin.dto.UserResponse;
 import com.example.drmayday.features.admin.service.AdminUserService;
 import com.example.drmayday.common.dto.BaseResponse;
+import com.example.drmayday.features.profile.dto.EmployeeProfileResponse;
+import com.example.drmayday.features.profile.dto.PatientProfileResponse;
+import com.example.drmayday.features.profile.dto.PersonProfileResponse;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
@@ -15,10 +22,10 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * Admin controller for user management (Administration).
- * Handles ADMIN_GET_LIST_USERS, ADMIN_GET_USER_DETAILS, ADMIN_CREATE_USER, and ADMIN_EDIT_USER.
+ * Handles admin user, person, patient, and staff management.
  */
 @RestController
-@RequestMapping("/api/v1/admin/users")
+@RequestMapping("/api/v1/admin")
 public class AdminUserController {
 
     private final AdminUserService adminUserService;
@@ -35,7 +42,7 @@ public class AdminUserController {
      * @param limit Number of records per page (defaults to 20)
      * @return The paginated user list
      */
-    @GetMapping
+    @GetMapping("/users")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BaseResponse<Page<UserResponse>>> getListUsers(
             @RequestParam(defaultValue = "1") int page,
@@ -51,7 +58,7 @@ public class AdminUserController {
      * @param id User ID
      * @return The user's account details
      */
-    @GetMapping("/{id}")
+    @GetMapping("/users/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BaseResponse<UserDetailsResponse>> getUserDetails(@PathVariable String id) {
         UserDetailsResponse userDetails = adminUserService.getUserDetails(id);
@@ -65,12 +72,39 @@ public class AdminUserController {
      * @param req New user data
      * @return The created user
      */
-    @PostMapping
+    @PostMapping("/users")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<BaseResponse<UserResponse>> createUser(@Valid @RequestBody CreateUserRequest req) {
-        UserResponse response = adminUserService.createUser(req);
+    public ResponseEntity<BaseResponse<CreatedUserResponse>> createUser(@Valid @RequestBody CreateUserRequest req) {
+        CreatedUserResponse response = adminUserService.createUser(req);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(BaseResponse.created(response));
+                .body(BaseResponse.created("Thông báo tạo tài khoản thành công", response));
+    }
+
+    @PostMapping("/persons")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<BaseResponse<PersonProfileResponse>> createPerson(
+            @Valid @RequestBody CreatePersonRequest request) {
+        PersonProfileResponse response = adminUserService.createPerson(request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(BaseResponse.created("Thông báo tạo Người thành công", response));
+    }
+
+    @PostMapping("/patients")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<BaseResponse<PatientProfileResponse>> createPatient(
+            @Valid @RequestBody CreatePatientRequest request) {
+        PatientProfileResponse response = adminUserService.createPatient(request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(BaseResponse.created("Thông báo tạo hồ sơ Bệnh nhân thành công", response));
+    }
+
+    @PostMapping("/staff")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<BaseResponse<EmployeeProfileResponse>> createStaff(
+            @Valid @RequestBody CreateStaffRequest request) {
+        EmployeeProfileResponse response = adminUserService.createStaff(request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(BaseResponse.created("Thông báo tạo hồ sơ Nhân viên thành công", response));
     }
 
     /**
@@ -81,7 +115,7 @@ public class AdminUserController {
      * @param req User fields to update
      * @return The updated user
      */
-    @PutMapping("/{id}")
+    @PutMapping("/users/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BaseResponse<UserResponse>> editUser(
             @PathVariable String id,

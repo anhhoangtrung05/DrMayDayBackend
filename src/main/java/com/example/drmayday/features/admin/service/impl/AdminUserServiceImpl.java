@@ -1,6 +1,10 @@
 package com.example.drmayday.features.admin.service.impl;
 
+import com.example.drmayday.features.admin.dto.CreatePatientRequest;
+import com.example.drmayday.features.admin.dto.CreatePersonRequest;
+import com.example.drmayday.features.admin.dto.CreateStaffRequest;
 import com.example.drmayday.features.admin.dto.CreateUserRequest;
+import com.example.drmayday.features.admin.dto.CreatedUserResponse;
 import com.example.drmayday.features.admin.dto.EditUserRequest;
 import com.example.drmayday.features.admin.dto.UserDetailsResponse;
 import com.example.drmayday.features.admin.dto.UserResponse;
@@ -10,6 +14,9 @@ import com.example.drmayday.entity.Employee;
 import com.example.drmayday.entity.UserAccount;
 import com.example.drmayday.entity.Role;
 import com.example.drmayday.features.admin.service.AdminUserService;
+import com.example.drmayday.features.profile.dto.EmployeeProfileResponse;
+import com.example.drmayday.features.profile.dto.PatientProfileResponse;
+import com.example.drmayday.features.profile.dto.PersonProfileResponse;
 import com.example.drmayday.repository.PatientRepository;
 import com.example.drmayday.repository.BranchRepository;
 import com.example.drmayday.repository.PersonRepository;
@@ -21,6 +28,7 @@ import com.example.drmayday.common.exception.ErrorCode;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -31,6 +39,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 
 @Service
 public class AdminUserServiceImpl implements AdminUserService {
@@ -95,55 +104,142 @@ public class AdminUserServiceImpl implements AdminUserService {
 
     @Override
     @Transactional
-    public UserResponse createUser(CreateUserRequest request) {
-        log.info("Admin creating a user: phone={}, role_id={}", request.getPhone(), request.getRoleId());
-        String phone = normalizePhone(request.getPhone());
-
-        if (userAccountRepository.existsByUsername(phone) || personRepository.existsByPhoneNumber(phone)) {
-            throw new AppException(ErrorCode.USER_PHONE_ALREADY_EXISTS);
+    public CreatedUserResponse createUser(CreateUserRequest request) {
+        if (request == null || request.personId() == null || request.roleId() == null
+                || request.username() == null || request.username().isBlank()
+                || request.password() == null || request.password().isBlank()) {
+            throw new AppException(ErrorCode.MISSING_REQUIRED_PARAMETER);
         }
 
-        Role role = resolveRole(request.getRoleId());
-        boolean active = !"0".equals(request.getIsActive()) && !"false".equalsIgnoreCase(request.getIsActive());
-
-        OffsetDateTime creationTime = OffsetDateTime.now().minusSeconds(10);
-
-        Person person = Person.builder()
-                .fullName(request.getFullName().trim())
-                .phoneNumber(phone)
-                .createdAt(creationTime)
-                .updatedAt(creationTime)
-                .build();
-        person = personRepository.save(person);
-
-        if ("benh_nhan".equalsIgnoreCase(role.getName()) || Long.valueOf(4L).equals(role.getRoleId())) {
-            Patient patient = Patient.builder()
-                    .person(person)
-                    .build();
-            patientRepository.save(patient);
-        } else {
-            Long branchId = branchRepository.findFirstByOrderByBranchIdAsc()
-                    .map(Branch -> Branch == null ? null : Branch.getBranchId())
-                    .orElse(1L);
-            Employee employee = Employee.builder()
-                    .branchId(branchId)
-                    .person(person)
-                    .build();
-            employeeRepository.save(employee);
+        Person person = personRepository.findById(request.personId())
+                .orElseThrow(() -> new AppException(ErrorCode.PERSON_NOT_FOUND));
+        if (userAccountRepository.existsByPerson_PersonId(person.getPersonId())) {
+            throw new AppException(ErrorCode.PERSON_ALREADY_HAS_USER_ACCOUNT);
         }
 
+        Role role = roleRepository.findById(request.roleId())
+                .orElseThrow(() -> new AppException(ErrorCode.INVALID_PARAMETER_VALUE));
+        String username = request.username().trim();
+        if (username.length() > 100 || userAccountRepository.existsByUsernameIgnoreCase(username)) {
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Tên đăng nhập không hợp lệ");
+        }
+
+        OffsetDateTime now = OffsetDateTime.now();
         UserAccount userAccount = UserAccount.builder()
                 .person(person)
                 .role(role)
-                .username(phone)
-                .passwordHash(passwordEncoder.encode(request.getPassword()))
-                .active(active)
-                .createdAt(creationTime)
-                .updatedAt(creationTime)
+                .username(username)
+                .passwordHash(passwordEncoder.encode(request.password()))
+                .active(request.isActive() == null || request.isActive())
+                .createdAt(now)
+                .updatedAt(now)
                 .build();
-        userAccount = userAccountRepository.save(userAccount);
 
-        return mapToUserResponse(userAccount);
+        try {
+            return CreatedUserResponse.from(userAccountRepository.saveAndFlush(userAccount));
+        } catch (DataIntegrityViolationException exception) {
+            if (hasConstraint(exception, "uq_tai_khoan_nguoi")) {
+                throw new AppException(ErrorCode.PERSON_ALREADY_HAS_USER_ACCOUNT);
+            }
+            if (hasConstraint(exception, "uq_tai_khoan_ten_dang_nhap")) {
+                throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Tên đăng nhập không hợp lệ");
+            }
+            throw exception;
+        }
+    }
+
+    @Override
+    @Transactional
+    public PersonProfileResponse createPerson(CreatePersonRequest request) {
+        if (request == null || request.fullName() == null || request.fullName().isBlank()
+                || request.phoneNumber() == null || request.phoneNumber().isBlank()) {
+            throw new AppException(ErrorCode.MISSING_REQUIRED_PARAMETER);
+        }
+
+        OffsetDateTime now = OffsetDateTime.now();
+        Person person = Person.builder()
+                .fullName(request.fullName().trim())
+                .phoneNumber(request.phoneNumber())
+                .birthDate(request.dateOfBirth())
+                .gender(request.gender())
+                .provinceCity(request.provinceCity())
+                .communeWard(request.wardCommune())
+                .streetAddress(request.addressLine())
+                .createdAt(now)
+                .updatedAt(now)
+                .build();
+        return PersonProfileResponse.from(personRepository.saveAndFlush(person));
+    }
+
+    @Override
+    @Transactional
+    public PatientProfileResponse createPatient(CreatePatientRequest request) {
+        if (request == null || request.personId() == null) {
+            throw new AppException(ErrorCode.MISSING_REQUIRED_PARAMETER);
+        }
+
+        Person person = personRepository.findById(request.personId())
+                .orElseThrow(() -> new AppException(ErrorCode.PERSON_NOT_FOUND));
+        if (patientRepository.existsById(person.getPersonId())) {
+            throw new AppException(ErrorCode.PERSON_ALREADY_REGISTERED_AS_PATIENT);
+        }
+
+        String hisCode = trimToNull(request.hisCode());
+        if (hisCode != null && patientRepository.existsByHisCode(hisCode)) {
+            throw new AppException(ErrorCode.PATIENT_HIS_CODE_ALREADY_EXISTS);
+        }
+
+        Patient patient = Patient.builder()
+                .person(person)
+                .hisCode(hisCode)
+                .occupation(request.occupation())
+                .ethnicity(trimToNull(request.ethnicity()))
+                .healthInsuranceNumber(trimToNull(request.healthInsuranceNumber()))
+                .healthInsuranceValidUntil(request.healthInsuranceValidUntil())
+                .emergencyContactNameAndAddress(trimToNull(request.emergencyContactNameAddress()))
+                .emergencyContactPhone(trimToNull(request.emergencyContactPhone()))
+                .build();
+        try {
+            return PatientProfileResponse.from(patientRepository.saveAndFlush(patient));
+        } catch (DataIntegrityViolationException exception) {
+            if (hasConstraint(exception, "uq_benh_nhan_ma_his")) {
+                throw new AppException(ErrorCode.PATIENT_HIS_CODE_ALREADY_EXISTS);
+            }
+            if (hasConstraint(exception, "pk_benh_nhan")) {
+                throw new AppException(ErrorCode.PERSON_ALREADY_REGISTERED_AS_PATIENT);
+            }
+            throw exception;
+        }
+    }
+
+    @Override
+    @Transactional
+    public EmployeeProfileResponse createStaff(CreateStaffRequest request) {
+        if (request == null || request.personId() == null || request.branchId() == null) {
+            throw new AppException(ErrorCode.MISSING_REQUIRED_PARAMETER);
+        }
+
+        Person person = personRepository.findById(request.personId())
+                .orElseThrow(() -> new AppException(ErrorCode.PERSON_NOT_FOUND));
+        if (!branchRepository.existsById(request.branchId())) {
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE);
+        }
+        if (employeeRepository.existsById(person.getPersonId())) {
+            throw new AppException(ErrorCode.PERSON_ALREADY_REGISTERED_AS_EMPLOYEE);
+        }
+
+        Employee employee = Employee.builder()
+                .person(person)
+                .branchId(request.branchId())
+                .build();
+        try {
+            return EmployeeProfileResponse.from(employeeRepository.saveAndFlush(employee));
+        } catch (DataIntegrityViolationException exception) {
+            if (hasConstraint(exception, "pk_nhan_vien")) {
+                throw new AppException(ErrorCode.PERSON_ALREADY_REGISTERED_AS_EMPLOYEE);
+            }
+            throw exception;
+        }
     }
 
     @Override
@@ -240,15 +336,6 @@ public class AdminUserServiceImpl implements AdminUserService {
                 .build();
     }
 
-    /**
-     * Normalizes +84xxxxxxxxx to 0xxxxxxxxx because nguoi.so_dien_thoai accepts exactly 10 digits
-     * and each phone number can be associated with only one account.
-     */
-    private String normalizePhone(String phone) {
-        String trimmed = phone.trim();
-        return trimmed.startsWith("+84") ? "0" + trimmed.substring(3) : trimmed;
-    }
-
     private Long parseUserId(String id) {
         try {
             return Long.parseLong(id);
@@ -291,5 +378,23 @@ public class AdminUserServiceImpl implements AdminUserService {
 
     private String formatOffsetDateTime(OffsetDateTime dateTime) {
         return dateTime != null ? dateTime.format(DATE_TIME_FORMATTER) : null;
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private boolean hasConstraint(Throwable throwable, String constraintName) {
+        for (Throwable cause = throwable; cause != null; cause = cause.getCause()) {
+            String message = cause.getMessage();
+            if (message != null && message.toLowerCase(Locale.ROOT).contains(constraintName)) {
+                return true;
+            }
+        }
+        return false;
     }
 }
