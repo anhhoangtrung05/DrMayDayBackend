@@ -6,6 +6,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 /**
  * Stores the identity information of an authenticated user in the Spring Security context.
@@ -25,18 +27,40 @@ public class UserPrincipal implements UserDetails {
     }
 
     public static UserPrincipal create(Long userId, String phone, String roleName) {
-        String roleStr = roleName != null ? roleName.trim() : "benh_nhan";
+        String roleStr = roleName != null && !roleName.isBlank() ? roleName.trim() : "benh_nhan";
         String normalized = roleStr.toUpperCase();
         if (normalized.startsWith("ROLE_")) {
             normalized = normalized.substring(5);
         }
-        String authority = "ROLE_" + normalized;
+
+        // Map both DB Vietnamese role names (benh_nhan, bac_si, ...) and English @PreAuthorize aliases (PATIENT, DOCTOR, ...)
+        Set<GrantedAuthority> authorities = new LinkedHashSet<>();
+        authorities.add(new SimpleGrantedAuthority("ROLE_" + normalized));
+
+        switch (normalized) {
+            case "BENH_NHAN", "PATIENT" -> {
+                authorities.add(new SimpleGrantedAuthority("ROLE_BENH_NHAN"));
+                authorities.add(new SimpleGrantedAuthority("ROLE_PATIENT"));
+            }
+            case "BAC_SI", "DOCTOR" -> {
+                authorities.add(new SimpleGrantedAuthority("ROLE_BAC_SI"));
+                authorities.add(new SimpleGrantedAuthority("ROLE_DOCTOR"));
+            }
+            case "DIEU_DUONG", "NURSE" -> {
+                authorities.add(new SimpleGrantedAuthority("ROLE_DIEU_DUONG"));
+                authorities.add(new SimpleGrantedAuthority("ROLE_NURSE"));
+            }
+            case "QUAN_TRI", "ADMIN" -> authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
+            default -> {
+                // Keep exact normalized authority for any other custom role
+            }
+        }
 
         return new UserPrincipal(
                 userId,
                 phone,
                 roleStr,
-                Collections.singletonList(new SimpleGrantedAuthority(authority))
+                Collections.unmodifiableSet(authorities)
         );
     }
 

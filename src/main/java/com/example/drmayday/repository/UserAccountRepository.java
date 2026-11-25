@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import java.util.Optional;
 
 public interface UserAccountRepository extends JpaRepository<UserAccount, Long> {
+    @EntityGraph(attributePaths = {"person", "role"})
     Optional<UserAccount> findByUsername(String username);
 
     @EntityGraph(attributePaths = {"person", "role"})
