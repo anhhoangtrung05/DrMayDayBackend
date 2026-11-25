@@ -35,25 +35,25 @@ public class ExamFindingsServiceImpl implements ExamFindingsService {
     @Transactional
     public AcuteExamFindingsResponse upsertAcuteExamFindings(UpsertAcuteExamFindingsRequest req) {
         if (req == null || req.getExamId() == null || req.getExamId().isBlank()) {
-            throw new AppException(ErrorCode.MISSING_REQUIRED_PARAMETER, "Missing required parameter: exam_id");
+            throw new AppException(ErrorCode.MISSING_REQUIRED_PARAMETER, "Thiếu tham số bắt buộc: exam_id");
         }
 
         Long examIdLong;
         try {
             examIdLong = Long.parseLong(req.getExamId().trim());
         } catch (NumberFormatException e) {
-            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "exam_id must be a numeric value");
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Tham số exam_id phải là giá trị số");
         }
 
         MedicalVisit visit = medicalVisitRepository.findById(examIdLong)
-                .orElseThrow(() -> new AppException(ErrorCode.EXAM_NOT_FOUND, "Exam not found: " + examIdLong));
+                .orElseThrow(() -> new AppException(ErrorCode.EXAM_NOT_FOUND, "Không tìm thấy phiên khám: " + examIdLong));
 
         if (!"CAP".equalsIgnoreCase(visit.getMedicalRecordType())) {
-            throw new AppException(ErrorCode.RECORD_TYPE_MISMATCH, "Record/Exam type mismatch: exam is not CAP");
+            throw new AppException(ErrorCode.RECORD_TYPE_MISMATCH, "Phiên khám không phải là phiên khám cấp tính");
         }
 
         if (req.getSoLanNon() != null && req.getSoLanNon() < 0) {
-            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "so_lan_non must be >= 0");
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Số lần nôn phải là giá trị không âm");
         }
 
         AcuteVisit acuteVisit = acuteVisitRepository.findById(examIdLong).orElse(null);
@@ -118,29 +118,29 @@ public class ExamFindingsServiceImpl implements ExamFindingsService {
     @Transactional
     public ChronicExamFindingsResponse upsertChronicExamFindings(UpsertChronicExamFindingsRequest req) {
         if (req == null || req.getExamId() == null || req.getExamId().isBlank()) {
-            throw new AppException(ErrorCode.MISSING_REQUIRED_PARAMETER, "Missing required parameter: exam_id");
+            throw new AppException(ErrorCode.MISSING_REQUIRED_PARAMETER, "Thiếu tham số bắt buộc: exam_id");
         }
 
         Long examIdLong;
         try {
             examIdLong = Long.parseLong(req.getExamId().trim());
         } catch (NumberFormatException e) {
-            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "exam_id must be a numeric value");
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Tham số exam_id phải là giá trị số");
         }
 
         MedicalVisit visit = medicalVisitRepository.findById(examIdLong)
-                .orElseThrow(() -> new AppException(ErrorCode.EXAM_NOT_FOUND, "Exam not found: " + examIdLong));
+                .orElseThrow(() -> new AppException(ErrorCode.EXAM_NOT_FOUND, "Không tìm thấy phiên khám: " + examIdLong));
 
         if (!"MAN".equalsIgnoreCase(visit.getMedicalRecordType())) {
-            throw new AppException(ErrorCode.RECORD_TYPE_MISMATCH, "Record/Exam type mismatch: exam is not MAN");
+            throw new AppException(ErrorCode.RECORD_TYPE_MISMATCH, "Phiên khám không phải là phiên khám mạn tính");
         }
 
         if (req.getDiemAas7() != null && (req.getDiemAas7() < 0 || req.getDiemAas7() > 105)) {
-            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "diem_aas7 must be between 0 and 105");
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Điểm aas7 phải nằm trong khoảng từ 0 đến 105");
         }
 
         if (Boolean.TRUE.equals(req.getPhuViTriKhac()) && (req.getPhuViTriKhacGhiRo() == null || req.getPhuViTriKhacGhiRo().isBlank())) {
-            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "phu_vi_tri_khac_ghi_ro is required when phu_vi_tri_khac is true");
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Mô tả vị trí phù khác phải để trống khi phu_vi_tri_khac=false");
         }
 
         ChronicVisit chronicVisit = chronicVisitRepository.findById(examIdLong).orElse(null);

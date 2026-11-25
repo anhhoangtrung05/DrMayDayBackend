@@ -44,44 +44,44 @@ public class VitalSignsServiceImpl implements VitalSignsService {
     @Transactional
     public VitalSignsResponse addVitalSigns(AddVitalSignsRequest req) {
         if (req == null || req.getExamId() == null || req.getExamId().isBlank()) {
-            throw new AppException(ErrorCode.MISSING_REQUIRED_PARAMETER, "Missing required parameter: exam_id");
+            throw new AppException(ErrorCode.MISSING_REQUIRED_PARAMETER, "Thiếu tham số bắt buộc: exam_id");
         }
 
         Long examIdLong;
         try {
             examIdLong = Long.parseLong(req.getExamId().trim());
         } catch (NumberFormatException e) {
-            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "exam_id must be a numeric value");
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "exam_id phải là giá trị số");
         }
 
         if (!medicalVisitRepository.existsById(examIdLong)) {
-            throw new AppException(ErrorCode.EXAM_NOT_FOUND, "Exam not found: " + examIdLong);
+            throw new AppException(ErrorCode.EXAM_NOT_FOUND, "Phiên khám không tìm thấy: " + examIdLong);
         }
 
         if (req.getMachLanPhut() != null && req.getMachLanPhut() <= 0) {
-            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "mach_lan_phut must be > 0");
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Mạch/phút phải là một giá trị dương");
         }
         if (req.getHuyetApTamThu() != null && req.getHuyetApTamThu() <= 0) {
-            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "huyet_ap_tam_thu must be > 0");
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Huyết áp tâm thu phải là một giá trị dương");
         }
         if (req.getHuyetApTamTruong() != null && req.getHuyetApTamTruong() <= 0) {
-            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "huyet_ap_tam_truong must be > 0");
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Huyết áp tâm trương phải là một giá trị dương");
         }
         if (req.getHuyetApTamThu() != null && req.getHuyetApTamTruong() != null
                 && req.getHuyetApTamTruong() >= req.getHuyetApTamThu()) {
-            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "huyet_ap_tam_truong must be < huyet_ap_tam_thu");
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Huyết áp tâm trương phải nhỏ hơn Huyết áp tâm thu");
         }
         if (req.getNhipThoLanPhut() != null && req.getNhipThoLanPhut() <= 0) {
-            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "nhip_tho_lan_phut must be > 0");
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Nhịp thở/phút phải là một giá trị dương");
         }
         if (req.getSpo2PhanTram() != null) {
             if (req.getSpo2PhanTram().compareTo(BigDecimal.ZERO) < 0 || req.getSpo2PhanTram().compareTo(BigDecimal.valueOf(100)) > 0) {
-                throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "spo2_phan_tram must be between 0 and 100");
+                throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "spo2_phan_tram phải nằm trong khoảng từ 0 đến 100");
             }
         }
         if (Boolean.TRUE.equals(req.getCoBatThuongCoQuan())
                 && (req.getBatThuongCoQuanGhiRo() == null || req.getBatThuongCoQuanGhiRo().isBlank())) {
-            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "bat_thuong_co_quan_ghi_ro is required when co_bat_thuong_co_quan is true");
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "bat_thuong_co_quan_ghi_ro là bắt buộc khi co_bat_thuong_co_quan=true");
         }
 
         VitalSign entity = VitalSign.builder()
@@ -105,23 +105,23 @@ public class VitalSignsServiceImpl implements VitalSignsService {
     @Transactional(readOnly = true)
     public List<VitalSignsResponse> getListVitalSigns(String examId) {
         if (examId == null || examId.isBlank()) {
-            throw new AppException(ErrorCode.MISSING_REQUIRED_PARAMETER, "Missing required parameter: exam_id");
+            throw new AppException(ErrorCode.MISSING_REQUIRED_PARAMETER, "Thiếu tham số bắt buộc: exam_id");
         }
 
         Long examIdLong;
         try {
             examIdLong = Long.parseLong(examId.trim());
         } catch (NumberFormatException e) {
-            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "exam_id must be a numeric value");
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "exam_id phải là một giá trị số");
         }
 
         MedicalVisit visit = medicalVisitRepository.findById(examIdLong)
-                .orElseThrow(() -> new AppException(ErrorCode.EXAM_NOT_FOUND, "Exam not found: " + examIdLong));
+                .orElseThrow(() -> new AppException(ErrorCode.EXAM_NOT_FOUND, "Phiên khám không tìm thấy: " + examIdLong));
 
-        // Check ownership if caller is PATIENT
+        // Verify ownership when the caller is a patient.
         if (SecurityUtils.hasRole("patient") && !SecurityUtils.hasRole("doctor") && !SecurityUtils.hasRole("admin")) {
             MedicalRecord record = medicalRecordRepository.findById(visit.getMedicalRecordId())
-                    .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "Medical record not found"));
+                    .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "Hồ sơ bệnh án không tìm thấy"));
 
             Long currentUserId = SecurityUtils.getCurrentUserId();
             UserAccount account = userAccountRepository.findById(currentUserId).orElse(null);
@@ -130,7 +130,7 @@ public class VitalSignsServiceImpl implements VitalSignsService {
                     : currentUserId;
 
             if (!record.getPatientId().equals(callerPatientId)) {
-                throw new AppException(ErrorCode.CANNOT_ACCESS_ANOTHER_USER_DATA, "Cannot access another user data");
+                throw new AppException(ErrorCode.CANNOT_ACCESS_ANOTHER_USER_DATA, "Không thể truy cập dữ liệu của người dùng khác");
             }
         }
 

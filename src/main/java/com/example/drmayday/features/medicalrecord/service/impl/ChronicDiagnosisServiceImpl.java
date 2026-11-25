@@ -40,24 +40,24 @@ public class ChronicDiagnosisServiceImpl implements ChronicDiagnosisService {
                 .orElseThrow(() -> new AppException(ErrorCode.MEDICAL_RECORD_NOT_FOUND));
 
         if (!"MAN".equals(record.getMedicalRecordType())) {
-            throw new AppException(ErrorCode.RECORD_TYPE_MISMATCH, "Record is not MAN type");
+            throw new AppException(ErrorCode.RECORD_TYPE_MISMATCH, "Hồ sơ bệnh án không phải hồ sơ bệnh án mạn tính");
         }
 
         if (req.getChanDoanChinh() != null && !VALID_CHAN_DOAN_CHINH.contains(req.getChanDoanChinh())) {
-            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "chan_doan_chinh invalid");
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Chẩn đoán chính không hợp lệ");
         }
         if (req.getPhanNhomCsu() != null && !VALID_PHAN_NHOM_CSU.contains(req.getPhanNhomCsu())) {
-            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "phan_nhom_csu invalid");
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Phân nhóm CSU không hợp lệ");
         }
         if (req.getBieuHienQuaTrinhBenh() != null && !VALID_BIEU_HIEN.contains(req.getBieuHienQuaTrinhBenh())) {
-            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "bieu_hien_qua_trinh_benh invalid");
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Biểu hiện quá trình bệnh không hợp lệ");
         }
         if (Boolean.TRUE.equals(req.getMayDayCamUngKhac()) &&
                 (req.getMayDayCamUngKhacGhiRo() == null || req.getMayDayCamUngKhacGhiRo().isBlank())) {
-            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "may_day_cam_ung_khac_ghi_ro required when may_day_cam_ung_khac=true");
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Mô tả phản ứng khác khi mắc bệnh là bắt buộc khi may_day_cam_ung_khac=true");
         }
         if (!Boolean.TRUE.equals(req.getMayDayCamUngKhac()) && req.getMayDayCamUngKhacGhiRo() != null) {
-            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "may_day_cam_ung_khac_ghi_ro must be null when may_day_cam_ung_khac is not true");
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Mô tả phản ứng khác khi mắc bệnh phải để trống khi may_day_cam_ung_khac=false");
         }
 
         ChronicUrticariaRecord chronic = chronicRepo.findById(req.getRecordId())

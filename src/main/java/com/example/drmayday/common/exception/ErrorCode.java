@@ -38,12 +38,19 @@ public enum ErrorCode {
     USER_PHONE_ALREADY_EXISTS("3006", "Số điện thoại người dùng đã tồn tại", HttpStatus.CONFLICT),
     USER_ACCOUNT_NOT_FOUND("3007", "Không tìm thấy tài khoản người dùng", HttpStatus.NOT_FOUND),
     PASSWORD_INCORRECT("3008", "Mật khẩu không chính xác", HttpStatus.UNAUTHORIZED),
+    PATIENT_PROFILE_NOT_FOUND("3009", "Không tìm thấy hồ sơ bệnh nhân", HttpStatus.NOT_FOUND),
+    EMPLOYEE_PROFILE_NOT_FOUND("3010", "Không tìm thấy hồ sơ nhân viên", HttpStatus.NOT_FOUND),
+    PERSON_ALREADY_HAS_USER_ACCOUNT("3011", "Người đã có tài khoản", HttpStatus.CONFLICT),
+    PERSON_ALREADY_REGISTERED_AS_PATIENT("3012", "Người đã có hồ sơ bệnh nhân", HttpStatus.CONFLICT),
+    PERSON_ALREADY_REGISTERED_AS_EMPLOYEE("3013", "Người đã có hồ sơ nhân viên", HttpStatus.CONFLICT),
+    PERSON_NOT_FOUND("3014", "Không tìm thấy người", HttpStatus.NOT_FOUND),
+    PATIENT_HIS_CODE_ALREADY_EXISTS("3015", "Mã HIS bệnh nhân đã tồn tại", HttpStatus.CONFLICT),
     ADMIN_ROLE_REQUIRED("3102", "Yêu cầu quyền quản trị viên", HttpStatus.FORBIDDEN),
     DOCTOR_ROLE_REQUIRED("3103", "Yêu cầu quyền bác sĩ", HttpStatus.FORBIDDEN),
     DOCTOR_NOT_ASSIGNED("3105", "Bác sĩ chưa được phân công vào hồ sơ", HttpStatus.BAD_REQUEST),
     CANNOT_ACCESS_ANOTHER_USER_DATA("3106", "Không thể truy cập dữ liệu của người dùng khác", HttpStatus.FORBIDDEN),
 
-    // 4xxx - Lỗi Hồ sơ bệnh án & Form Builder
+    // 4xxx - Medical record and form builder errors
     MEDICAL_RECORD_NOT_FOUND("4001", "Không tìm thấy hồ sơ bệnh án", HttpStatus.NOT_FOUND),
     ACTIVE_MEDICAL_RECORD_REQUIRED("4002", "Yêu cầu hồ sơ bệnh án đang hoạt động", HttpStatus.BAD_REQUEST),
     MEDICAL_RECORD_ALREADY_COMPLETED("4003", "Hồ sơ bệnh án đã hoàn tất", HttpStatus.BAD_REQUEST),
@@ -58,7 +65,7 @@ public enum ErrorCode {
     UAS7_NO_ACTIVE_RECORD("5004", "Bệnh nhân không có hồ sơ bệnh án đang hoạt động để ghi điểm UAS7", HttpStatus.BAD_REQUEST),
     EXAM_NOT_FOUND("5008", "Không tìm thấy phiên khám", HttpStatus.NOT_FOUND),
 
-    // 7xxx - Lỗi Chi tiết tổn thương
+    // 7xxx - Lesion detail errors
     LESION_DETAIL_NOT_FOUND("7010", "Không tìm thấy chi tiết tổn thương", HttpStatus.NOT_FOUND),
 
     // 9xxx - General system errors

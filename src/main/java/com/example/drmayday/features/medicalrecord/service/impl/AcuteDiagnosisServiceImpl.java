@@ -38,14 +38,14 @@ public class AcuteDiagnosisServiceImpl implements AcuteDiagnosisService {
                 .orElseThrow(() -> new AppException(ErrorCode.MEDICAL_RECORD_NOT_FOUND));
 
         if (!"CAP".equals(record.getMedicalRecordType())) {
-            throw new AppException(ErrorCode.RECORD_TYPE_MISMATCH, "Record is not CAP type");
+            throw new AppException(ErrorCode.RECORD_TYPE_MISMATCH, "Hồ sơ bệnh án không phải hồ sơ bệnh án cấp tính");
         }
 
         if (req.getTuoiLanDauBiBenh() != null && req.getTuoiLanDauBiBenh() < 0) {
-            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "tuoi_lan_dau_bi_benh must be >= 0");
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Tuổi lần đầu bị bệnh phải >= 0");
         }
         if (req.getSoLanMayDayCapTruoc() != null && req.getSoLanMayDayCapTruoc() < 0) {
-            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "so_lan_may_day_cap_truoc must be >= 0");
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Số lần mắc bệnh cấp trước phải >= 0");
         }
 
         AcuteUrticariaRecord acute = acuteRepo.findById(req.getRecordId())
@@ -88,7 +88,7 @@ public class AcuteDiagnosisServiceImpl implements AcuteDiagnosisService {
         try {
             return Duration.parse(value);
         } catch (Exception ex) {
-            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Invalid interval/duration format");
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Giá trị thời gian không hợp lệ: " + value);
         }
     }
 }

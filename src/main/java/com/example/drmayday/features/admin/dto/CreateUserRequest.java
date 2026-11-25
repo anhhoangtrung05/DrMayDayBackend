@@ -2,122 +2,27 @@ package com.example.drmayday.features.admin.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
-/**
- * Request DTO for ADMIN_CREATE_USER.
- */
-public class CreateUserRequest {
+public record CreateUserRequest(
+        @JsonProperty("person_id")
+        @NotNull(message = "2001")
+        Long personId,
 
-    @NotBlank(message = "2001")
-    @JsonProperty("full_name")
-    private String fullName;
+        @JsonProperty("role_id")
+        @NotNull(message = "2001")
+        Long roleId,
 
-    @NotBlank(message = "2001")
-    @Pattern(regexp = "^(0|\\+84)[0-9]{9}$", message = "2004")
-    @JsonProperty("phone")
-    private String phone;
+        @JsonProperty("username")
+        @NotBlank(message = "2001")
+        @Size(max = 100, message = "2003")
+        String username,
 
-    @NotBlank(message = "2001")
-    @JsonProperty("password")
-    private String password;
+        @JsonProperty("password")
+        @NotBlank(message = "2001")
+        String password,
 
-    @NotBlank(message = "2001")
-    @JsonProperty("role_id")
-    private String roleId;
-
-    @JsonProperty("is_active")
-    private String isActive = "1";
-
-    public CreateUserRequest() {
-    }
-
-    public CreateUserRequest(String fullName, String phone, String password, String roleId, String isActive) {
-        this.fullName = fullName;
-        this.phone = phone;
-        this.password = password;
-        this.roleId = roleId;
-        this.isActive = isActive != null ? isActive : "1";
-    }
-
-    public String getFullName() {
-        return fullName;
-    }
-
-    public void setFullName(String fullName) {
-        this.fullName = fullName;
-    }
-
-    public String getPhone() {
-        return phone;
-    }
-
-    public void setPhone(String phone) {
-        this.phone = phone;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
-    public String getRoleId() {
-        return roleId;
-    }
-
-    public void setRoleId(String roleId) {
-        this.roleId = roleId;
-    }
-
-    public String getIsActive() {
-        return isActive;
-    }
-
-    public void setIsActive(String isActive) {
-        this.isActive = isActive;
-    }
-
-    public static Builder builder() {
-        return new Builder();
-    }
-
-    public static class Builder {
-        private String fullName;
-        private String phone;
-        private String password;
-        private String roleId;
-        private String isActive = "1";
-
-        public Builder fullName(String fullName) {
-            this.fullName = fullName;
-            return this;
-        }
-
-        public Builder phone(String phone) {
-            this.phone = phone;
-            return this;
-        }
-
-        public Builder password(String password) {
-            this.password = password;
-            return this;
-        }
-
-        public Builder roleId(String roleId) {
-            this.roleId = roleId;
-            return this;
-        }
-
-        public Builder isActive(String isActive) {
-            this.isActive = isActive;
-            return this;
-        }
-
-        public CreateUserRequest build() {
-            return new CreateUserRequest(fullName, phone, password, roleId, isActive);
-        }
-    }
+        @JsonProperty("is_active")
+        Boolean isActive) {
 }

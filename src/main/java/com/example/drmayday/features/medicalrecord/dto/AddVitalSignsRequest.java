@@ -13,7 +13,7 @@ import java.time.OffsetDateTime;
 @AllArgsConstructor
 public class AddVitalSignsRequest {
 
-    @NotBlank(message = "exam_id is required")
+    @NotBlank(message = "Thiếu tham số bắt buộc: exam_id")
     @JsonProperty("exam_id")
     private String examId;
 
