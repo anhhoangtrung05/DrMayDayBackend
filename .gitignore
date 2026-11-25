@@ -53,6 +53,7 @@ logs/
 temp/
 tmp/
 **/tmp/
+uploads/
 
 # --- OS-generated Files ---
 .DS_Store
