@@ -7,9 +7,15 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
+import java.util.Optional;
+
 public interface MedicalRecordRepository extends JpaRepository<MedicalRecord, Long> {
 
-    boolean existsByPatientIdAndStatusNotIn(Long patientId, java.util.Collection<String> statuses);
+    boolean existsByPatientIdAndStatusNotIn(Long patientId, Collection<String> statuses);
+
+    Optional<MedicalRecord> findFirstByPatientIdAndMedicalRecordTypeAndStatusNotInOrderByMedicalRecordIdDesc(
+            Long patientId, String medicalRecordType, Collection<String> statuses);
 
     @Query("SELECT m FROM MedicalRecord m WHERE " +
            "(:patientId IS NULL OR m.patientId = :patientId) AND " +
