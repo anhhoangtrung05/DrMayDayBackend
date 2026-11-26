@@ -1,11 +1,13 @@
 package com.example.drmayday.features.admin.controller;
 
+import com.example.drmayday.features.admin.dto.AssignUserRequest;
 import com.example.drmayday.features.admin.dto.CreatePatientRequest;
 import com.example.drmayday.features.admin.dto.CreatePersonRequest;
 import com.example.drmayday.features.admin.dto.CreateStaffRequest;
 import com.example.drmayday.features.admin.dto.CreateUserRequest;
 import com.example.drmayday.features.admin.dto.CreatedUserResponse;
 import com.example.drmayday.features.admin.dto.EditUserRequest;
+import com.example.drmayday.features.admin.dto.StaffAssignResponse;
 import com.example.drmayday.features.admin.dto.UserDetailsResponse;
 import com.example.drmayday.features.admin.dto.UserResponse;
 import com.example.drmayday.features.admin.service.AdminUserService;
@@ -35,6 +37,9 @@ import java.time.OffsetDateTime;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -349,5 +354,79 @@ class AdminUserControllerTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("3007"))
                 .andExpect(jsonPath("$.message").value("Không tìm thấy tài khoản người dùng"));
+    }
+
+    @Test
+    @DisplayName("API 13: DELETE /api/v1/admin/users/{id} - Xóa tài khoản thành công (200 OK)")
+    void deleteUser_Success() throws Exception {
+        doNothing().when(adminUserService).deleteUser("202");
+
+        mockMvc.perform(delete("/api/v1/admin/users/202")
+                        .header("Authorization", "Bearer mock-admin-token"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("1000"))
+                .andExpect(jsonPath("$.message").value("Thành công"));
+
+        verify(adminUserService).deleteUser("202");
+    }
+
+    @Test
+    @DisplayName("API 13: DELETE /api/v1/admin/users/{id} - Tài khoản không tồn tại trả về 404 (3007)")
+    void deleteUser_NotFound() throws Exception {
+        doThrow(new AppException(ErrorCode.USER_ACCOUNT_NOT_FOUND))
+                .when(adminUserService).deleteUser("999");
+
+        mockMvc.perform(delete("/api/v1/admin/users/999")
+                        .header("Authorization", "Bearer mock-admin-token"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("3007"));
+    }
+
+    @Test
+    @DisplayName("API 14: POST /api/v1/admin/users/assign - Phân công nhân viên thành công (200 OK)")
+    void assignUser_Success() throws Exception {
+        StaffAssignResponse response = StaffAssignResponse.builder()
+                .staffId("101")
+                .userId("202")
+                .branchId("7")
+                .branchName("Chi nhánh Cầu Giấy")
+                .build();
+        when(adminUserService.assignUser(any(AssignUserRequest.class))).thenReturn(response);
+
+        mockMvc.perform(post("/api/v1/admin/users/assign")
+                        .header("Authorization", "Bearer mock-admin-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"user_id\": 202, \"branch_id\": 7}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("1000"))
+                .andExpect(jsonPath("$.data.staff_id").value("101"))
+                .andExpect(jsonPath("$.data.user_id").value("202"))
+                .andExpect(jsonPath("$.data.branch_id").value("7"))
+                .andExpect(jsonPath("$.data.branch_name").value("Chi nhánh Cầu Giấy"));
+    }
+
+    @Test
+    @DisplayName("API 14: POST /api/v1/admin/users/assign - Thiếu branch_id trả về 400 (2001)")
+    void assignUser_MissingBranchId() throws Exception {
+        mockMvc.perform(post("/api/v1/admin/users/assign")
+                        .header("Authorization", "Bearer mock-admin-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"user_id\": 202}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("2001"));
+    }
+
+    @Test
+    @DisplayName("API 14: POST /api/v1/admin/users/assign - Chi nhánh không hợp lệ trả về 400 (2003)")
+    void assignUser_InvalidBranch() throws Exception {
+        when(adminUserService.assignUser(any(AssignUserRequest.class)))
+                .thenThrow(new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Chi nhánh không tồn tại"));
+
+        mockMvc.perform(post("/api/v1/admin/users/assign")
+                        .header("Authorization", "Bearer mock-admin-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"user_id\": 202, \"branch_id\": 999}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("2003"));
     }
 }

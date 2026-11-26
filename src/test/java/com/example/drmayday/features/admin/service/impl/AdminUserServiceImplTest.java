@@ -2,17 +2,20 @@ package com.example.drmayday.features.admin.service.impl;
 
 import com.example.drmayday.common.exception.AppException;
 import com.example.drmayday.common.exception.ErrorCode;
+import com.example.drmayday.entity.Branch;
 import com.example.drmayday.entity.Employee;
 import com.example.drmayday.entity.Patient;
 import com.example.drmayday.entity.Person;
 import com.example.drmayday.entity.Role;
 import com.example.drmayday.entity.UserAccount;
+import com.example.drmayday.features.admin.dto.AssignUserRequest;
 import com.example.drmayday.features.admin.dto.CreatePatientRequest;
 import com.example.drmayday.features.admin.dto.CreatePersonRequest;
 import com.example.drmayday.features.admin.dto.CreateStaffRequest;
 import com.example.drmayday.features.admin.dto.CreateUserRequest;
 import com.example.drmayday.features.admin.dto.CreatedUserResponse;
 import com.example.drmayday.features.admin.dto.EditUserRequest;
+import com.example.drmayday.features.admin.dto.StaffAssignResponse;
 import com.example.drmayday.features.profile.dto.EmployeeProfileResponse;
 import com.example.drmayday.features.profile.dto.PatientProfileResponse;
 import com.example.drmayday.features.profile.dto.PersonProfileResponse;
@@ -548,6 +551,114 @@ class AdminUserServiceImplTest {
                     () -> service.editUser("not-a-number", new EditUserRequest()));
 
             verify(userAccountRepository, never()).findById(any());
+        }
+    }
+
+    @Nested
+    @DisplayName("deleteUser")
+    class DeleteUserTests {
+
+        @Test
+        @DisplayName("[Happy Path] Existing account — deletes account and flushes")
+        void deleteUser_existingAccount_deletesAccount() {
+            UserAccount account = userAccount();
+            when(userAccountRepository.findById(202L)).thenReturn(Optional.of(account));
+
+            service.deleteUser("202");
+
+            verify(userAccountRepository).delete(account);
+            verify(userAccountRepository).flush();
+        }
+
+        @Test
+        @DisplayName("[Unhappy Path] Account does not exist — returns not found")
+        void deleteUser_missingAccount_returnsNotFound() {
+            when(userAccountRepository.findById(999L)).thenReturn(Optional.empty());
+
+            assertError(ErrorCode.USER_ACCOUNT_NOT_FOUND, () -> service.deleteUser("999"));
+
+            verify(userAccountRepository, never()).delete(any(UserAccount.class));
+        }
+
+        @Test
+        @DisplayName("[Unhappy Path] Non-numeric ID — returns not found")
+        void deleteUser_invalidId_returnsNotFound() {
+            assertError(ErrorCode.USER_ACCOUNT_NOT_FOUND, () -> service.deleteUser("abc"));
+
+            verify(userAccountRepository, never()).findById(any());
+        }
+    }
+
+    @Nested
+    @DisplayName("assignUser")
+    class AssignUserTests {
+
+        @Test
+        @DisplayName("[Happy Path] Valid staff user and active branch — updates branchId")
+        void assignUser_validRequest_updatesBranch() {
+            UserAccount account = userAccount();
+            Branch branch = Branch.builder().branchId(BRANCH_ID).name("Chi nhánh Cầu Giấy").active(true).build();
+            Employee employee = Employee.builder().employeeId(PERSON_ID).branchId(1L).build();
+
+            when(userAccountRepository.findById(202L)).thenReturn(Optional.of(account));
+            when(branchRepository.findById(BRANCH_ID)).thenReturn(Optional.of(branch));
+            when(employeeRepository.findById(PERSON_ID)).thenReturn(Optional.of(employee));
+            when(employeeRepository.saveAndFlush(any(Employee.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+            StaffAssignResponse response = service.assignUser(new AssignUserRequest(202L, BRANCH_ID));
+
+            assertThat(response.getStaffId()).isEqualTo(String.valueOf(PERSON_ID));
+            assertThat(response.getUserId()).isEqualTo("202");
+            assertThat(response.getBranchId()).isEqualTo(String.valueOf(BRANCH_ID));
+            assertThat(response.getBranchName()).isEqualTo("Chi nhánh Cầu Giấy");
+            assertThat(employee.getBranchId()).isEqualTo(BRANCH_ID);
+            verify(employeeRepository).saveAndFlush(employee);
+        }
+
+        @Test
+        @DisplayName("[Unhappy Path] Missing required fields — returns 2001")
+        void assignUser_missingFields_returnsBadRequest() {
+            assertError(ErrorCode.MISSING_REQUIRED_PARAMETER, () -> service.assignUser(null));
+            assertError(ErrorCode.MISSING_REQUIRED_PARAMETER, () -> service.assignUser(new AssignUserRequest(null, BRANCH_ID)));
+            assertError(ErrorCode.MISSING_REQUIRED_PARAMETER, () -> service.assignUser(new AssignUserRequest(202L, null)));
+        }
+
+        @Test
+        @DisplayName("[Unhappy Path] User account not found — returns 3007")
+        void assignUser_missingAccount_returnsNotFound() {
+            when(userAccountRepository.findById(999L)).thenReturn(Optional.empty());
+
+            assertError(ErrorCode.USER_ACCOUNT_NOT_FOUND, () -> service.assignUser(new AssignUserRequest(999L, BRANCH_ID)));
+        }
+
+        @Test
+        @DisplayName("[Unhappy Path] Branch not found — returns 2003")
+        void assignUser_missingBranch_returnsBadRequest() {
+            when(userAccountRepository.findById(202L)).thenReturn(Optional.of(userAccount()));
+            when(branchRepository.findById(999L)).thenReturn(Optional.empty());
+
+            assertError(ErrorCode.INVALID_PARAMETER_VALUE, () -> service.assignUser(new AssignUserRequest(202L, 999L)));
+        }
+
+        @Test
+        @DisplayName("[Unhappy Path] Inactive branch — returns 2106")
+        void assignUser_inactiveBranch_returnsBadRequest() {
+            when(userAccountRepository.findById(202L)).thenReturn(Optional.of(userAccount()));
+            when(branchRepository.findById(BRANCH_ID)).thenReturn(Optional.of(
+                    Branch.builder().branchId(BRANCH_ID).name("Inactive").active(false).build()));
+
+            assertError(ErrorCode.BRANCH_INACTIVE, () -> service.assignUser(new AssignUserRequest(202L, BRANCH_ID)));
+        }
+
+        @Test
+        @DisplayName("[Unhappy Path] User is not medical staff — returns 2003")
+        void assignUser_notEmployee_returnsBadRequest() {
+            when(userAccountRepository.findById(202L)).thenReturn(Optional.of(userAccount()));
+            when(branchRepository.findById(BRANCH_ID)).thenReturn(Optional.of(
+                    Branch.builder().branchId(BRANCH_ID).name("Active").active(true).build()));
+            when(employeeRepository.findById(PERSON_ID)).thenReturn(Optional.empty());
+
+            assertError(ErrorCode.INVALID_PARAMETER_VALUE, () -> service.assignUser(new AssignUserRequest(202L, BRANCH_ID)));
         }
     }
 }

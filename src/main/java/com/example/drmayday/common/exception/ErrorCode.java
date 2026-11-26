@@ -49,6 +49,8 @@ public enum ErrorCode {
     DOCTOR_ROLE_REQUIRED("3103", "Yêu cầu quyền bác sĩ", HttpStatus.FORBIDDEN),
     DOCTOR_NOT_ASSIGNED("3105", "Bác sĩ chưa được phân công vào hồ sơ", HttpStatus.BAD_REQUEST),
     CANNOT_ACCESS_ANOTHER_USER_DATA("3106", "Không thể truy cập dữ liệu của người dùng khác", HttpStatus.FORBIDDEN),
+    ROLE_ALREADY_EXISTS("3107", "Tên vai trò đã tồn tại", HttpStatus.CONFLICT),
+    PERMISSION_ALREADY_EXISTS("3108", "Tên quyền hạn đã tồn tại", HttpStatus.CONFLICT),
 
     // 4xxx - Medical record and form builder errors
     MEDICAL_RECORD_NOT_FOUND("4001", "Không tìm thấy hồ sơ bệnh án", HttpStatus.NOT_FOUND),
