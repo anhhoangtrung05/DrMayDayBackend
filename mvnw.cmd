@@ -89,10 +89,14 @@ if (-not (Test-Path -Path $MAVEN_M2_PATH)) {
 }
 
 $MAVEN_WRAPPER_DISTS = $null
-if ((Get-Item $MAVEN_M2_PATH).Target[0] -eq $null) {
+$MAVEN_M2_ITEM = Get-Item $MAVEN_M2_PATH
+# PowerShell 7 returns an empty Target for a normal directory. Do not index
+# Target[0] unless the path is actually a link (the stock wrapper otherwise
+# fails with "Cannot index into a null array" on Windows).
+if ($MAVEN_M2_ITEM.PSIsContainer -or [string]::IsNullOrEmpty($MAVEN_M2_ITEM.Target)) {
   $MAVEN_WRAPPER_DISTS = "$MAVEN_M2_PATH/wrapper/dists"
 } else {
-  $MAVEN_WRAPPER_DISTS = (Get-Item $MAVEN_M2_PATH).Target[0] + "/wrapper/dists"
+  $MAVEN_WRAPPER_DISTS = $MAVEN_M2_ITEM.Target + "/wrapper/dists"
 }
 
 $MAVEN_HOME_PARENT = "$MAVEN_WRAPPER_DISTS/$distributionUrlNameMain"

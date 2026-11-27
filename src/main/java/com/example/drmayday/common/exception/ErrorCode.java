@@ -38,12 +38,19 @@ public enum ErrorCode {
     USER_PHONE_ALREADY_EXISTS("3006", "Số điện thoại người dùng đã tồn tại", HttpStatus.CONFLICT),
     USER_ACCOUNT_NOT_FOUND("3007", "Không tìm thấy tài khoản người dùng", HttpStatus.NOT_FOUND),
     PASSWORD_INCORRECT("3008", "Mật khẩu không chính xác", HttpStatus.UNAUTHORIZED),
+    PATIENT_PROFILE_NOT_FOUND("3009", "Không tìm thấy hồ sơ bệnh nhân", HttpStatus.NOT_FOUND),
+    EMPLOYEE_PROFILE_NOT_FOUND("3010", "Không tìm thấy hồ sơ nhân viên", HttpStatus.NOT_FOUND),
+    PERSON_ALREADY_HAS_USER_ACCOUNT("3011", "Người đã có tài khoản", HttpStatus.CONFLICT),
+    PERSON_ALREADY_REGISTERED_AS_PATIENT("3012", "Người đã có hồ sơ bệnh nhân", HttpStatus.CONFLICT),
+    PERSON_ALREADY_REGISTERED_AS_EMPLOYEE("3013", "Người đã có hồ sơ nhân viên", HttpStatus.CONFLICT),
+    PERSON_NOT_FOUND("3014", "Không tìm thấy người", HttpStatus.NOT_FOUND),
+    PATIENT_HIS_CODE_ALREADY_EXISTS("3015", "Mã HIS bệnh nhân đã tồn tại", HttpStatus.CONFLICT),
     ADMIN_ROLE_REQUIRED("3102", "Yêu cầu quyền quản trị viên", HttpStatus.FORBIDDEN),
     DOCTOR_ROLE_REQUIRED("3103", "Yêu cầu quyền bác sĩ", HttpStatus.FORBIDDEN),
     DOCTOR_NOT_ASSIGNED("3105", "Bác sĩ chưa được phân công vào hồ sơ", HttpStatus.BAD_REQUEST),
     CANNOT_ACCESS_ANOTHER_USER_DATA("3106", "Không thể truy cập dữ liệu của người dùng khác", HttpStatus.FORBIDDEN),
 
-    // 4xxx - Lỗi Hồ sơ bệnh án & Form Builder
+    // 4xxx - Medical record and form builder errors
     MEDICAL_RECORD_NOT_FOUND("4001", "Không tìm thấy hồ sơ bệnh án", HttpStatus.NOT_FOUND),
     ACTIVE_MEDICAL_RECORD_REQUIRED("4002", "Yêu cầu hồ sơ bệnh án đang hoạt động", HttpStatus.BAD_REQUEST),
     MEDICAL_RECORD_ALREADY_COMPLETED("4003", "Hồ sơ bệnh án đã hoàn tất", HttpStatus.BAD_REQUEST),
@@ -69,6 +76,21 @@ public enum ErrorCode {
     LESION_NAME_CANNOT_BE_EMPTY("7004", "Tên đợt tổn thương không được để trống", HttpStatus.BAD_REQUEST),
     EPISODE_HAS_CHILD_DATA("7009", "Đợt tổn thương vẫn còn vị trí hoặc hình ảnh đính kèm", HttpStatus.CONFLICT),
     LESION_DETAIL_NOT_FOUND("7010", "Không tìm thấy chi tiết tổn thương", HttpStatus.NOT_FOUND),
+
+    // 80xx - Prescription errors
+    PRESCRIPTION_ITEMS_EMPTY("8001", "Đơn thuốc phải có ít nhất một thuốc", HttpStatus.BAD_REQUEST),
+    PRESCRIPTION_NOT_FOUND("8003", "Không tìm thấy đơn thuốc", HttpStatus.NOT_FOUND),
+    PRESCRIPTION_ITEM_MEDICATION_CONFLICT("8004", "Mỗi thuốc trong đơn phải có đúng một trong hai trường ma_thuoc hoặc ten_thuoc_bo_sung", HttpStatus.BAD_REQUEST),
+    MEDICATION_NOT_FOUND("8005", "Mã thuốc không tồn tại trong danh mục thuốc", HttpStatus.NOT_FOUND),
+
+    // 81xx - Lab result errors
+    LAB_RESULT_FIELD_TYPE_MISMATCH("8103", "Trường kết quả cận lâm sàng không khớp loại phiên khám", HttpStatus.BAD_REQUEST),
+    LAB_RESULT_NOT_FOUND("8104", "Không tìm thấy kết quả cận lâm sàng", HttpStatus.NOT_FOUND),
+    ASST_REQUIRES_POSITIVE_SERUM_TEST("8105", "Chỉ được nhập asst_duong_kinh_mm khi test_huyet_thanh_tu_than = Duong tinh", HttpStatus.BAD_REQUEST),
+
+    // 82xx - Stop-medication instruction errors
+    STOP_PURPOSE_OTHER_DESCRIPTION_REQUIRED("8201", "Mục đích ngừng thuốc là Khac thì bắt buộc nhập muc_dich_khac_ghi_ro", HttpStatus.BAD_REQUEST),
+    STOP_PURPOSE_INVALID("8202", "Mục đích ngừng thuốc không hợp lệ, chỉ chấp nhận: Test huyet thanh tu than, Test kich thich, Khac", HttpStatus.BAD_REQUEST),
 
     // 9xxx - General system errors
     INTERNAL_SERVER_ERROR("9999", "Lỗi hệ thống nội bộ", HttpStatus.INTERNAL_SERVER_ERROR);

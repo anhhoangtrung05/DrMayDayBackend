@@ -34,12 +34,12 @@ public class SecurityConfig {
     }
 
     @Bean
-    public PasswordEncoder passwordEncoder() {
+    PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
@@ -47,7 +47,6 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/**", "/error", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/api/v1/profile/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/v1/branches/**", "/api/v1/rooms/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/branches/**", "/api/v1/rooms/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/branches/**", "/api/v1/rooms/**").hasRole("ADMIN")
@@ -63,7 +62,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    public AuthenticationEntryPoint customAuthenticationEntryPoint() {
+    AuthenticationEntryPoint customAuthenticationEntryPoint() {
         return (request, response, authException) -> {
             String authHeader = request.getHeader("Authorization");
             Object authEx = request.getAttribute("AUTH_EXCEPTION");
@@ -87,7 +86,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    public AccessDeniedHandler customAccessDeniedHandler() {
+    AccessDeniedHandler customAccessDeniedHandler() {
         return (request, response, accessDeniedException) -> {
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);

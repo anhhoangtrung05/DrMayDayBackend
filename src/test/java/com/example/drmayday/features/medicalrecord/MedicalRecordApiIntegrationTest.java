@@ -25,8 +25,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Covers APIs 30-38 ("Bệnh nhân & Hồ sơ bệnh án") through the real filter chain
- * against PostgreSQL. Scenarios come from the "Kịch bản kiểm thử" column of
+ * Covers APIs 30-38 (patients and medical records) through the real filter chain
+ * against PostgreSQL. Scenarios come from the test-scenario column of
  * docs/API Design - IT4788 (2).xlsx.
  *
  * Each test runs in a rolled-back transaction, so it leaves no rows behind.

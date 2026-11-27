@@ -1,9 +1,16 @@
 package com.example.drmayday.features.admin.service;
 
+import com.example.drmayday.features.admin.dto.CreatePatientRequest;
+import com.example.drmayday.features.admin.dto.CreatePersonRequest;
+import com.example.drmayday.features.admin.dto.CreateStaffRequest;
 import com.example.drmayday.features.admin.dto.CreateUserRequest;
+import com.example.drmayday.features.admin.dto.CreatedUserResponse;
 import com.example.drmayday.features.admin.dto.EditUserRequest;
 import com.example.drmayday.features.admin.dto.UserDetailsResponse;
 import com.example.drmayday.features.admin.dto.UserResponse;
+import com.example.drmayday.features.profile.dto.EmployeeProfileResponse;
+import com.example.drmayday.features.profile.dto.PatientProfileResponse;
+import com.example.drmayday.features.profile.dto.PersonProfileResponse;
 import org.springframework.data.domain.Page;
 
 public interface AdminUserService {
@@ -31,7 +38,13 @@ public interface AdminUserService {
      * @param request Data for the new user
      * @return The created user's details
      */
-    UserResponse createUser(CreateUserRequest request);
+    CreatedUserResponse createUser(CreateUserRequest request);
+
+    PersonProfileResponse createPerson(CreatePersonRequest request);
+
+    PatientProfileResponse createPatient(CreatePatientRequest request);
+
+    EmployeeProfileResponse createStaff(CreateStaffRequest request);
 
     /**
      * ADMIN_EDIT_USER - Updates a user's full name, role, or active status.

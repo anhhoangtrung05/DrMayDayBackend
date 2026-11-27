@@ -120,54 +120,179 @@ Authorization: Bearer {{adminToken}}
 GET {{baseUrl}}/api/v1/admin/users/999999
 Authorization: Bearer {{adminToken}}
 
-### ADMIN_CREATE_USER - Admin creates a user (201 Created - Code 1001)
-POST {{baseUrl}}/api/v1/admin/users
+### ADMIN_CREATE_PERSON - Create a person record (201 Created - Code 1001)
+### ADMIN_CREATE_PERSON is the prerequisite for ADMIN_CREATE_USER, ADMIN_CREATE_PATIENT, and ADMIN_CREATE_STAFF.
+### @name createPerson
+POST {{baseUrl}}/api/v1/admin/persons
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 {
   "full_name": "Bác sĩ Nguyễn Văn C",
-  "phone": "0988776656",
-  "password": "Password123@",
-  "role_id": "2",
-  "is_active": "1"
+  "phone_number": "0988776656",
+  "date_of_birth": "1985-04-15",
+  "gender": "Nam",
+  "province_city": "Hà Nội",
+  "ward_commune": "Phường Bạch Mai",
+  "address_line": "Số 10 phố Huế"
 }
 
-### ADMIN_CREATE_USER - Phone number already exists (409 Conflict - Code 3006)
+### ADMIN_CREATE_PERSON - Missing required field (400 Bad Request - Code 2001)
+POST {{baseUrl}}/api/v1/admin/persons
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "phone_number": "0988776657"
+}
+
+### ADMIN_CREATE_PERSON - Invalid phone number (400 Bad Request - Code 2004)
+POST {{baseUrl}}/api/v1/admin/persons
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "full_name": "Người Sai Số",
+  "phone_number": "0123"
+}
+
+### ADMIN_CREATE_USER - Create an account for the person created above (201 Created - Code 1001)
 POST {{baseUrl}}/api/v1/admin/users
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 {
-  "full_name": "Người Trùng Số",
-  "phone": "0988776656",
+  "person_id": {{createPerson.response.body.data.person_id}},
+  "role_id": 2,
+  "username": "doctor.nguyenvanc",
   "password": "Password123@",
-  "role_id": "2",
-  "is_active": "1"
+  "is_active": true
 }
 
-### ADMIN_CREATE_USER - Required field is missing (400 Bad Request - Code 2001)
+### ADMIN_CREATE_USER - Person already has an account (409 Conflict - Code 3011)
 POST {{baseUrl}}/api/v1/admin/users
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 {
-  "full_name": "",
-  "phone": "",
-  "password": "",
-  "role_id": ""
+  "person_id": {{createPerson.response.body.data.person_id}},
+  "role_id": 2,
+  "username": "doctor.nguyenvanc.duplicate",
+  "password": "Password123@",
+  "is_active": true
 }
 
-### ADMIN_CREATE_USER - Invalid phone number format (400 Bad Request - Code 2004)
+### ADMIN_CREATE_USER - Person does not exist (404 Not Found - Code 3014)
 POST {{baseUrl}}/api/v1/admin/users
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 {
-  "full_name": "Người Sai Phone",
-  "phone": "0123",
-  "password": "Password123@",
-  "role_id": "2"
+  "person_id": 999999,
+  "role_id": 2,
+  "username": "missing.person",
+  "password": "Password123@"
+}
+
+### ADMIN_CREATE_USER - Role does not exist (400 Bad Request - Code 2003)
+POST {{baseUrl}}/api/v1/admin/users
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "person_id": {{createPerson.response.body.data.person_id}},
+  "role_id": 999999,
+  "username": "invalid.role",
+  "password": "Password123@"
+}
+
+### ADMIN_CREATE_USER - Required field missing (400 Bad Request - Code 2001)
+POST {{baseUrl}}/api/v1/admin/users
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "person_id": {{createPerson.response.body.data.person_id}},
+  "role_id": 2,
+  "username": "",
+  "password": "Password123@"
+}
+
+### ADMIN_CREATE_PATIENT - Create a person first, then a patient profile (201 Created - Code 1001)
+### @name createPatientPerson
+POST {{baseUrl}}/api/v1/admin/persons
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "full_name": "Nguyễn Thị B",
+  "phone_number": "0988776657"
+}
+
+### @name createPatient
+POST {{baseUrl}}/api/v1/admin/patients
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "person_id": {{createPatientPerson.response.body.data.person_id}},
+  "his_code": "HIS-ADMIN-001",
+  "occupation": "Nong dan",
+  "ethnicity": "Kinh",
+  "health_insurance_number": "BHYT-ADMIN-001",
+  "health_insurance_valid_until": "2030-12-31",
+  "emergency_contact_name_address": "Nguyễn Văn C, Hà Nội",
+  "emergency_contact_phone": "0987654321"
+}
+
+### ADMIN_CREATE_PATIENT - Duplicate patient profile (409 Conflict - Code 3012)
+POST {{baseUrl}}/api/v1/admin/patients
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "person_id": {{createPatientPerson.response.body.data.person_id}}
+}
+
+### ADMIN_CREATE_PATIENT - Invalid occupation (400 Bad Request - Code 2003)
+POST {{baseUrl}}/api/v1/admin/patients
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "person_id": {{createPatientPerson.response.body.data.person_id}},
+  "occupation": "Unknown"
+}
+
+### ADMIN_CREATE_STAFF - Create a person first, then a staff profile (201 Created - Code 1001)
+### @name createStaffPerson
+POST {{baseUrl}}/api/v1/admin/persons
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "full_name": "Trần Văn D",
+  "phone_number": "0988776658"
+}
+
+### @name createStaff
+POST {{baseUrl}}/api/v1/admin/staff
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "person_id": {{createStaffPerson.response.body.data.person_id}},
+  "branch_id": 1
+}
+
+### ADMIN_CREATE_STAFF - Invalid branch (400 Bad Request - Code 2003)
+POST {{baseUrl}}/api/v1/admin/staff
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "person_id": {{createStaffPerson.response.body.data.person_id}},
+  "branch_id": 999999
 }
 
 ### ADMIN_EDIT_USER - Update user information (200 OK - Code 1000)

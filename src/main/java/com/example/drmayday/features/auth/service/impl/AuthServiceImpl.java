@@ -108,16 +108,16 @@ public class AuthServiceImpl implements AuthService {
         String resetTokenKey = PASSWORD_RESET_TOKEN_KEY_PREFIX + account.getAccountId();
         String encodedResetToken = redisTemplate.opsForValue().get(resetTokenKey);
         if (encodedResetToken == null || !passwordEncoder.matches(request.resetToken(), encodedResetToken)) {
-            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE);
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Mã xác thực không hợp lệ hoặc đã hết hạn");
         }
         if (!request.newPassword().equals(request.confirmPassword())) {
-            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE);
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Mật khẩu mới và mật khẩu xác nhận không khớp");
         }
 
         account.setPasswordHash(passwordEncoder.encode(request.newPassword()));
         userAccountRepository.save(account);
         if (!Boolean.TRUE.equals(redisTemplate.delete(resetTokenKey))) {
-            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE);
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Không thể xóa mã xác thực");
         }
         jwtTokenProvider.invalidateUserTokens(account.getAccountId());
     }
@@ -133,7 +133,7 @@ public class AuthServiceImpl implements AuthService {
             throw new AppException(ErrorCode.PASSWORD_INCORRECT);
         }
         if (!request.newPassword().equals(request.confirmPassword())) {
-            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE);
+            throw new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Mật khẩu mới và mật khẩu xác nhận không khớp");
         }
 
         account.setPasswordHash(passwordEncoder.encode(request.newPassword()));

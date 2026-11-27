@@ -201,7 +201,7 @@ public class DatabaseSeeder implements CommandLineRunner {
 
     private void ensurePermissions() {
         Set<String> existingNames = permissionRepository.findAll().stream()
-                .map(Permission::getName)
+            .map(permission -> permission.getName())
                 .collect(Collectors.toSet());
 
         if (!existingNames.contains("manage_users_v1")) {

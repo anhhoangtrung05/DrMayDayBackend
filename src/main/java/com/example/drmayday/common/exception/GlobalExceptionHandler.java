@@ -85,8 +85,57 @@ public class GlobalExceptionHandler {
     public ResponseEntity<BaseResponse<Void>> handleHttpMessageNotReadableException(org.springframework.http.converter.HttpMessageNotReadableException ex) {
         log.warn("Failed to read request body: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(BaseResponse.error(ErrorCode.INVALID_PARAMETER_VALUE.getCode(),
-                        ErrorCode.INVALID_PARAMETER_VALUE.getMessage()));
+                .body(BaseResponse.error(ErrorCode.INVALID_PARAMETER_VALUE.getCode(), describeUnreadableBody(ex)));
+    }
+
+    /**
+     * Builds a specific message for an unreadable body: names the offending field when Jackson
+     * reports one (e.g. "items[0].so_luong"), otherwise says whether the JSON is malformed or missing.
+     */
+    static String describeUnreadableBody(org.springframework.http.converter.HttpMessageNotReadableException ex) {
+        tools.jackson.core.JacksonException jackson = findCause(ex, tools.jackson.core.JacksonException.class);
+        if (jackson == null) {
+            return "Thiếu hoặc không đọc được nội dung request body";
+        }
+        if (jackson instanceof tools.jackson.core.exc.StreamReadException) {
+            return "Nội dung request body không phải JSON hợp lệ";
+        }
+        String field = toFieldPath(jackson.getPath());
+        if (field.isEmpty()) {
+            return ErrorCode.INVALID_PARAMETER_VALUE.getMessage();
+        }
+        if (jackson instanceof tools.jackson.databind.exc.UnrecognizedPropertyException) {
+            return "Trường không được hỗ trợ: " + field;
+        }
+        return "Giá trị của trường " + field + " không đúng kiểu dữ liệu";
+    }
+
+    private static <T extends Throwable> T findCause(Throwable ex, Class<T> type) {
+        for (Throwable t = ex; t != null; t = t.getCause()) {
+            if (type.isInstance(t)) {
+                return type.cast(t);
+            }
+            if (t.getCause() == t) {
+                break;
+            }
+        }
+        return null;
+    }
+
+    /** Joins Jackson's reference path into "a.b[0].c", using the JSON property names. */
+    private static String toFieldPath(java.util.List<tools.jackson.core.JacksonException.Reference> path) {
+        StringBuilder sb = new StringBuilder();
+        for (tools.jackson.core.JacksonException.Reference ref : path) {
+            if (ref.getPropertyName() != null) {
+                if (!sb.isEmpty()) {
+                    sb.append('.');
+                }
+                sb.append(ref.getPropertyName());
+            } else if (ref.getIndex() >= 0) {
+                sb.append('[').append(ref.getIndex()).append(']');
+            }
+        }
+        return sb.toString();
     }
 
     @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)

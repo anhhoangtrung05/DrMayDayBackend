@@ -24,7 +24,8 @@ public class ClinicalTestResult {
     @Column(name = "can_lam_sang_khac_ghi_chu") private String otherClinicalTestNotes;
     @Column(name = "xet_nghiem_khac") private String otherLaboratoryTest;
     @Column(name = "thoi_diem_thuc_hien") private OffsetDateTime performedAt;
-    @Column(name = "thoi_diem_cap_nhat", nullable = false) private OffsetDateTime updatedAt;
+    // Filled by the column default and the trg_kqcls_cap_nhat trigger.
+    @Column(name = "thoi_diem_cap_nhat", nullable = false, insertable = false, updatable = false) private OffsetDateTime updatedAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumns({

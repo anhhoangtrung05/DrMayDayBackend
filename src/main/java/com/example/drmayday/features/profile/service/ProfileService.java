@@ -1,18 +1,22 @@
 package com.example.drmayday.features.profile.service;
 
+import com.example.drmayday.features.profile.dto.EmployeeProfileResponse;
 import com.example.drmayday.features.profile.dto.PatientProfileResponse;
-import com.example.drmayday.features.profile.dto.UpdateProfileRequest;
+import com.example.drmayday.features.profile.dto.PersonProfileResponse;
+import com.example.drmayday.features.profile.dto.UpdateEmployeeProfileRequest;
+import com.example.drmayday.features.profile.dto.UpdatePatientProfileRequest;
+import com.example.drmayday.features.profile.dto.UpdatePersonProfileRequest;
 
 public interface ProfileService {
-    PatientProfileResponse getProfile(Long userId);
+    PersonProfileResponse getPersonProfile(Long accountId);
 
-    default PatientProfileResponse getProfile(Integer userId) {
-        return getProfile(userId != null ? userId.longValue() : null);
-    }
+    PersonProfileResponse updatePersonProfile(Long accountId, UpdatePersonProfileRequest request);
 
-    PatientProfileResponse updateProfile(Long userId, UpdateProfileRequest request);
+    PatientProfileResponse getPatientProfile(Long accountId);
 
-    default PatientProfileResponse updateProfile(Integer userId, UpdateProfileRequest request) {
-        return updateProfile(userId != null ? userId.longValue() : null, request);
-    }
+    PatientProfileResponse updatePatientProfile(Long accountId, UpdatePatientProfileRequest request);
+
+    EmployeeProfileResponse getEmployeeProfile(Long accountId);
+
+    EmployeeProfileResponse updateEmployeeProfile(Long accountId, UpdateEmployeeProfileRequest request);
 }
