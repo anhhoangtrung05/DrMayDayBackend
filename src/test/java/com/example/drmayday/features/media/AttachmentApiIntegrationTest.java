@@ -192,7 +192,7 @@ class AttachmentApiIntegrationTest {
                             .file(largeFile)
                             .header("Authorization", "Bearer " + ownerPatientToken)
                             .param("record_id", String.valueOf(recordId)))
-                    .andExpect(status().isPayloadTooLarge())
+                    .andExpect(status().isContentTooLarge())
                     .andExpect(jsonPath("$.code").value("6003"));
         }
     }

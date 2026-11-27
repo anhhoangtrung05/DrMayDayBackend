@@ -10,13 +10,13 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/permissions")
+@RequestMapping("/api/v1/permissions/{id}")
 @RequiredArgsConstructor
 public class PermissionController {
 
     private final PermissionService permissionService;
 
-    @PutMapping("/{id}")
+    @PutMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BaseResponse<PermissionResponse>> editPermission(
             @PathVariable String id,
@@ -25,7 +25,7 @@ public class PermissionController {
         return ResponseEntity.ok(BaseResponse.ok(response));
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BaseResponse<Void>> deletePermission(@PathVariable String id) {
         permissionService.deletePermission(id);

@@ -67,7 +67,7 @@ public enum ErrorCode {
 
     // 6xxx - Media & attachment errors
     IMAGE_FILE_REQUIRED("6001", "Tệp hình ảnh là bắt buộc", HttpStatus.BAD_REQUEST),
-    FILE_SIZE_EXCEEDS_LIMIT("6003", "Dung lượng tệp vượt quá giới hạn", HttpStatus.PAYLOAD_TOO_LARGE),
+    FILE_SIZE_EXCEEDS_LIMIT("6003", "Dung lượng tệp vượt quá giới hạn", HttpStatus.CONTENT_TOO_LARGE),
     ATTACHMENT_NOT_FOUND("6005", "Không tìm thấy tệp đính kèm", HttpStatus.NOT_FOUND),
     ATTACHMENT_IN_USE("6007", "Tệp đính kèm đang được sử dụng bởi ảnh tổn thương", HttpStatus.CONFLICT),
 

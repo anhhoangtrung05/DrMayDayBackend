@@ -3,10 +3,7 @@ package com.example.drmayday.features.prescription.service.impl;
 import com.example.drmayday.common.exception.AppException;
 import com.example.drmayday.common.exception.ErrorCode;
 import com.example.drmayday.common.security.SecurityUtils;
-import com.example.drmayday.entity.Medication;
 import com.example.drmayday.entity.MedicationDiscontinuation;
-import com.example.drmayday.entity.MedicalRecord;
-import com.example.drmayday.entity.MedicalVisit;
 import com.example.drmayday.entity.Prescription;
 import com.example.drmayday.entity.PrescriptionItem;
 import com.example.drmayday.features.prescription.dto.CreatePrescriptionRequest;
@@ -136,10 +133,10 @@ public class PrescriptionServiceImpl implements PrescriptionService {
             return List.of();
         }
 
-        List<Long> ids = prescriptions.stream().map(Prescription::getPrescriptionId).toList();
+        List<Long> ids = prescriptions.stream().map(prescription -> prescription.getPrescriptionId()).toList();
         Map<Long, List<PrescriptionItem>> itemsByPrescription = prescriptionItemRepository
                 .findByPrescriptionIdInOrderByPrescriptionItemIdAsc(ids).stream()
-                .collect(Collectors.groupingBy(PrescriptionItem::getPrescriptionId));
+            .collect(Collectors.groupingBy(item -> item.getPrescriptionId()));
 
         return prescriptions.stream()
                 .map(p -> PrescriptionResponse.from(p, itemsByPrescription.getOrDefault(p.getPrescriptionId(), List.of())))
@@ -261,7 +258,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
         }
         Long currentUserId = SecurityUtils.getCurrentUserId();
         medicalRecordRepository.findById(recordId)
-                .map(MedicalRecord::getPatientId)
+            .map(record -> record.getPatientId())
                 .filter(patientId -> !patientId.equals(currentUserId))
                 .ifPresent(patientId -> {
                     throw new AppException(ErrorCode.CANNOT_ACCESS_ANOTHER_USER_DATA);
@@ -300,7 +297,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
 
         if (!medicationIds.isEmpty()) {
             Set<String> found = medicationRepository.findAllById(medicationIds).stream()
-                    .map(Medication::getMedicationId)
+                    .map(medication -> medication.getMedicationId())
                     .collect(Collectors.toSet());
             for (String id : medicationIds) {
                 if (!found.contains(id)) {
@@ -361,7 +358,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
 
     private static String summarize(List<MedicationDiscontinuation> rows) {
         return rows.stream()
-                .map(MedicationDiscontinuation::getMedicationToStop)
+            .map(row -> row.getMedicationToStop())
                 .distinct()
                 .collect(Collectors.joining(", "));
     }

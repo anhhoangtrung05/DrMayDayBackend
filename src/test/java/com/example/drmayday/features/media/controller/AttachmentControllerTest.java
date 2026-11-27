@@ -135,7 +135,7 @@ class AttachmentControllerTest {
                 .thenThrow(new MaxUploadSizeExceededException(5 * 1024 * 1024L));
 
         mockMvc.perform(multipart("/api/v1/attachments").file(file).param("record_id", "10"))
-                .andExpect(status().isPayloadTooLarge())
+                .andExpect(status().isContentTooLarge())
                 .andExpect(jsonPath("$.code").value("6003"));
     }
 

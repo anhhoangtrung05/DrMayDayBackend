@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
+@RequestMapping("/api/v1/lesion-details")
 public class LesionDetailsController {
 
     private final LesionDetailsService lesionDetailsService;
@@ -22,7 +23,7 @@ public class LesionDetailsController {
         this.lesionDetailsService = lesionDetailsService;
     }
 
-    @PostMapping("/api/v1/lesion-details")
+    @PostMapping
     @PreAuthorize("hasAnyRole('DOCTOR','ADMIN')")
     public ResponseEntity<BaseResponse<List<LesionDetailResponse>>> addLesionDetailsBulk(
             @Valid @RequestBody AddLesionDetailsBulkRequest req) {
@@ -31,7 +32,7 @@ public class LesionDetailsController {
                 .body(BaseResponse.created("Thêm chi tiết tổn thương thành công", data));
     }
 
-    @GetMapping("/api/v1/lesion-details")
+    @GetMapping
     @PreAuthorize("hasAnyRole('PATIENT','DOCTOR','ADMIN')")
     public ResponseEntity<BaseResponse<List<LesionDetailResponse>>> getListLesionDetails(
             @RequestParam(required = false) String exam_id) {
@@ -39,7 +40,7 @@ public class LesionDetailsController {
         return ResponseEntity.ok(BaseResponse.success("Thành công", data));
     }
 
-    @PutMapping("/api/v1/lesion-details/{id}")
+    @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('DOCTOR','ADMIN')")
     public ResponseEntity<BaseResponse<LesionDetailResponse>> updateLesionDetail(
             @PathVariable String id,
@@ -49,7 +50,7 @@ public class LesionDetailsController {
         return ResponseEntity.ok(BaseResponse.success("Cập nhật chi tiết tổn thương thành công", data));
     }
 
-    @DeleteMapping("/api/v1/lesion-details/{id}")
+    @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('DOCTOR','ADMIN')")
     public ResponseEntity<BaseResponse<Void>> deleteLesionDetail(
             @PathVariable String id,

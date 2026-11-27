@@ -2,7 +2,6 @@ package com.example.drmayday.common.security;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.security.core.GrantedAuthority;
 
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -13,7 +12,7 @@ class UserPrincipalTest {
 
     private static Set<String> authoritiesOf(UserPrincipal principal) {
         return principal.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
+            .map(authority -> authority.getAuthority())
                 .collect(Collectors.toSet());
     }
 

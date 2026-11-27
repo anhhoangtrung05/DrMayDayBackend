@@ -86,12 +86,13 @@ public class LabResultServiceImpl implements LabResultService {
                 .findFirstByMedicalVisitIdOrderByClinicalTestResultIdAsc(visit.getMedicalVisitId())
                 .orElse(null);
         boolean created = existing == null;
-        ClinicalTestResult parent = created
-                ? ClinicalTestResult.builder()
-                        .medicalVisitId(visit.getMedicalVisitId())
-                        .clinicalTestResultType(type)
-                        .build()
-                : existing;
+        ClinicalTestResult parent = existing;
+        if (parent == null) {
+            parent = ClinicalTestResult.builder()
+                .medicalVisitId(visit.getMedicalVisitId())
+                .clinicalTestResultType(type)
+                .build();
+        }
 
         // PUT replaces the whole result: fields that are not sent are cleared.
         parent.setWbc(req.getWbc());
@@ -153,9 +154,8 @@ public class LabResultServiceImpl implements LabResultService {
                 .orElseThrow(() -> new AppException(ErrorCode.LAB_RESULT_NOT_FOUND,
                         "Phiên khám " + examId + " chưa có kết quả cận lâm sàng"));
 
-        Long recordId = medicalVisitRepository.findById(examId)
-                .map(MedicalVisit::getMedicalRecordId)
-                .orElse(null);
+        MedicalVisit visit = medicalVisitRepository.findById(examId).orElse(null);
+        Long recordId = visit == null ? null : visit.getMedicalRecordId();
         checkPatientAccessToRecord(recordId);
 
         Long resultId = parent.getClinicalTestResultId();
@@ -174,7 +174,7 @@ public class LabResultServiceImpl implements LabResultService {
         Map<String, Object> foreignFields = TYPE_ACUTE.equals(type) ? chronicFields : acuteFields;
         List<String> sentForeign = foreignFields.entrySet().stream()
                 .filter(e -> e.getValue() != null)
-                .map(Map.Entry::getKey)
+                .map(entry -> entry.getKey())
                 .toList();
         if (!sentForeign.isEmpty()) {
             String otherType = TYPE_ACUTE.equals(type) ? TYPE_CHRONIC : TYPE_ACUTE;
@@ -255,7 +255,8 @@ public class LabResultServiceImpl implements LabResultService {
             return;
         }
         Long currentUserId = SecurityUtils.getCurrentUserId();
-        Long ownerId = medicalRecordRepository.findById(recordId).map(MedicalRecord::getPatientId).orElse(null);
+        MedicalRecord record = medicalRecordRepository.findById(recordId).orElse(null);
+        Long ownerId = record == null ? null : record.getPatientId();
         if (ownerId != null && !Objects.equals(ownerId, currentUserId)) {
             throw new AppException(ErrorCode.CANNOT_ACCESS_ANOTHER_USER_DATA);
         }

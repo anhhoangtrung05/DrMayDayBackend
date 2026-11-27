@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
+@RequestMapping("/api/v1/vital-signs")
 public class VitalSignsController {
 
     private final VitalSignsService vitalSignsService;
@@ -21,7 +22,7 @@ public class VitalSignsController {
         this.vitalSignsService = vitalSignsService;
     }
 
-    @PostMapping("/api/v1/vital-signs")
+    @PostMapping
     @PreAuthorize("hasAnyRole('DOCTOR','ADMIN')")
     public ResponseEntity<BaseResponse<VitalSignsResponse>> addVitalSigns(
             @Valid @RequestBody AddVitalSignsRequest req) {
@@ -30,7 +31,7 @@ public class VitalSignsController {
                 .body(BaseResponse.created("Thêm dấu hiệu sinh tồn thành công", data));
     }
 
-    @GetMapping("/api/v1/vital-signs")
+    @GetMapping
     @PreAuthorize("hasAnyRole('PATIENT','DOCTOR','ADMIN')")
     public ResponseEntity<BaseResponse<List<VitalSignsResponse>>> getListVitalSigns(
             @RequestParam(required = false) String exam_id) {

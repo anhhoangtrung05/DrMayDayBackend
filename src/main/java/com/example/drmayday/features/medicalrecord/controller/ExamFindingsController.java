@@ -10,10 +10,12 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@RequestMapping("/api/v1")
 public class ExamFindingsController {
 
     private final ExamFindingsService examFindingsService;
@@ -22,7 +24,7 @@ public class ExamFindingsController {
         this.examFindingsService = examFindingsService;
     }
 
-    @PutMapping("/api/v1/acute-exam-findings")
+    @PutMapping("/acute-exam-findings")
     @PreAuthorize("hasAnyRole('DOCTOR','ADMIN')")
     public ResponseEntity<BaseResponse<AcuteExamFindingsResponse>> upsertAcuteExamFindings(
             @Valid @RequestBody UpsertAcuteExamFindingsRequest req) {
@@ -30,7 +32,7 @@ public class ExamFindingsController {
         return ResponseEntity.ok(BaseResponse.success("Cập nhật triệu chứng phiên khám cấp thành công", data));
     }
 
-    @PutMapping("/api/v1/chronic-exam-findings")
+    @PutMapping("/chronic-exam-findings")
     @PreAuthorize("hasAnyRole('DOCTOR','ADMIN')")
     public ResponseEntity<BaseResponse<ChronicExamFindingsResponse>> upsertChronicExamFindings(
             @Valid @RequestBody UpsertChronicExamFindingsRequest req) {
