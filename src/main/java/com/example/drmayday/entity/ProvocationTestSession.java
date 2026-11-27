@@ -26,4 +26,10 @@ public class ProvocationTestSession {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "ma_phien_kham", referencedColumnName = "ma_phien_kham", insertable = false, updatable = false)
     private ChronicVisit chronicVisit;
+
+    @PrePersist
+    @PreUpdate
+    void touchUpdatedAt() {
+        updatedAt = OffsetDateTime.now();
+    }
 }

@@ -26,6 +26,17 @@ public class ProvocationTestResult {
     @Column(name = "diem_dau_nrs") private Short painNrsScore;
     @Column(name = "can_nguyen_khac_ten") private String otherCauseName;
 
+    @Column(name = "la_can_nguyen_khac", nullable = false)
+    @Builder.Default
+    private Boolean otherCause = false;
+
+    @PrePersist
+    void beforeInsert() {
+        if (otherCause == null) {
+            otherCause = false;
+        }
+    }
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "ma_phien_nghiem_phap", referencedColumnName = "ma_phien_nghiem_phap", insertable = false, updatable = false)
     private ProvocationTestSession provocationTestSession;

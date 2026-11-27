@@ -363,3 +363,100 @@ Authorization: Bearer {{adminToken}}
 ### API 23: roleperm03 / delete_role_permissions - Thu hồi một quyền hạn khỏi vai trò (200 OK - Mã 1000)
 DELETE {{baseUrl}}/api/v1/roles/1/permissions/2
 Authorization: Bearer {{adminToken}}
+
+
+### =====================================================================
+### PHẦN 13: DANH MỤC LOẠI NGHIỆM PHÁP (APIs 104 - 108)
+### =====================================================================
+
+### API 104: TEST_TYPE_CREATE - Tạo loại nghiệm pháp kích thích mới (201 Created - Mã 1001)
+POST {{baseUrl}}/api/v1/test-types
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "ten_nghiem_phap": "Test áp lực chậm tùy chỉnh",
+  "phuong_phap_thuc_hien": "Treo tạ 7kg trong 15 phút",
+  "thoi_gian_chuan": 15,
+  "la_can_nguyen_khac": false
+}
+
+### API 105: TEST_TYPE_LIST - Lấy danh sách loại nghiệm pháp (200 OK - Mã 1000)
+GET {{baseUrl}}/api/v1/test-types
+Authorization: Bearer {{adminToken}}
+
+### API 106: TEST_TYPE_GET - Xem chi tiết loại nghiệm pháp (200 OK - Mã 1000)
+GET {{baseUrl}}/api/v1/test-types/1
+Authorization: Bearer {{adminToken}}
+
+### API 107: TEST_TYPE_UPDATE - Cập nhật loại nghiệm pháp (200 OK - Mã 1000)
+PUT {{baseUrl}}/api/v1/test-types/10
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "ten_nghiem_phap": "Test áp lực chậm (cập nhật)",
+  "phuong_phap_thuc_hien": "Treo tạ 7kg",
+  "thoi_gian_chuan": 20
+}
+
+### API 108: TEST_TYPE_DELETE - Xóa loại nghiệm pháp (200 OK - Mã 1000)
+DELETE {{baseUrl}}/api/v1/test-types/10
+Authorization: Bearer {{adminToken}}
+
+
+### =====================================================================
+### PHẦN 14: TEST KÍCH THÍCH ĐẶC HIỆU CIndU (APIs 109 - 113)
+### =====================================================================
+
+### API 109: STIM_TEST_SESSION_UPSERT - Tạo/cập nhật ngừng thuốc trước test CIndU (200 OK - Mã 1000)
+PUT {{baseUrl}}/api/v1/medical-records/2/exams/1/stimulation-test-session
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "ngung_khang_histamine": true,
+  "thoi_gian_ngung_histamine": 7,
+  "ngung_corticoid": false,
+  "thoi_gian_ngung_corticoid": null
+}
+
+### API 110: STIM_TEST_SESSION_GET - Lấy phiên test CIndU kèm danh sách kết quả (200 OK - Mã 1000)
+GET {{baseUrl}}/api/v1/medical-records/2/exams/1/stimulation-test-session
+Authorization: Bearer {{adminToken}}
+
+### API 111: STIM_TEST_RESULTS_BULK_CREATE - Nhập hàng loạt kết quả test CIndU (201 Created - Mã 1001)
+POST {{baseUrl}}/api/v1/medical-records/2/exams/1/stimulation-test-session/results
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+[
+  {
+    "ma_nghiem_phap": 1,
+    "la_can_nguyen_khac": false,
+    "ket_qua": "Duong tinh",
+    "nguong_gia_tri_so": 2,
+    "don_vi_do": "diem",
+    "diem_ngua_nrs": 6,
+    "diem_dau_nrs": 1,
+    "diem_bong_rat_nrs": 2
+  }
+]
+
+### API 112: STIM_TEST_RESULT_UPDATE - Sửa 1 dòng kết quả test CIndU (200 OK - Mã 1000)
+PUT {{baseUrl}}/api/v1/stimulation-test-results/1
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "ma_nghiem_phap": 1,
+  "la_can_nguyen_khac": false,
+  "ket_qua": "Am tinh",
+  "diem_ngua_nrs": 0,
+  "diem_dau_nrs": 0,
+  "diem_bong_rat_nrs": 0
+}
+
+### API 113: STIM_TEST_RESULT_DELETE - Xóa 1 dòng kết quả test CIndU (200 OK - Mã 1000)
+DELETE {{baseUrl}}/api/v1/stimulation-test-results/1
+Authorization: Bearer {{adminToken}}
