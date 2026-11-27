@@ -4,4 +4,6 @@ import com.example.drmayday.entity.LesionPhoto;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface LesionPhotoRepository extends JpaRepository<LesionPhoto, Long> {
+    boolean existsByAttachmentId(Long attachmentId);
+    boolean existsBySkinLesionEpisodeId(Long skinLesionEpisodeId);
 }

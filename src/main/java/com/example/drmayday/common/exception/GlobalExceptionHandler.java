@@ -9,9 +9,12 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
 /**
  * Centralized exception handler that standardizes error responses across the system.
@@ -147,6 +150,40 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(BaseResponse.error(ErrorCode.INVALID_PARAMETER_VALUE.getCode(),
                         ErrorCode.INVALID_PARAMETER_VALUE.getMessage()));
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<BaseResponse<Void>> handleMaxUploadSizeExceededException(MaxUploadSizeExceededException ex) {
+        log.warn("Max upload size exceeded: {}", ex.getMessage());
+        return ResponseEntity.status(ErrorCode.FILE_SIZE_EXCEEDS_LIMIT.getHttpStatus())
+                .body(BaseResponse.error(ErrorCode.FILE_SIZE_EXCEEDS_LIMIT.getCode(),
+                        ErrorCode.FILE_SIZE_EXCEEDS_LIMIT.getMessage()));
+    }
+
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    public ResponseEntity<BaseResponse<Void>> handleMissingServletRequestPartException(MissingServletRequestPartException ex) {
+        log.warn("Missing request part: {}", ex.getMessage());
+        if ("file".equalsIgnoreCase(ex.getRequestPartName())) {
+            return ResponseEntity.status(ErrorCode.IMAGE_FILE_REQUIRED.getHttpStatus())
+                    .body(BaseResponse.error(ErrorCode.IMAGE_FILE_REQUIRED.getCode(),
+                            ErrorCode.IMAGE_FILE_REQUIRED.getMessage()));
+        }
+        return ResponseEntity.status(ErrorCode.MISSING_REQUIRED_PARAMETER.getHttpStatus())
+                .body(BaseResponse.error(ErrorCode.MISSING_REQUIRED_PARAMETER.getCode(),
+                        ErrorCode.MISSING_REQUIRED_PARAMETER.getMessage()));
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<BaseResponse<Void>> handleMissingServletRequestParameterException(MissingServletRequestParameterException ex) {
+        log.warn("Missing request parameter: {}", ex.getMessage());
+        if ("file".equalsIgnoreCase(ex.getParameterName())) {
+            return ResponseEntity.status(ErrorCode.IMAGE_FILE_REQUIRED.getHttpStatus())
+                    .body(BaseResponse.error(ErrorCode.IMAGE_FILE_REQUIRED.getCode(),
+                            ErrorCode.IMAGE_FILE_REQUIRED.getMessage()));
+        }
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(BaseResponse.error(ErrorCode.MISSING_REQUIRED_PARAMETER.getCode(),
+                        ErrorCode.MISSING_REQUIRED_PARAMETER.getMessage()));
     }
 
     @ExceptionHandler(Exception.class)

@@ -65,7 +65,16 @@ public enum ErrorCode {
     UAS7_NO_ACTIVE_RECORD("5004", "Bệnh nhân không có hồ sơ bệnh án đang hoạt động để ghi điểm UAS7", HttpStatus.BAD_REQUEST),
     EXAM_NOT_FOUND("5008", "Không tìm thấy phiên khám", HttpStatus.NOT_FOUND),
 
-    // 7xxx - Lesion detail errors
+    // 6xxx - Media & attachment errors
+    IMAGE_FILE_REQUIRED("6001", "Tệp hình ảnh là bắt buộc", HttpStatus.BAD_REQUEST),
+    FILE_SIZE_EXCEEDS_LIMIT("6003", "Dung lượng tệp vượt quá giới hạn", HttpStatus.PAYLOAD_TOO_LARGE),
+    ATTACHMENT_NOT_FOUND("6005", "Không tìm thấy tệp đính kèm", HttpStatus.NOT_FOUND),
+    ATTACHMENT_IN_USE("6007", "Tệp đính kèm đang được sử dụng bởi ảnh tổn thương", HttpStatus.CONFLICT),
+
+    // 7xxx - Lesion tracking & detail errors
+    LESION_EPISODE_NOT_FOUND("7001", "Không tìm thấy đợt tổn thương da", HttpStatus.NOT_FOUND),
+    LESION_NAME_CANNOT_BE_EMPTY("7004", "Tên đợt tổn thương không được để trống", HttpStatus.BAD_REQUEST),
+    EPISODE_HAS_CHILD_DATA("7009", "Đợt tổn thương vẫn còn vị trí hoặc hình ảnh đính kèm", HttpStatus.CONFLICT),
     LESION_DETAIL_NOT_FOUND("7010", "Không tìm thấy chi tiết tổn thương", HttpStatus.NOT_FOUND),
 
     // 80xx - Prescription errors

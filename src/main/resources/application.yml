@@ -5,6 +5,11 @@ spring:
   application:
     name: drmayday-backend
 
+  servlet:
+    multipart:
+      max-file-size: ${MULTIPART_MAX_FILE_SIZE:10MB}
+      max-request-size: ${MULTIPART_MAX_REQUEST_SIZE:15MB}
+
   data:
     redis:
       host: ${REDIS_HOST:localhost}
@@ -44,3 +49,8 @@ speedsms:
 logging:
   level:
     "[com.example.drmayday]": ${LOG_LEVEL:INFO}
+
+app:
+  storage:
+    upload-dir: ${STORAGE_UPLOAD_DIR:${java.io.tmpdir}/drmayday-uploads/attachments}
+    url-prefix: ${STORAGE_URL_PREFIX:http://localhost:9000/drmayday/attachments}
