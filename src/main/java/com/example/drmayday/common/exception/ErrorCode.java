@@ -92,6 +92,11 @@ public enum ErrorCode {
     STOP_PURPOSE_OTHER_DESCRIPTION_REQUIRED("8201", "Mục đích ngừng thuốc là Khac thì bắt buộc nhập muc_dich_khac_ghi_ro", HttpStatus.BAD_REQUEST),
     STOP_PURPOSE_INVALID("8202", "Mục đích ngừng thuốc không hợp lệ, chỉ chấp nhận: Test huyet thanh tu than, Test kich thich, Khac", HttpStatus.BAD_REQUEST),
 
+    // 83xx - Provocation test types & CIndU stimulation tests
+    TEST_TYPE_NOT_FOUND("8301", "Không tìm thấy loại nghiệm pháp kích thích", HttpStatus.NOT_FOUND),
+    TEST_TYPE_ALREADY_EXISTS("8302", "Tên loại nghiệm pháp kích thích đã tồn tại", HttpStatus.CONFLICT),
+    TEST_TYPE_IN_USE("8303", "Loại nghiệm pháp đang được kết quả test tham chiếu", HttpStatus.CONFLICT),
+
     // 9xxx - General system errors
     INTERNAL_SERVER_ERROR("9999", "Lỗi hệ thống nội bộ", HttpStatus.INTERNAL_SERVER_ERROR);
 
