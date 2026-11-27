@@ -363,3 +363,40 @@ Authorization: Bearer {{adminToken}}
 ### API 23: roleperm03 / delete_role_permissions - Thu hồi một quyền hạn khỏi vai trò (200 OK - Mã 1000)
 DELETE {{baseUrl}}/api/v1/roles/1/permissions/2
 Authorization: Bearer {{adminToken}}
+
+
+### =====================================================================
+### PHẦN 11: QUẢN LÝ THÔNG BÁO ĐẨY (PUSH NOTIFICATIONS - APIs 100 - 103)
+### =====================================================================
+
+### API 100: NOTIFICATIONS_SET_DEVTOKEN - Đăng ký FCM device token (201 Created - Mã 1001)
+POST {{baseUrl}}/api/v1/notifications/token
+Authorization: Bearer {{patientToken}}
+Content-Type: application/json
+
+{
+  "fcm_token": "fcm-sample-android-token-001",
+  "device_type": "android"
+}
+
+### API 100: NOTIFICATIONS_SET_DEVTOKEN - Thiếu fcm_token (400 Bad Request - Mã 9101)
+POST {{baseUrl}}/api/v1/notifications/token
+Authorization: Bearer {{patientToken}}
+Content-Type: application/json
+
+{
+  "fcm_token": "",
+  "device_type": "android"
+}
+
+### API 101: NOTIFICATIONS_GET_NOTIFICATION - Lấy danh sách thông báo của người dùng (200 OK - Mã 1000)
+GET {{baseUrl}}/api/v1/notifications/?page=1&limit=20
+Authorization: Bearer {{patientToken}}
+
+### API 102: NOTIFICATION_SET_READ_NOTIFICATION - Đánh dấu thông báo đã đọc (200 OK - Mã 1000)
+PUT {{baseUrl}}/api/v1/notifications/1/read
+Authorization: Bearer {{patientToken}}
+
+### API 103: NOTIFICATION_DELETE_NOTIFICATION - Xóa một thông báo (200 OK - Mã 1000)
+DELETE {{baseUrl}}/api/v1/notifications/1
+Authorization: Bearer {{patientToken}}

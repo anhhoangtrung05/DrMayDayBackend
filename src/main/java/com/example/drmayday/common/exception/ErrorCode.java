@@ -92,6 +92,10 @@ public enum ErrorCode {
     STOP_PURPOSE_OTHER_DESCRIPTION_REQUIRED("8201", "Mục đích ngừng thuốc là Khac thì bắt buộc nhập muc_dich_khac_ghi_ro", HttpStatus.BAD_REQUEST),
     STOP_PURPOSE_INVALID("8202", "Mục đích ngừng thuốc không hợp lệ, chỉ chấp nhận: Test huyet thanh tu than, Test kich thich, Khac", HttpStatus.BAD_REQUEST),
 
+    // 91xx - Push notifications (FCM)
+    FCM_TOKEN_REQUIRED("9101", "Chuỗi FCM token thiết bị không được để trống", HttpStatus.BAD_REQUEST),
+    NOTIFICATION_NOT_FOUND("9102", "Không tìm thấy thông báo", HttpStatus.NOT_FOUND),
+
     // 9xxx - General system errors
     INTERNAL_SERVER_ERROR("9999", "Lỗi hệ thống nội bộ", HttpStatus.INTERNAL_SERVER_ERROR);
 
