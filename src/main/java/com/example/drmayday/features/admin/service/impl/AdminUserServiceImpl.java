@@ -1,13 +1,16 @@
 package com.example.drmayday.features.admin.service.impl;
 
+import com.example.drmayday.features.admin.dto.AssignUserRequest;
 import com.example.drmayday.features.admin.dto.CreatePatientRequest;
 import com.example.drmayday.features.admin.dto.CreatePersonRequest;
 import com.example.drmayday.features.admin.dto.CreateStaffRequest;
 import com.example.drmayday.features.admin.dto.CreateUserRequest;
 import com.example.drmayday.features.admin.dto.CreatedUserResponse;
 import com.example.drmayday.features.admin.dto.EditUserRequest;
+import com.example.drmayday.features.admin.dto.StaffAssignResponse;
 import com.example.drmayday.features.admin.dto.UserDetailsResponse;
 import com.example.drmayday.features.admin.dto.UserResponse;
+import com.example.drmayday.entity.Branch;
 import com.example.drmayday.entity.Patient;
 import com.example.drmayday.entity.Person;
 import com.example.drmayday.entity.Employee;
@@ -304,6 +307,52 @@ public class AdminUserServiceImpl implements AdminUserService {
         userAccount = userAccountRepository.save(userAccount);
 
         return mapToUserResponse(userAccount);
+    }
+
+    @Override
+    @Transactional
+    public void deleteUser(String id) {
+        log.info("Admin deleting a user: id={}", id);
+        Long userId = parseUserId(id);
+
+        UserAccount userAccount = userAccountRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_ACCOUNT_NOT_FOUND));
+
+        userAccountRepository.delete(userAccount);
+        userAccountRepository.flush();
+    }
+
+    @Override
+    @Transactional
+    public StaffAssignResponse assignUser(AssignUserRequest request) {
+        if (request == null || request.getUserId() == null || request.getBranchId() == null) {
+            throw new AppException(ErrorCode.MISSING_REQUIRED_PARAMETER);
+        }
+
+        UserAccount account = userAccountRepository.findById(request.getUserId())
+                .orElseThrow(() -> new AppException(ErrorCode.USER_ACCOUNT_NOT_FOUND));
+        if (account.getPerson() == null) {
+            throw new AppException(ErrorCode.USER_ACCOUNT_NOT_FOUND);
+        }
+
+        Branch branch = branchRepository.findById(request.getBranchId())
+                .orElseThrow(() -> new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Chi nhánh không tồn tại"));
+        if (!Boolean.TRUE.equals(branch.getActive())) {
+            throw new AppException(ErrorCode.BRANCH_INACTIVE);
+        }
+
+        Employee employee = employeeRepository.findById(account.getPerson().getPersonId())
+                .orElseThrow(() -> new AppException(ErrorCode.INVALID_PARAMETER_VALUE, "Người dùng không phải nhân viên y tế"));
+
+        employee.setBranchId(branch.getBranchId());
+        employeeRepository.saveAndFlush(employee);
+
+        return StaffAssignResponse.builder()
+                .staffId(String.valueOf(employee.getEmployeeId()))
+                .userId(String.valueOf(account.getAccountId()))
+                .branchId(String.valueOf(branch.getBranchId()))
+                .branchName(branch.getName())
+                .build();
     }
 
     private UserResponse mapToUserResponse(UserAccount userAccount) {

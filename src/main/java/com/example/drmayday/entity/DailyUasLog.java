@@ -2,6 +2,8 @@ package com.example.drmayday.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Generated;
+import org.hibernate.generator.EventType;
 import java.time.*;
 
 @Entity
@@ -22,6 +24,7 @@ public class DailyUasLog {
     @Column(name = "ngay_thu_may_trong_chu_ky") private Short cycleDay;
     @Column(name = "diem_san_phu_hss", nullable = false) private Short whealScoreHss;
     @Column(name = "diem_ngua_iss", nullable = false) private Short itchScoreIss;
+    @Generated(event = {EventType.INSERT, EventType.UPDATE})
     @Column(name = "diem_uas_ngay", insertable = false, updatable = false) private Short dailyUasScore;
     @Column(name = "trang_thai_dung_thuoc", length = 50) private String medicationAdherenceStatus;
     @Column(name = "trang_thai_ngay", length = 50) private String dayStatus;

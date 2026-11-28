@@ -314,10 +314,54 @@ Content-Type: application/json
   "full_name": "Không Tồn Tại"
 }
 
+### API 13: ADMIN_DELETE_USER - Delete user account by ID (200 OK - Code 1000)
+DELETE {{baseUrl}}/api/v1/admin/users/99
+Authorization: Bearer {{adminToken}}
+
+### API 14: ADMIN_ASSIGN_USER - Assign/transfer medical staff to a branch (200 OK - Code 1000)
+POST {{baseUrl}}/api/v1/admin/users/assign
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "user_id": 1,
+  "branch_id": 1
+}
+
 
 ### =====================================================================
-### PHẦN 3: QUẢN TRỊ QUYỀN HẠN & VAI TRÒ (APIs 19 - 23)
+### PHẦN 3: QUẢN TRỊ QUYỀN HẠN & VAI TRÒ (APIs 15 - 23)
 ### =====================================================================
+
+### API 15: RBAC_SET_ROLE - Tạo vai trò mới (201 Created - Mã 1001)
+POST {{baseUrl}}/api/v1/roles
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "role_name": "duoc_si",
+  "display_name": "Dược sĩ",
+  "description": "Quản lý danh mục thuốc"
+}
+
+### API 16: RBAC_GET_ROLE - Lấy danh sách tất cả vai trò (200 OK - Mã 1000)
+GET {{baseUrl}}/api/v1/roles
+Authorization: Bearer {{adminToken}}
+
+### API 17: RBAC_SET_PERMISSION - Tạo quyền hạn mới (201 Created - Mã 1001)
+POST {{baseUrl}}/api/v1/permissions
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "permission_name": "export_reports",
+  "description": "Xuất báo cáo thống kê",
+  "group_name": "REPORTS"
+}
+
+### API 18: RBAC_GET_LIST_PERMISSION - Lấy danh sách quyền hạn (200 OK - Mã 1000)
+GET {{baseUrl}}/api/v1/permissions
+Authorization: Bearer {{adminToken}}
 
 ### API 19: perm03 / edit_permission - Chỉnh sửa thông tin quyền hạn (200 OK - Mã 1000)
 PUT {{baseUrl}}/api/v1/permissions/1
@@ -363,3 +407,54 @@ Authorization: Bearer {{adminToken}}
 ### API 23: roleperm03 / delete_role_permissions - Thu hồi một quyền hạn khỏi vai trò (200 OK - Mã 1000)
 DELETE {{baseUrl}}/api/v1/roles/1/permissions/2
 Authorization: Bearer {{adminToken}}
+
+
+### =====================================================================
+### PHẦN 7: ĐÁNH GIÁ THANG ĐIỂM MỀ ĐAY UAS7 (APIs 58 - 64)
+### =====================================================================
+
+### API 58: USA7_SCORE_GET_USA7SCORES_ELIGIBILITY - Kiểm tra điều kiện chấm UAS7 (200 OK - Mã 1000)
+GET {{baseUrl}}/api/v1/uas7-scores/eligibility
+Authorization: Bearer {{patientToken}}
+
+### API 59: USA7_SCORE_CREATE_USA7SCORES - Chấm điểm UAS7 trong ngày (201 Created - Mã 1001)
+POST {{baseUrl}}/api/v1/uas7-scores
+Authorization: Bearer {{patientToken}}
+Content-Type: application/json
+
+{
+  "record_id": 2,
+  "hss_score": 2,
+  "iss_score": 3,
+  "trang_thai_dung_thuoc": "DUNG_DEU"
+}
+
+### API 60: USA7_SCORE_GET_USA7SCORES_PATIENT - Lịch sử điểm UAS7 của bệnh nhân (200 OK - Mã 1000)
+GET {{baseUrl}}/api/v1/uas7-scores/patient/2
+Authorization: Bearer {{patientToken}}
+
+### API 61: USA7_SCORE_CREATE_USA7_CYCLE - Tạo chu kỳ theo dõi UAS7 mới (201 Created - Mã 1001)
+POST {{baseUrl}}/api/v1/patients/2/uas7-cycles
+Authorization: Bearer {{patientToken}}
+Content-Type: application/json
+
+{
+  "ngay_bat_dau": "2026-11-26"
+}
+
+### API 62: USA7_SCORE_GET_LIST_USA7_CYCLES - Danh sách chu kỳ theo dõi UAS7 của bệnh nhân (200 OK - Mã 1000)
+GET {{baseUrl}}/api/v1/patients/2/uas7-cycles
+Authorization: Bearer {{patientToken}}
+
+### API 63: USA7_SCORE_GET_USA7_CYCLE_DETAIL - Chi tiết chu kỳ theo dõi UAS7 (200 OK - Mã 1000)
+GET {{baseUrl}}/api/v1/uas7-cycles/1
+Authorization: Bearer {{patientToken}}
+
+### API 64: USA7_SCORE_UPDATE_USA7_CYCLE_STATUS - Cập nhật trạng thái chu kỳ UAS7 (200 OK - Mã 1000)
+PUT {{baseUrl}}/api/v1/uas7-cycles/1
+Authorization: Bearer {{patientToken}}
+Content-Type: application/json
+
+{
+  "trang_thai_chu_ky": "HOAN_THANH"
+}

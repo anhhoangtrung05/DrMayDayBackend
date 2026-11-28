@@ -1,11 +1,13 @@
 package com.example.drmayday.features.admin.service;
 
+import com.example.drmayday.features.admin.dto.AssignUserRequest;
 import com.example.drmayday.features.admin.dto.CreatePatientRequest;
 import com.example.drmayday.features.admin.dto.CreatePersonRequest;
 import com.example.drmayday.features.admin.dto.CreateStaffRequest;
 import com.example.drmayday.features.admin.dto.CreateUserRequest;
 import com.example.drmayday.features.admin.dto.CreatedUserResponse;
 import com.example.drmayday.features.admin.dto.EditUserRequest;
+import com.example.drmayday.features.admin.dto.StaffAssignResponse;
 import com.example.drmayday.features.admin.dto.UserDetailsResponse;
 import com.example.drmayday.features.admin.dto.UserResponse;
 import com.example.drmayday.features.profile.dto.EmployeeProfileResponse;
@@ -54,4 +56,19 @@ public interface AdminUserService {
      * @return The updated user's details
      */
     UserResponse editUser(String id, EditUserRequest request);
+
+    /**
+     * ADMIN_DELETE_USER - Deletes a user account from the system.
+     *
+     * @param id ID of the user account to delete
+     */
+    void deleteUser(String id);
+
+    /**
+     * ADMIN_ASSIGN_USER - Assigns or transfers a medical staff member to a branch.
+     *
+     * @param request User ID and target branch ID
+     * @return Staff assignment details
+     */
+    StaffAssignResponse assignUser(AssignUserRequest request);
 }

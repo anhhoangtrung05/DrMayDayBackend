@@ -1,11 +1,13 @@
 package com.example.drmayday.features.admin.controller;
 
+import com.example.drmayday.features.admin.dto.AssignUserRequest;
 import com.example.drmayday.features.admin.dto.CreatePatientRequest;
 import com.example.drmayday.features.admin.dto.CreatePersonRequest;
 import com.example.drmayday.features.admin.dto.CreateStaffRequest;
 import com.example.drmayday.features.admin.dto.CreateUserRequest;
 import com.example.drmayday.features.admin.dto.CreatedUserResponse;
 import com.example.drmayday.features.admin.dto.EditUserRequest;
+import com.example.drmayday.features.admin.dto.StaffAssignResponse;
 import com.example.drmayday.features.admin.dto.UserDetailsResponse;
 import com.example.drmayday.features.admin.dto.UserResponse;
 import com.example.drmayday.features.admin.service.AdminUserService;
@@ -122,5 +124,34 @@ public class AdminUserController {
             @RequestBody EditUserRequest req) {
         UserResponse response = adminUserService.editUser(id, req);
         return ResponseEntity.ok(BaseResponse.success(response));
+    }
+
+    /**
+     * ADMIN_DELETE_USER
+     * Deletes a user account by ID. Access is restricted to admins.
+     *
+     * @param id User ID
+     * @return Success response
+     */
+    @DeleteMapping("/users/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<BaseResponse<Void>> deleteUser(@PathVariable String id) {
+        adminUserService.deleteUser(id);
+        return ResponseEntity.ok(BaseResponse.ok());
+    }
+
+    /**
+     * ADMIN_ASSIGN_USER
+     * Assigns or transfers a medical staff member to a branch. Access is restricted to admins.
+     *
+     * @param req Assignment request containing user_id and branch_id
+     * @return Staff assignment details
+     */
+    @PostMapping("/users/assign")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<BaseResponse<StaffAssignResponse>> assignUser(
+            @Valid @RequestBody AssignUserRequest req) {
+        StaffAssignResponse response = adminUserService.assignUser(req);
+        return ResponseEntity.ok(BaseResponse.success("Phân công nhân viên thành công", response));
     }
 }
