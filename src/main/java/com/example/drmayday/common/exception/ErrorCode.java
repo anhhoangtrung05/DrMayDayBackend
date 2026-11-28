@@ -79,6 +79,7 @@ public enum ErrorCode {
     // 7xxx - Lesion tracking & detail errors
     LESION_EPISODE_NOT_FOUND("7001", "Không tìm thấy đợt tổn thương da", HttpStatus.NOT_FOUND),
     LESION_NAME_CANNOT_BE_EMPTY("7004", "Tên đợt tổn thương không được để trống", HttpStatus.BAD_REQUEST),
+    SYMPTOM_SCORE_OUT_OF_RANGE("7007", "Điểm số triệu chứng (ngứa, đau, rát) nằm ngoài khoảng 0-10", HttpStatus.BAD_REQUEST),
     EPISODE_HAS_CHILD_DATA("7009", "Đợt tổn thương vẫn còn vị trí hoặc hình ảnh đính kèm", HttpStatus.CONFLICT),
     LESION_DETAIL_NOT_FOUND("7010", "Không tìm thấy chi tiết tổn thương", HttpStatus.NOT_FOUND),
 
@@ -96,6 +97,12 @@ public enum ErrorCode {
     // 82xx - Stop-medication instruction errors
     STOP_PURPOSE_OTHER_DESCRIPTION_REQUIRED("8201", "Mục đích ngừng thuốc là Khac thì bắt buộc nhập muc_dich_khac_ghi_ro", HttpStatus.BAD_REQUEST),
     STOP_PURPOSE_INVALID("8202", "Mục đích ngừng thuốc không hợp lệ, chỉ chấp nhận: Test huyet thanh tu than, Test kich thich, Khac", HttpStatus.BAD_REQUEST),
+
+    // 83xx - Provocation test types & CIndU stimulation tests
+    TEST_TYPE_NOT_FOUND("8301", "Không tìm thấy loại nghiệm pháp kích thích", HttpStatus.NOT_FOUND),
+    TEST_TYPE_ALREADY_EXISTS("8302", "Tên loại nghiệm pháp kích thích đã tồn tại", HttpStatus.CONFLICT),
+    TEST_TYPE_IN_USE("8303", "Loại nghiệm pháp đang được kết quả test tham chiếu", HttpStatus.CONFLICT),
+    STIMULATION_TEST_RESULT_NOT_FOUND("8304", "Không tìm thấy dòng kết quả test kích thích", HttpStatus.NOT_FOUND),
 
     // 9xxx - General system errors
     INTERNAL_SERVER_ERROR("9999", "Lỗi hệ thống nội bộ", HttpStatus.INTERNAL_SERVER_ERROR);
